@@ -9,7 +9,7 @@ import Link from "next/link"
 import BasicInfoStep from "@/components/application/chat/basic-info-step"
 import WhatsAppConfigStep from "@/components/application/chat/whatsapp-config-step"
 import AgentConfigStep from "@/components/application/chat/agent-config-step"
-import ProductsStep from "@/components/application/chat/products-step"
+import ProductsStep, { ProductForm } from "@/components/application/chat/products-step"
 import ReviewStep from "@/components/application/chat/review-step"
 import { useCreateChatAgent } from "@/hooks/use-all-chat-agents"
 import { createPhoneNumberRecord } from "@/actions/agents"
@@ -17,7 +17,24 @@ import { createPhoneNumberRecord } from "@/actions/agents"
 export default function CreateAgentPage() {
   const router = useRouter()
   const [currentStep, setCurrentStep] = useState(1)
-  const [formData, setFormData] = useState({
+  type FormData = {
+    name: string
+    description: string
+    isActive: boolean
+    whatsappBusinessId: string
+    phoneNumberId: string
+    apiKey: string
+    webhookUrl: string
+    type: string
+    welcomeMessage: string
+    fallbackMessage: string
+    maxResponseTime: number
+    knowledgeBaseId: string
+    phoneNumber: string
+    products: ProductForm[]
+  }
+
+  const [formData, setFormData] = useState<FormData>({
     name: "",
     description: "",
     isActive: true,
@@ -31,7 +48,7 @@ export default function CreateAgentPage() {
     maxResponseTime: 30,
     knowledgeBaseId: "",
     phoneNumber: "",
-    products: []
+    products: [] as ProductForm[]
   })
 
   const { mutate: createAgent, isPending, isError, error } = useCreateChatAgent();
