@@ -32,15 +32,29 @@ export const createChatAgent = async (values: any) => {
   const user = await onBoardUser();
   if (!user?.data?.id) throw new Error("User not found");
 
-  // Extraer las credenciales de Twilio del objeto values
-  const { twilioCredentials, ...agentData } = values;
+  // Extraer campos especiales que no van directo al modelo ChatAgent
+  const { twilioCredentials, products = [], ...agentData } = values;
 
-  // Crear el agente de chat
+  // Preparar datos anidados para productos si existen
+  const productsCreateInput = Array.isArray(products)
+    ? products.map((p: any) => ({
+        name: p.name,
+        description: p.description,
+        price: p.price,
+        stock: p.stock,
+        images: p.images,
+        payment_link: p.payment_link,
+        category: p.category,
+      }))
+    : [];
+
   const agent = await db.chatAgent.create({
     data: {
       ...agentData,
       userId: user.data.id,
+      products: productsCreateInput.length > 0 ? { create: productsCreateInput } : undefined,
     },
+    include: { products: true },
   });
 
   return { status: 201, data: agent };

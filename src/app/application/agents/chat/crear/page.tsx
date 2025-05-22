@@ -2,13 +2,14 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { ChevronLeft, ChevronRight, Bot, MessageSquare, Settings, Database, Check } from "lucide-react"
+import { ChevronLeft, ChevronRight, Bot, MessageSquare, Settings, Package, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import Link from "next/link"
 import BasicInfoStep from "@/components/application/chat/basic-info-step"
 import WhatsAppConfigStep from "@/components/application/chat/whatsapp-config-step"
 import AgentConfigStep from "@/components/application/chat/agent-config-step"
+import ProductsStep from "@/components/application/chat/products-step"
 import ReviewStep from "@/components/application/chat/review-step"
 import { useCreateChatAgent } from "@/hooks/use-all-chat-agents"
 import { createPhoneNumberRecord } from "@/actions/agents"
@@ -24,16 +25,18 @@ export default function CreateAgentPage() {
     phoneNumberId: "",
     apiKey: "",
     webhookUrl: "",
+    type: "",
     welcomeMessage: "¡Hola! ¿En qué puedo ayudarte?",
     fallbackMessage: "Lo siento, no entiendo tu mensaje. ¿Podrías reformularlo?",
     maxResponseTime: 30,
     knowledgeBaseId: "",
-    phoneNumber: ""
+    phoneNumber: "",
+    products: []
   })
 
   const { mutate: createAgent, isPending, isError, error } = useCreateChatAgent();
 
-  const totalSteps = 4
+  const totalSteps = 5
 
   const updateFormData = (data: Partial<typeof formData>) => {
     setFormData({ ...formData, ...data })
@@ -62,6 +65,8 @@ export default function CreateAgentPage() {
       case 3:
         return <AgentConfigStep formData={formData} updateFormData={updateFormData} />
       case 4:
+        return <ProductsStep formData={formData} updateFormData={updateFormData} />
+      case 5:
         return <ReviewStep formData={formData} />
       default:
         return null
@@ -115,13 +120,15 @@ export default function CreateAgentPage() {
                   {index + 1 === 1 && <Bot size={18} />}
                   {index + 1 === 2 && <MessageSquare size={18} />}
                   {index + 1 === 3 && <Settings size={18} />}
-                {index + 1 === 4 && <Check size={18} />}
+                  {index + 1 === 4 && <Package size={18} />}
+                  {index + 1 === 5 && <Check size={18} />}
                 </div>
                 <span className="text-xs hidden sm:block">
                   {index + 1 === 1 && "Información Básica"}
                   {index + 1 === 2 && "Config. WhatsApp"}
                   {index + 1 === 3 && "Config. Agente"}
-                  {index + 1 === 4 && "Revisar"}
+                  {index + 1 === 4 && "Productos"}
+                  {index + 1 === 5 && "Revisar"}
                 </span>
               </div>
             ))}
