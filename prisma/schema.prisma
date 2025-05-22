@@ -1,0 +1,364 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  AUDIO
+  VIDEO
+  DOCUMENT
+  LOCATION
+  CONTACTS
+  BUTTON
+  INTERACTIVE
+}
+
+enum TYPE_AGENT {
+  outbound
+  inbound
+  widget
+}
+
+model User {
+  id                   String          @id @default(uuid()) @db.Uuid
+  clerkId              String          @unique
+  email                String          @unique
+  name                 String?
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @default(now())
+  amountCredits        Int
+  totalConversations   Int             @default(0)
+  totalAverageDuration Int             @default(0)
+  totalCost            Int             @default(0)
+  initialAmountCredits Int             @default(1000)
+  subscriptions        Subscription[]
+  transactions         Transaction[]
+  agents               Agent[]
+  knowledgeBases       knowledgeBase[]
+  leads                Lead[]
+  tags                 Tag[]
+  stages               Stage[]
+  workflows            Workflow[]
+  chatAgents           ChatAgent[]
+}
+
+model Contact {
+  id          String     @id @default(uuid()) @db.Uuid
+  waId        String     @unique
+  name        String?
+  phoneNumber String
+  company     String?
+  email       String?
+  lastSeen    DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  messages    Message[]
+  tags        Tag[]
+  stageId     String?
+  stageUserId String?    @db.Uuid
+  stage       Stage?     @relation(fields: [stageId, stageUserId], references: [id, userId])
+  notes       String?
+  chatAgentId String?    @db.Uuid
+  chatAgent   ChatAgent? @relation(fields: [chatAgentId], references: [id])
+
+  @@index([phoneNumber])
+  @@index([stageId, stageUserId])
+  @@index([chatAgentId])
+}
+
+model Message {
+  id          String      @id @default(uuid()) @db.Uuid
+  waId        String      @unique
+  from        String
+  to          String
+  timestamp   DateTime
+  type        MessageType
+  textBody    String?
+  metadata    Json?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  contactId   String      @db.Uuid
+  contact     Contact     @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  chatAgentId String?     @db.Uuid
+  chatAgent   ChatAgent?  @relation(fields: [chatAgentId], references: [id])
+
+  @@index([from])
+  @@index([timestamp])
+  @@index([contactId])
+  @@index([chatAgentId])
+}
+
+model AgentPhoneNumber {
+  id                  String @id @default(uuid()) @db.Uuid
+  twilio_account_sid  String
+  twilio_auth_token   String
+  twilio_phone_number String
+  agentId             String @unique @db.Uuid
+  agent               Agent  @relation(fields: [agentId], references: [id], onDelete: Cascade)
+}
+
+
+model Agent {
+  id                 String            @id @default(uuid()) @db.Uuid
+  idElevenLabs       String?           @unique
+  userId             String            @db.Uuid
+  language           String
+  phoneNumber        String?           @unique
+  name               String
+  type               TYPE_AGENT
+  activated          Boolean
+  isWidget           Boolean
+  prompt             String
+  first_message      String            @default("")
+  voice_id           String            @default("")
+  conversations      Int               @default(0)
+  averageDurarion    Int               @default(0)
+  addedKnowledgeBase Boolean           @default(false)
+  widgetId           String?           @db.Uuid
+  knowledgeBaseId    String?           @db.Uuid
+  companyName        String? // Nombre de la empresa
+  companyLogo        String? // URL del logo de la empresa
+  companyWebsite     String? // Sitio web de la empresa
+  user               User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  widgets            Widget[]
+  knowledgeBase      knowledgeBase?    @relation(fields: [knowledgeBaseId], references: [id])
+  phoneNumberDetails AgentPhoneNumber?
+
+  @@index([companyName])
+}
+
+model knowledgeBase {
+  id           String      @id @default(uuid()) @db.Uuid
+  idElevenlabs String?     @unique
+  name         String
+  userId       String      @db.Uuid
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  agents       Agent[]
+  chatAgents   ChatAgent[]
+}
+
+model Widget {
+  id               String     @id @default(uuid()) @db.Uuid
+  shape            String
+  action_text      String     @default("¿Need help?")
+  bg_color         String     @default("#ffffff")
+  border_color     String     @default("#dedede")
+  border_radius    Int        @default(23)
+  btn_color        String     @default("#000000")
+  btn_radius       Int        @default(16)
+  btn_text_color   String     @default("#ffffff")
+  end_call_text    String     @default("Finish")
+  focus_color      String     @default("#000000")
+  gradient_color_1 String     @default("")
+  gradient_color_2 String     @default("#ffffff")
+  start_call_text  String     @default("Start call")
+  text_color       String     @default("#000000")
+  listening_text   String     @default("Listening")
+  agentId          String     @db.Uuid
+  agent            Agent      @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  speaking_text    String     @default("Speaking")
+  questions        Question[]
+}
+
+model Subscription {
+  id                 String  @id @default(uuid()) @db.Uuid
+  planId             String  @db.Uuid
+  status             String
+  userId             String  @db.Uuid
+  lemonSqueezyId     String  @unique
+  email              String
+  endsAt             String?
+  isPaused           Boolean @default(false)
+  isUsageBased       Boolean @default(false)
+  name               String
+  orderId            Int
+  price              String
+  renewsAt           String?
+  statusFormatted    String
+  subscriptionItemId String? @default(uuid())
+  trialEndsAt        String?
+  plan               Plan    @relation(fields: [planId], references: [id])
+  user               User    @relation(fields: [userId], references: [id])
+}
+
+model Plan {
+  id                 String         @id @default(uuid()) @db.Uuid
+  name               String
+  price              String
+  interval           String?
+  description        String?
+  intervalCount      Int?
+  isUsageBased       Boolean        @default(false)
+  productId          Int
+  productName        String?
+  sort               Int?
+  trialInterval      String?
+  trialIntervalCount Int?
+  variantId          Int            @unique
+  subscriptions      Subscription[]
+}
+
+model Transaction {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  amount    Float
+  type      String
+  status    String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Question {
+  id       String   @id @default(uuid()) @db.Uuid
+  text     String
+  widgetId String   @db.Uuid
+  answers  Answer[]
+  widget   Widget   @relation(fields: [widgetId], references: [id], onDelete: Cascade)
+}
+
+model Answer {
+  id         String   @id @default(uuid())
+  questionId String   @db.Uuid
+  response   String
+  createdAt  DateTime @default(now())
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+}
+
+model Lead {
+  id          String     @id @default(uuid())
+  name        String
+  company     String
+  email       String
+  phone       String
+  status      String?
+  stageId     String
+  tags        String[]
+  lastContact String
+  notes       String?
+  value       Float?
+  userId      String     @db.Uuid
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stage       Stage      @relation(fields: [stageId, userId], references: [id, userId])
+  chatAgentId String?    @db.Uuid
+  chatAgent   ChatAgent? @relation(fields: [chatAgentId], references: [id])
+
+  @@index([stageId, userId])
+  @@index([chatAgentId])
+}
+
+model Tag {
+  id         String      @id @default(uuid()) @db.Uuid
+  name       String
+  color      String
+  userId     String      @db.Uuid
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contacts   Contact[]
+  chatAgents ChatAgent[]
+
+  @@unique([name, userId])
+}
+
+model Stage {
+  id         String
+  name       String
+  color      String
+  leads      Lead[]
+  contacts   Contact[]
+  chatAgents ChatAgent[]
+  userId     String      @db.Uuid
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([id, userId])
+  @@unique([name, userId])
+}
+
+model Workflow {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  nodes       Json // Store nodes as JSON
+  edges       Json // Store edges as JSON
+  userId      String   @db.Uuid
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Template {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  thumbnail   String?
+  nodes       Json
+  edges       Json
+  createdAt   DateTime @default(now())
+}
+
+enum TYPE_CHAT_AGENT {
+  SALES
+}
+
+model ChatAgent {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // WhatsApp configuration
+  phoneNumber        String
+  whatsappBusinessId String?
+  apiKey             String?
+  webhookUrl         String?
+  phoneNumberId      String? @default(uuid())
+
+  // Agent configuration
+  welcomeMessage  String @default("¡Hola! ¿En qué puedo ayudarte?")
+  fallbackMessage String @default("Lo siento, no entiendo tu mensaje. ¿Podrías reformularlo?")
+  maxResponseTime Int    @default(30) // in seconds
+  type            TYPE_CHAT_AGENT @default(SALES)
+
+  // Statistics
+  totalMessages       Int @default(0)
+  activeChats         Int @default(0)
+  averageResponseTime Int @default(0)
+
+  // Relationships
+  userId             String                @db.Uuid
+  user               User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  knowledgeBaseId    String?               @db.Uuid
+  knowledgeBase      knowledgeBase?        @relation(fields: [knowledgeBaseId], references: [id])
+  contacts           Contact[]
+  messages           Message[]
+  tags               Tag[]
+  stageId            String?
+  stageUserId        String?               @db.Uuid
+  stage              Stage?                @relation(fields: [stageId, stageUserId], references: [id, userId])
+  leads              Lead[]
+  products           Product[]
+
+  @@index([userId])
+  @@index([stageId, stageUserId])
+}
+
+model Product {
+  id           String    @id @default(uuid()) @db.Uuid
+  name         String
+  description  String?
+  price        Float
+  stock        Int       @default(0)
+  images       Json // Objeto de links de imágenes
+  payment_link String
+  category     String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  chatAgentId  String    @db.Uuid
+  chatAgent    ChatAgent @relation(fields: [chatAgentId], references: [id], onDelete: Cascade)
+}
