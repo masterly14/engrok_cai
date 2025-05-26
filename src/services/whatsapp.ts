@@ -32,12 +32,6 @@ export class WhatsAppService {
       phoneNumberId: this.phoneNumberId,
       baseUrl: this.baseUrl,
     });
-
-    if (!this.token || !this.phoneNumberId) {
-      console.warn(
-        "WhatsApp Api: Credentials are missing in environment variables"
-      );
-    }
   }
 
   async updateConfiguration(agentId: string): Promise<void> {

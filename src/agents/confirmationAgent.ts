@@ -10,14 +10,11 @@ export interface PaymentConfirmEvent {
   status: OrderStatus;
 }
 
-/**
- * ConfirmationAgent
- * Gestiona confirmaciones de pago y envía notificaciones al cliente.
- */
 export class ConfirmationAgent {
   private sessionManager = new UserSessionManager();
   private followUpAgent = new FollowUpAgent();
 
+  
   async handle(event: PaymentConfirmEvent): Promise<void> {
     const { orderId, status } = event;
 
