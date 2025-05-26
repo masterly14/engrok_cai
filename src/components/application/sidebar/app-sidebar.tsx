@@ -18,7 +18,6 @@ export async function AppSidebar({
   ...props
 }: React.ComponentProps<typeof Sidebar>) {
   const user = await onBoardUser();
-  console.log('Usuario: ', user)
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>

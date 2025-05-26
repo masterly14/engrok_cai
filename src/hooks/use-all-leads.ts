@@ -2,7 +2,7 @@
 import { getAllLeads } from "@/actions/crm";
 import { useQuery } from "@tanstack/react-query";
 
-export function useAllLeads() {
+export function useAllLeads(enabled: boolean = false) {
   const {
     data,
     isLoading,
@@ -14,8 +14,9 @@ export function useAllLeads() {
       const response = await getAllLeads();
       return response;
     },
-    staleTime: 1000 * 60 * 30,
-    gcTime: 1000 * 60 * 30,
+    enabled,
+    staleTime: 1000 * 60 * 30, // 30 minutos
+    gcTime: 1000 * 60 * 60, // 1 hora
     refetchOnWindowFocus: false,
     refetchOnMount: false
   });

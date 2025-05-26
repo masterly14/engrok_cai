@@ -2,58 +2,48 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { ChevronLeft, ChevronRight, Bot, MessageSquare, Settings, Package, Check } from "lucide-react"
+import { ChevronLeft, ChevronRight, Bot, Settings } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import Link from "next/link"
 import BasicInfoStep from "@/components/application/chat/basic-info-step"
 import WhatsAppConfigStep from "@/components/application/chat/whatsapp-config-step"
 import AgentConfigStep from "@/components/application/chat/agent-config-step"
-import ProductsStep, { ProductForm } from "@/components/application/chat/products-step"
-import ReviewStep from "@/components/application/chat/review-step"
+import type { ProductForm } from "@/components/application/chat/products-step"
 import { useCreateChatAgent } from "@/hooks/use-all-chat-agents"
-import { createPhoneNumberRecord } from "@/actions/agents"
 
 export default function CreateAgentPage() {
   const router = useRouter()
   const [currentStep, setCurrentStep] = useState(1)
   type FormData = {
     name: string
-    description: string
     isActive: boolean
     whatsappBusinessId: string
     phoneNumberId: string
     apiKey: string
-    webhookUrl: string
     type: string
-    welcomeMessage: string
-    fallbackMessage: string
-    maxResponseTime: number
-    knowledgeBaseId: string
+    wompiEventsKey: string
+    wompiPrivateKey: string
     phoneNumber: string
     products: ProductForm[]
   }
 
   const [formData, setFormData] = useState<FormData>({
     name: "",
-    description: "",
     isActive: true,
     whatsappBusinessId: "",
     phoneNumberId: "",
     apiKey: "",
-    webhookUrl: "",
     type: "",
-    welcomeMessage: "¡Hola! ¿En qué puedo ayudarte?",
-    fallbackMessage: "Lo siento, no entiendo tu mensaje. ¿Podrías reformularlo?",
-    maxResponseTime: 30,
-    knowledgeBaseId: "",
+    wompiEventsKey: "",
+    wompiPrivateKey: "",
     phoneNumber: "",
     products: [] as ProductForm[]
   })
 
-  const { mutate: createAgent, isPending, isError, error } = useCreateChatAgent();
+  const { mutate: createAgent, isPending, isError } = useCreateChatAgent();
 
-  const totalSteps = 5
+  const totalSteps = 2
 
   const updateFormData = (data: Partial<typeof formData>) => {
     setFormData({ ...formData, ...data })
@@ -76,15 +66,13 @@ export default function CreateAgentPage() {
   const renderStep = () => {
     switch (currentStep) {
       case 1:
-        return <BasicInfoStep formData={formData} updateFormData={updateFormData} />
+        return (
+          <>
+            <BasicInfoStep formData={formData} updateFormData={updateFormData} />
+          </>
+        )
       case 2:
         return <WhatsAppConfigStep formData={formData} updateFormData={updateFormData} />
-      case 3:
-        return <AgentConfigStep formData={formData} updateFormData={updateFormData} />
-      case 4:
-        return <ProductsStep formData={formData} updateFormData={updateFormData} />
-      case 5:
-        return <ReviewStep formData={formData} />
       default:
         return null
     }
@@ -92,12 +80,8 @@ export default function CreateAgentPage() {
 
   const handleSubmit = async () => {
     // Normaliza los campos UUID vacíos a null
-    const dataToSend = {
-      ...formData,
-      knowledgeBaseId: formData.knowledgeBaseId === "" ? null : formData.knowledgeBaseId,
-    };
 
-    createAgent(dataToSend, {
+    createAgent(formData, {
       onSuccess: async (response) => {
         router.push("/application/agents/chat");
       },
@@ -135,17 +119,11 @@ export default function CreateAgentPage() {
                   }`}
                 >
                   {index + 1 === 1 && <Bot size={18} />}
-                  {index + 1 === 2 && <MessageSquare size={18} />}
-                  {index + 1 === 3 && <Settings size={18} />}
-                  {index + 1 === 4 && <Package size={18} />}
-                  {index + 1 === 5 && <Check size={18} />}
+                  {index + 1 === 2 && <Settings size={18} />}
                 </div>
                 <span className="text-xs hidden sm:block">
-                  {index + 1 === 1 && "Información Básica"}
-                  {index + 1 === 2 && "Config. WhatsApp"}
-                  {index + 1 === 3 && "Config. Agente"}
-                  {index + 1 === 4 && "Productos"}
-                  {index + 1 === 5 && "Revisar"}
+                  {index + 1 === 1 && "Config. Básica"}
+                  {index + 1 === 2 && "Config. Técnica"}
                 </span>
               </div>
             ))}

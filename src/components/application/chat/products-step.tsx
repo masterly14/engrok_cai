@@ -1,11 +1,18 @@
 "use client"
 
-import React, { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   Package,
   PlusCircle,
   Trash2,
-  Image as ImageIcon,
+  ImageIcon,
+  DollarSign,
+  Hash,
+  Tag,
+  FileText,
+  Link,
+  Sparkles,
+  Building2,
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -23,9 +30,10 @@ export type ProductForm = {
   price: number
   stock: number
   images: string[]
-  payment_link: string
   category: string
 }
+
+
 
 interface ProductsStepProps {
   formData: {
@@ -35,7 +43,29 @@ interface ProductsStepProps {
 }
 
 export default function ProductsStep({ formData, updateFormData }: ProductsStepProps) {
-  const [localProducts, setLocalProducts] = useState<ProductForm[]>(formData.products || [])
+  const [localProducts, setLocalProducts] = useState<ProductForm[]>(() => {
+    // Si no hay productos, crear uno por defecto
+    if (!formData.products || formData.products.length === 0) {
+      const defaultProduct: ProductForm = {
+        id: crypto.randomUUID(),
+        name: "",
+        description: "",
+        price: 0,
+        stock: 0,
+        images: [],
+        category: "",
+      }
+      return [defaultProduct]
+    }
+    return formData.products
+  })
+
+  // Sincronizar el estado local con formData cuando se inicializa
+  useEffect(() => {
+    if (localProducts.length > 0 && (!formData.products || formData.products.length === 0)) {
+      updateFormData({ products: localProducts })
+    }
+  }, [])
 
   // Añade un nuevo producto vacío
   const addProduct = () => {
@@ -46,7 +76,6 @@ export default function ProductsStep({ formData, updateFormData }: ProductsStepP
       price: 0,
       stock: 0,
       images: [],
-      payment_link: "",
       category: "",
     }
     const updated = [...localProducts, newProduct]
@@ -67,6 +96,7 @@ export default function ProductsStep({ formData, updateFormData }: ProductsStepP
     setLocalProducts(updated)
     updateFormData({ products: updated })
   }
+
 
   // Sube la imagen a la API que integra Cloudinary y guarda la URL resultante
   const handleImageUpload = async (id: string, files: FileList | null) => {
@@ -96,127 +126,237 @@ export default function ProductsStep({ formData, updateFormData }: ProductsStepP
     }
   }
 
+  const getCompletionPercentage = (product: ProductForm) => {
+    const fields = [product.name, product.description, product.category]
+    const filledFields = fields.filter((field) => field && field.trim() !== "").length
+    const hasPrice = product.price > 0
+    const hasStock = product.stock >= 0
+    const hasImages = product.images.length > 0
+
+    const totalChecks = fields.length + 3 // 4 text fields + price + stock + images
+    const completedChecks = filledFields + (hasPrice ? 1 : 0) + (hasStock ? 1 : 0) + (hasImages ? 1 : 0)
+
+    return Math.round((completedChecks / totalChecks) * 100)
+  }
+
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-2 text-primary mb-4">
-        <Package size={24} />
-        <h2 className="text-xl font-semibold">Productos</h2>
+    <div className="space-y-8 max-w-4xl mx-auto">
+      {/* Header con animación */}
+      <div className="text-center space-y-4">
+        <div className="flex items-center justify-center gap-3 text-primary">
+          <div className="p-3 bg-primary/10 rounded-full">
+            <Building2 size={28} className="text-primary" />
+          </div>
+          <h2 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+            Tu Negocio y Productos
+          </h2>
+          <Sparkles size={24} className="text-primary animate-pulse" />
+        </div>
+        <p className="text-muted-foreground text-lg">
+          Configura la información de tu negocio y añade tus productos increíbles
+        </p>
       </div>
 
-      <div className="space-y-4">
-        {localProducts.map((product, idx) => (
-          <Card key={product.id} className="border-muted-foreground/20">
-            <CardContent className="pt-6 space-y-4">
-              <div className="flex justify-between items-start">
-                <h3 className="font-medium">Producto {idx + 1}</h3>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => removeProduct(product.id)}
-                >
-                  <Trash2 size={16} />
-                </Button>
-              </div>
+      {/* Sección de Productos */}
+      <div className="space-y-6">
+        <div className="flex items-center gap-2 text-primary">
+          <Package size={24} />
+          <h3 className="text-2xl font-semibold">
+            Productos{" "}
+            {localProducts.length > 0 && (
+              <span className="text-lg text-muted-foreground">({localProducts.length})</span>
+            )}
+          </h3>
+        </div>
 
-              {/* Campos del producto */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Nombre</Label>
-                  <Input
-                    value={product.name}
-                    onChange={(e) => handleChange(product.id, "name", e.target.value)}
-                    placeholder="Nombre del producto"
-                  />
+        {localProducts.map((product, idx) => {
+          const completion = getCompletionPercentage(product)
+          return (
+            <Card
+              key={product.id}
+              className="border-2 border-muted-foreground/10 hover:border-primary/20 transition-all duration-300 hover:shadow-lg bg-gradient-to-br from-background to-muted/20"
+            >
+              <CardContent className="pt-6 space-y-6">
+                {/* Header del producto con progreso */}
+                <div className="flex justify-between items-start">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center text-primary font-bold text-sm">
+                        {idx + 1}
+                      </div>
+                      <h4 className="font-semibold text-lg">{product.name || `Producto ${idx + 1}`}</h4>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-32 h-2 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-primary to-primary/60 transition-all duration-500 ease-out"
+                          style={{ width: `${completion}%` }}
+                        />
+                      </div>
+                      <span className="text-xs text-muted-foreground font-medium">{completion}% completo</span>
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => removeProduct(product.id)}
+                    className="hover:bg-destructive/10 hover:text-destructive transition-colors"
+                  >
+                    <Trash2 size={16} />
+                  </Button>
                 </div>
 
-                <div className="space-y-2">
-                  <Label>Precio</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    value={product.price}
-                    onChange={(e) => handleChange(product.id, "price", parseFloat(e.target.value))}
-                    placeholder="0.00"
-                  />
+                {/* Campos principales en grid mejorado */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Nombre */}
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2 text-sm font-medium">
+                      <Tag size={16} className="text-primary" />
+                      Nombre del producto
+                    </Label>
+                    <Input
+                      value={product.name}
+                      onChange={(e) => handleChange(product.id, "name", e.target.value)}
+                      placeholder="Ej: iPhone 15 Pro Max"
+                      className="border-2 focus:border-primary transition-colors"
+                    />
+                  </div>
+
+                  {/* Precio */}
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2 text-sm font-medium">
+                      <DollarSign size={16} className="text-green-600" />
+                      Precio
+                    </Label>
+                    <div className="relative">
+                      <DollarSign
+                        size={16}
+                        className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground"
+                      />
+                      <Input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        value={product.price}
+                        onChange={(e) => handleChange(product.id, "price", Number.parseFloat(e.target.value))}
+                        placeholder="0.00"
+                        className="pl-10 border-2 focus:border-green-500 transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Stock */}
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2 text-sm font-medium">
+                      <Hash size={16} className="text-blue-600" />
+                      Stock disponible
+                    </Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={product.stock}
+                      onChange={(e) => handleChange(product.id, "stock", Number.parseInt(e.target.value || "0"))}
+                      placeholder="Ej: 50"
+                      className="border-2 focus:border-blue-500 transition-colors"
+                    />
+                  </div>
+
+                  {/* Categoría */}
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2 text-sm font-medium">
+                      <Package size={16} className="text-purple-600" />
+                      Categoría
+                    </Label>
+                    <Input
+                      value={product.category}
+                      onChange={(e) => handleChange(product.id, "category", e.target.value)}
+                      placeholder="Ej: Electrónica, Ropa, Hogar"
+                      className="border-2 focus:border-purple-500 transition-colors"
+                    />
+                  </div>
                 </div>
 
+                {/* Descripción */}
                 <div className="space-y-2">
-                  <Label>Stock</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    value={product.stock}
-                    onChange={(e) => handleChange(product.id, "stock", parseInt(e.target.value || "0"))}
-                    placeholder="0"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Categoría</Label>
-                  <Input
-                    value={product.category}
-                    onChange={(e) => handleChange(product.id, "category", e.target.value)}
-                    placeholder="Ej: Electrónica"
-                  />
-                </div>
-
-                <div className="col-span-full space-y-2">
-                  <Label>Descripción</Label>
+                  <Label className="flex items-center gap-2 text-sm font-medium">
+                    <FileText size={16} className="text-orange-600" />
+                    Descripción
+                  </Label>
                   <Textarea
                     value={product.description}
                     onChange={(e) => handleChange(product.id, "description", e.target.value)}
-                    placeholder="Descripción detallada del producto"
-                    className="min-h-[80px]"
+                    placeholder="Describe tu producto de manera atractiva. ¿Qué lo hace especial?"
+                    className="min-h-[100px] border-2 focus:border-orange-500 transition-colors resize-none"
                   />
                 </div>
-              </div>
 
-              {/* Imágenes */}
-              <div className="space-y-2">
-                <Label>Imágenes</Label>
-                <div className="flex flex-wrap gap-4 items-center">
-                  {product.images.map((src, i) => (
-                    <Image
-                      key={i}
-                      src={src}
-                      alt={`Imagen ${i + 1}`}
-                      width={80}
-                      height={80}
-                      className="rounded-md object-cover border"
-                    />
-                  ))}
+                {/* Sección de imágenes mejorada */}
+                <div className="space-y-3">
+                  <Label className="flex items-center gap-2 text-sm font-medium">
+                    <ImageIcon size={16} className="text-pink-600" />
+                    Imágenes del producto
+                  </Label>
+                  <div className="border-2 border-dashed border-muted-foreground/20 rounded-lg p-6 bg-muted/10">
+                    <div className="flex flex-wrap gap-4 items-center justify-center">
+                      {product.images.map((src, i) => (
+                        <div key={i} className="relative group">
+                          <Image
+                            src={src || "/placeholder.svg"}
+                            alt={`Imagen ${i + 1}`}
+                            width={100}
+                            height={100}
+                            className="rounded-lg object-cover border-2 border-muted shadow-md group-hover:shadow-lg transition-shadow"
+                          />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 rounded-lg transition-colors" />
+                        </div>
+                      ))}
 
-                  <Button asChild variant="secondary" size="sm" className="gap-1">
-                    <label className="flex items-center cursor-pointer">
-                      <ImageIcon size={16} /> Subir
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => handleImageUpload(product.id, e.target.files)}
-                      />
-                    </label>
-                  </Button>
+                      <Button
+                        asChild
+                        variant="outline"
+                        size="lg"
+                        className="border-2 border-dashed border-primary/50 hover:border-primary hover:bg-primary/5 transition-all min-h-[100px] min-w-[100px] flex-col gap-2"
+                      >
+                        <label className="cursor-pointer">
+                          <ImageIcon size={24} className="text-primary" />
+                          <span className="text-xs font-medium">Subir imagen</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => handleImageUpload(product.id, e.target.files)}
+                          />
+                        </label>
+                      </Button>
+                    </div>
+                    {product.images.length === 0 && (
+                      <p className="text-center text-muted-foreground text-sm mt-2">
+                        Las imágenes ayudan a vender más. ¡Sube al menos una!
+                      </p>
+                    )}
+                  </div>
                 </div>
-              </div>
+              </CardContent>
+            </Card>
+          )
+        })}
 
-              <div className="space-y-2">
-                <Label>Link de pago</Label>
-                <Input
-                  value={product.payment_link}
-                  onChange={(e) => handleChange(product.id, "payment_link", e.target.value)}
-                  placeholder="https://mi-tienda.com/checkout/123"
-                />
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-
-        <Button variant="outline" className="flex items-center gap-2" onClick={addProduct}>
-          <PlusCircle size={16} /> Añadir producto
-        </Button>
+        {/* Botón para agregar producto */}
+        <div className="flex justify-center">
+          <Button
+            variant="outline"
+            size="lg"
+            className="flex items-center gap-3 border-2 border-dashed border-primary/50 hover:border-primary hover:bg-primary/5 transition-all py-6 px-8 text-lg font-medium"
+            onClick={addProduct}
+          >
+            <div className="p-2 bg-primary/10 rounded-full">
+              <PlusCircle size={20} className="text-primary" />
+            </div>
+            {localProducts.length === 0 ? "Crear mi primer producto" : "Añadir otro producto"}
+          </Button>
+        </div>
       </div>
     </div>
   )
-} 
+}

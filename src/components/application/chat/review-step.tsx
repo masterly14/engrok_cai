@@ -18,13 +18,11 @@ import {
 interface ReviewStepProps {
   formData: {
     name: string
-    description: string
     phoneNumber: string
     isActive: boolean
     whatsappBusinessId: string
     phoneNumberId: string
     apiKey: string
-    webhookUrl: string
     welcomeMessage: string
     fallbackMessage: string
     maxResponseTime: number
@@ -80,7 +78,6 @@ export default function ReviewStep({ formData }: ReviewStepProps) {
 
       {renderSection("Información Básica", <Bot size={20} />, [
         { label: "Nombre", value: formData.name, icon: <Bot size={16} /> },
-        { label: "Descripción", value: formData.description || "", icon: <Info size={16} /> },
         { label: "Activo", value: formData.isActive, icon: <ToggleLeft size={16} /> },
         { label: "Número de Teléfono", value: formData.phoneNumber || "", icon: <Phone size={16} /> },
       ])}
@@ -89,7 +86,6 @@ export default function ReviewStep({ formData }: ReviewStepProps) {
         { label: "ID de WhatsApp Business", value: formData.whatsappBusinessId || "", icon: <Hash size={16} /> },
         { label: "ID de WhatsApp Phone Number", value: formData.phoneNumberId || "", icon: <Hash size={16} /> },
         { label: "Clave API", value: formData.apiKey ? "••••••••" : "", icon: <Key size={16} /> },
-        { label: "URL del Webhook", value: formData.webhookUrl || "", icon: <Globe size={16} /> },
       ])}
 
       {renderSection("Configuración del Agente", <Settings size={20} />, [

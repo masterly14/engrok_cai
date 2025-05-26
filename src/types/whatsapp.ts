@@ -218,3 +218,14 @@ export type WhatsAppMessage = {
       id: string;
     }>;
   };
+
+  export interface WhatsAppImageMessage {
+    messaging_product: "whatsapp";
+    to: string;
+    type: "image";
+    image: {
+      link: string;
+      caption?: string;
+    };
+  }
+  

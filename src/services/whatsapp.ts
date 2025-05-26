@@ -3,6 +3,7 @@ import {
   WhatsAppTemplateMessage,
   WhatsAppInteractiveMessage,
   WhatsAppSendMessageResponse,
+  WhatsAppImageMessage,
 } from "@/types/whatsapp";
 import { db } from "@/utils";
 import { agents } from "elevenlabs/api/resources/conversationalAi";
@@ -13,18 +14,23 @@ export class WhatsAppService {
   private apiVersion: string;
   private baseUrl: string;
   private phoneNumber: any;
+  private bussinessInfo: any;
 
   constructor() {
     this.token = process.env.NEXT_PUBLIC_WHATSAPP_TOKEN || "";
     this.phoneNumberId = process.env.NEXT_PUBLIC_WHATSAPP_PHONE_NUMBER_ID || "";
     this.apiVersion = "v18.0";
     this.baseUrl = `https://graph.facebook.com/${this.apiVersion}/${this.phoneNumberId}`;
-    this.phoneNumber = "15550690050"
-
+    this.phoneNumber = "15550690050";
+    this.bussinessInfo = {
+      name: "Bussiness Name",
+      description: "Bussiness Description",
+    };
+    
     console.log(`[WhatsAppService] Inicializando servicio con:`, {
       hasToken: !!this.token,
       phoneNumberId: this.phoneNumberId,
-      baseUrl: this.baseUrl
+      baseUrl: this.baseUrl,
     });
 
     if (!this.token || !this.phoneNumberId) {
@@ -36,16 +42,18 @@ export class WhatsAppService {
 
   async updateConfiguration(agentId: string): Promise<void> {
     try {
-      console.log(`[WhatsAppService.updateConfiguration] Actualizando configuración para agente: ${agentId}`);
-      
+      console.log(
+        `[WhatsAppService.updateConfiguration] Actualizando configuración para agente: ${agentId}`
+      );
+
       const agent = await db.chatAgent.findUnique({
         where: { id: agentId },
         select: {
           apiKey: true,
           whatsappBusinessId: true,
           phoneNumber: true,
-          phoneNumberId: true
-        }
+          phoneNumberId: true,
+        },
       });
 
       if (!agent) {
@@ -53,7 +61,9 @@ export class WhatsAppService {
       }
 
       if (!agent.apiKey || !agent.whatsappBusinessId || !agent.phoneNumber) {
-        throw new Error('El agente no tiene configuradas todas las credenciales necesarias');
+        throw new Error(
+          "El agente no tiene configuradas todas las credenciales necesarias"
+        );
       }
 
       this.token = agent.apiKey || "";
@@ -61,14 +71,20 @@ export class WhatsAppService {
       this.phoneNumber = agent.phoneNumber || "";
       this.baseUrl = `https://graph.facebook.com/${this.apiVersion}/${this.phoneNumberId}`;
 
-      console.log(`[WhatsAppService.updateConfiguration] Configuración actualizada:`, {
-        hasToken: !!this.token,
-        phoneNumberId: this.phoneNumberId,
-        phoneNumber: this.phoneNumber,
-        baseUrl: this.baseUrl
-      });
+      console.log(
+        `[WhatsAppService.updateConfiguration] Configuración actualizada:`,
+        {
+          hasToken: !!this.token,
+          phoneNumberId: this.phoneNumberId,
+          phoneNumber: this.phoneNumber,
+          baseUrl: this.baseUrl,
+        }
+      );
     } catch (error) {
-      console.error('[WhatsAppService.updateConfiguration] Error al actualizar la configuración:', error);
+      console.error(
+        "[WhatsAppService.updateConfiguration] Error al actualizar la configuración:",
+        error
+      );
       throw error;
     }
   }
@@ -91,31 +107,58 @@ export class WhatsAppService {
     return this.sendMessage(data);
   }
 
+  async sendImageMessage(
+    to: string,
+    imageUrl: string,
+    caption?: string
+  ): Promise<WhatsAppSendMessageResponse> {
+    const data = {
+      messaging_product: "whatsapp" as const,
+      to,
+      type: "image" as const,
+      image: {
+        link: imageUrl,
+        ...(caption ? { caption } : {}),
+      },
+    };
+
+    return this.sendMessage(data);
+  }
+
   async sendMessage(
     data:
       | WhatsAppTextMessage
       | WhatsAppTemplateMessage
       | WhatsAppInteractiveMessage
+      | WhatsAppImageMessage
   ): Promise<WhatsAppSendMessageResponse> {
     try {
       console.log(`[WhatsAppService.sendMessage] Iniciando envío de mensaje:`, {
         to: data.to,
         type: data.type,
-        phoneNumberId: this.phoneNumberId
+        phoneNumberId: this.phoneNumberId,
       });
 
       if (!this.token || !this.phoneNumberId) {
-        console.error(`[WhatsAppService.sendMessage] Error: Credenciales faltantes`, {
-          hasToken: !!this.token,
-          hasPhoneNumberId: !!this.phoneNumberId
-        });
+        console.error(
+          `[WhatsAppService.sendMessage] Error: Credenciales faltantes`,
+          {
+            hasToken: !!this.token,
+            hasPhoneNumberId: !!this.phoneNumberId,
+          }
+        );
         throw new Error("Missing WhatsApp credentials");
       }
 
       // Buscar o crear el contacto
-      console.log(`[WhatsAppService.sendMessage] Intentando obtener/crear contacto para: ${data.to}`);
+      console.log(
+        `[WhatsAppService.sendMessage] Intentando obtener/crear contacto para: ${data.to}`
+      );
       const contact = await this.getOrCreateContact(data.to);
-      console.log(`[WhatsAppService.sendMessage] Contacto obtenido/creado:`, contact);
+      console.log(
+        `[WhatsAppService.sendMessage] Contacto obtenido/creado:`,
+        contact
+      );
 
       const response = await fetch(`${this.baseUrl}/messages`, {
         method: "POST",
@@ -128,12 +171,18 @@ export class WhatsAppService {
 
       if (!response.ok) {
         const errorData = await response.json();
-        console.error(`[WhatsAppService.sendMessage] Error en API de WhatsApp:`, errorData);
+        console.error(
+          `[WhatsAppService.sendMessage] Error en API de WhatsApp:`,
+          errorData
+        );
         throw new Error(`WhatsApp API Error: ${JSON.stringify(errorData)}`);
       }
 
       const result: WhatsAppSendMessageResponse = await response.json();
-      console.log(`[WhatsAppService.sendMessage] Mensaje enviado exitosamente:`, result);
+      console.log(
+        `[WhatsAppService.sendMessage] Mensaje enviado exitosamente:`,
+        result
+      );
 
       // Crear el mensaje asociado al contactoY
       const message = await db.message.create({
@@ -144,15 +193,21 @@ export class WhatsAppService {
           timestamp: new Date(),
           type: data.type.toUpperCase() as any,
           textBody: (data.type === "text" && data.text.body) || null,
-          metadata: data,
-          contactId: contact.id, 
+          metadata: JSON.parse(JSON.stringify(data)),
+          contactId: contact.id,
         },
       });
-      console.log(`[WhatsAppService.sendMessage] Mensaje guardado en DB:`, message);
+      console.log(
+        `[WhatsAppService.sendMessage] Mensaje guardado en DB:`,
+        message
+      );
 
       return result;
     } catch (error) {
-      console.error("[WhatsAppService.sendMessage] Error al enviar mensaje de WhatsApp:", error);
+      console.error(
+        "[WhatsAppService.sendMessage] Error al enviar mensaje de WhatsApp:",
+        error
+      );
       throw error;
     }
   }
@@ -160,34 +215,42 @@ export class WhatsAppService {
   private async getOrCreateContact(phoneNumber: string) {
     console.log(`[WhatsAppService] ===== INICIO DE BÚSQUEDA DE CONTACTO =====`);
     console.log(`[WhatsAppService] Número del remitente: ${phoneNumber}`);
-    console.log(`[WhatsAppService] Número de WhatsApp (this.phoneNumberId): ${this.phoneNumberId}`);
+    console.log(
+      `[WhatsAppService] Número de WhatsApp (this.phoneNumberId): ${this.phoneNumberId}`
+    );
     console.log(`[WhatsAppService] Tipo de datos:`, {
       phoneNumberType: typeof phoneNumber,
-      phoneNumberIdType: typeof this.phoneNumberId
+      phoneNumberIdType: typeof this.phoneNumberId,
     });
 
     // Primero buscar el agente por el número de teléfono de Twilio
-    console.log(`[WhatsAppService] Buscando en PhoneNumber con twilio_phone_number: ${this.phoneNumberId}`);
+    console.log(
+      `[WhatsAppService] Buscando en PhoneNumber con twilio_phone_number: ${this.phoneNumberId}`
+    );
     const agent = await db.chatAgent.findFirst({
       where: {
-        phoneNumber: this.phoneNumber
+        phoneNumber: this.phoneNumber,
       },
     });
 
     console.log(`[WhatsAppService] Resultado de búsqueda en PhoneNumber:`, {
       encontrado: !!agent,
-      detalles: agent ? {
-        id: agent.id,
-        twilio_phone_number: agent.phoneNumber,
-        agentId: agent.id,
-      } : null
+      detalles: agent
+        ? {
+            id: agent.id,
+            twilio_phone_number: agent.phoneNumber,
+            agentId: agent.id,
+          }
+        : null,
     });
 
     if (!agent) {
-      console.error(`[WhatsAppService] Error: No se encontró agente para el número de WhatsApp ${this.phoneNumberId}`);
+      console.error(
+        `[WhatsAppService] Error: No se encontró agente para el número de WhatsApp ${this.phoneNumberId}`
+      );
       console.error(`[WhatsAppService] Detalles del error:`, {
         agent: agent,
-        hasAgent: !!agent
+        hasAgent: !!agent,
       });
       throw new Error("Agent not found for this WhatsApp number");
     }
@@ -195,9 +258,9 @@ export class WhatsAppService {
     // Buscar el contacto existente
     console.log(`[WhatsAppService] Buscando contacto existente para:`, {
       phoneNumber,
-      agentId: agent.id
+      agentId: agent.id,
     });
-    
+
     let contact = await db.contact.findFirst({
       where: {
         waId: phoneNumber,
@@ -207,11 +270,13 @@ export class WhatsAppService {
 
     console.log(`[WhatsAppService] Resultado de búsqueda de contacto:`, {
       encontrado: !!contact,
-      detalles: contact ? {
-        id: contact.id,
-        phoneNumber: contact.phoneNumber,
-        agentId: contact.chatAgentId
-      } : null
+      detalles: contact
+        ? {
+            id: contact.id,
+            phoneNumber: contact.phoneNumber,
+            agentId: contact.chatAgentId,
+          }
+        : null,
     });
 
     // Si no existe, buscar solo por waId
@@ -225,23 +290,23 @@ export class WhatsAppService {
     if (!contact) {
       console.log(`[WhatsAppService] Creando nuevo contacto para:`, {
         phoneNumber,
-        agentId: agent.id
+        agentId: agent.id,
       });
-      
+
       const contactData = {
         waId: phoneNumber,
         phoneNumber,
-        chatAgentId: agent.id
+        chatAgentId: agent.id,
       };
-      
+
       contact = await db.contact.create({
         data: contactData,
       });
-      
+
       console.log(`[WhatsAppService] Nuevo contacto creado:`, {
         id: contact.id,
         phoneNumber: contact.phoneNumber,
-        agentId: contact.chatAgentId
+        agentId: contact.chatAgentId,
       });
     }
 

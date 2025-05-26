@@ -13,10 +13,21 @@ export function useAgentConversations(agentId: string | undefined) {
       return getAgentConversations(agentId);
     },
     enabled: !!agentId,
-    staleTime: 1000 * 60 * 5,
-    gcTime: 1000 * 60 * 30,
+    staleTime: 1000 * 60 * 5, // 5 minutos
+    gcTime: 1000 * 60 * 30, // 30 minutos
     refetchOnWindowFocus: false,
     refetchOnMount: false,
+    select: (data) => ({
+      ...data,
+      data: data.data?.map(conv => ({
+        id: conv.id,
+        contact: conv.contact,
+        phoneNumber: conv.phoneNumber,
+        lastMessage: conv.lastMessage,
+        unread: conv.unread,
+        timestamp: conv.timestamp,
+      }))
+    })
   });
 
   return { conversationsData, conversationsLoading, conversationsError };

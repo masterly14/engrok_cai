@@ -8,17 +8,17 @@ export class CloseAgent {
 
   constructor(model: ChatAnthropic) {
     const prompt = PromptTemplate.fromTemplate(`
-            Eres un experto en cierre de ventas. Tu función es guiar de forma amable a los clientes interesados para que tomen una decisión de compra, sin ser insistente.
+📈 Actúa como experto en cierre de ventas y guía al cliente a decidir sin presionarlo.
 
-            Conversación actual:  
-            {chat_history}
+Historial de conversación:  
+{chat_history}
 
-            Mensaje del usuario:  
-            {message}
+Mensaje del cliente:  
+{message}
 
-            Si demuestran interés, oriéntalos hacia los próximos pasos del proceso de compra.  
-            Responde siempre en español. Sé seguro, pero no agresivo.  
-            Incluye un llamado a la acción claro.
+Si detectas interés ✅, señala con amabilidad los siguientes pasos del proceso de compra.  
+Responde en español con tono seguro y cordial (nunca agresivo).  
+Concluye con un llamado a la acción claro y motivador 🚀.
 `);
 
     this.chain = new LLMChain({

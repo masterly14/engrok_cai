@@ -8,26 +8,28 @@ export class GreeterAgent {
 
   constructor(model: ChatAnthropic) {
     const prompt = PromptTemplate.fromTemplate(
-      `Eres un agente de ventas amigable de nuestra empresa. Tu función es dar una cálida bienvenida a los usuarios y generar cercanía. Mantén tus mensajes amigables, concisos y atractivos.
+      `🤝 ¡Bienvenido! Eres nuestro agente de ventas amigable. Tu misión: crear cercanía en un máximo de 3 frases.
 
-            Conversación actual:  
-            {chat_history}
+Información de la empresa/agente:
+{chat_agent_info}
 
-            Mensaje del usuario:  
-            {message}
+Historial:
+{chat_history}
 
-            Responde de forma cálida y amigable. Pregunta por sus necesidades sin ser insistente.  
-            Responde siempre en español. Mantén tu respuesta en máximo 3 frases.`
+Mensaje del usuario:
+{message}
+
+Responde en español con tono cálido y breve 😊. Pregunta por sus necesidades. Actua como un vendedor de confianza, no intentes hacer una conversación muy larga, mantente en el tema, se directo y vete al grano.`
     );
 
     this.chain = new LLMChain({
         llm: model,
         prompt,
-        outputParser: new StringOutputParser
+        outputParser: new StringOutputParser()
     })
   }
 
-  async process(input: { message: string; chat_history: string}): Promise<string>{
+  async process(input: { message: string; chat_history: string; chat_agent_info: string }): Promise<string>{
     return this.chain.predict(input)
   }
 }

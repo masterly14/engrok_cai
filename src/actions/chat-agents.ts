@@ -11,10 +11,10 @@ export const getAllChatAgents = async () => {
     include: {
       tags: true,
       stage: true,
-      knowledgeBase: true,
       _count: {
         select: { messages: true },
       },
+      products: true,
     },
     orderBy: { createdAt: "desc" },
   });
@@ -32,27 +32,44 @@ export const createChatAgent = async (values: any) => {
   const user = await onBoardUser();
   if (!user?.data?.id) throw new Error("User not found");
 
-  // Extraer campos especiales que no van directo al modelo ChatAgent
-  const { twilioCredentials, products = [], ...agentData } = values;
+  // Extract all the fields from the form
+  const {
+    name,
+    isActive,
+    type,
+    whatsappBusinessId,
+    phoneNumberId,
+    apiKey,
+    phoneNumber,
+    wompiEventsKey,
+    wompiPrivateKey,
+    products = []
+  } = values;
 
-  // Preparar datos anidados para productos si existen
-  const productsCreateInput = Array.isArray(products)
-    ? products.map((p: any) => ({
-        name: p.name,
-        description: p.description,
-        price: p.price,
-        stock: p.stock,
-        images: p.images,
-        payment_link: p.payment_link,
-        category: p.category,
-      }))
-    : [];
-
+  // Create the agent with all the required fields
   const agent = await db.chatAgent.create({
     data: {
-      ...agentData,
+      name,
+      isActive,
+      type,
+      whatsappBusinessId,
+      phoneNumberId,
+      apiKey,
+      phoneNumber,
+      wompiEventsKey,
+      wompiPrivateKey,
       userId: user.data.id,
-      products: productsCreateInput.length > 0 ? { create: productsCreateInput } : undefined,
+      products: products.length > 0 ? {
+        create: products.map((p: any) => ({
+          name: p.name,
+          description: p.description,
+          price: p.price,
+          stock: p.stock,
+          images: p.images,
+          payment_link: p.payment_link,
+          category: p.category,
+        }))
+      } : undefined,
     },
     include: { products: true },
   });

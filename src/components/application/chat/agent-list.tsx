@@ -6,7 +6,6 @@ import AgentCard from "./agent-card"
 type ChatAgent = {
   id: string
   name: string
-  description: string | null
   isActive: boolean
   phoneNumber: string
   totalMessages: number
@@ -25,7 +24,7 @@ export default function AgentList({ searchTerm }: AgentListProps) {
 
   // Filtrar agentes según el término de búsqueda
   const filteredAgents = chatAgentsData?.data?.filter((agent) => agent.name.toLowerCase().includes(searchTerm.toLowerCase())) ?? []
-
+  console.log(filteredAgents)
   return (
     <>
       {filteredAgents.length === 0 ? (

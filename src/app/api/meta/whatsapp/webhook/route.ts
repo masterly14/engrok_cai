@@ -2,8 +2,8 @@ import { messageHandler } from "@/handlers/messageHandler";
 import { WhatsAppMessage, WhatsAppWebhookPayload } from "@/types/whatsapp";
 import { NextRequest, NextResponse } from "next/server";
 
-async function handleMessage(message: WhatsAppMessage): Promise<void> {
-  await messageHandler.handleIncomingMessage(message);
+async function handleMessage(message: WhatsAppMessage, AgentNumber: string): Promise<void> {
+  await messageHandler.handleIncomingMessage(message, AgentNumber);
 }
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
         if (change.field === "messages") {
           if (change.value.messages && change.value.messages.length > 0) {
             for (const message of change.value.messages) {
-              await handleMessage(message);
+              await handleMessage(message, change.value.metadata.display_phone_number);
             }
           }
         }

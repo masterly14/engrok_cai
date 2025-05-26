@@ -12,6 +12,8 @@ import { ProductExpertAgent } from "./productExpertAgent";
 import { objectionHandlerAgent } from "./objectionHandlerAgent";
 import { CloseAgent } from "./closeAgent";
 import redisClient from "@/lib/redis";
+import { OrderAgent } from "./orderAgent";
+import { PaymentLinkAgent } from "./paymentLinkAgent";
 
 enum conversationState {
   GREETING = "greeting",
@@ -35,6 +37,8 @@ export class AgentOrchestator {
   private productExpertAgent: ProductExpertAgent;
   private objectionHandlerAgent: objectionHandlerAgent;
   private closerAgent: CloseAgent;
+  private orderAgent: OrderAgent;
+  private paymentLinkAgent: PaymentLinkAgent;
 
   private routerChain: LLMChain;
 
@@ -64,6 +68,9 @@ export class AgentOrchestator {
     );
     this.objectionHandlerAgent = new objectionHandlerAgent(this.model);
     this.closerAgent = new CloseAgent(this.model);
+
+    this.orderAgent = new OrderAgent();
+    this.paymentLinkAgent = new PaymentLinkAgent();
 
     this.routerChain = this.createRouterChain();
   }
@@ -115,7 +122,33 @@ export class AgentOrchestator {
     });
   }
 
-  async routeMessage(message: string, userId: string): Promise<string> {
+  private async extractProductInterest(message: string, chatAgentId: string): Promise<string[]> {
+    // Get relevant products for the message
+    const productInfo = await this.productDb.getRelevanProducts(chatAgentId, message);
+    
+    // Extract product IDs from the product info
+    const productIds: string[] = [];
+    const lines = productInfo.split('\n');
+    let currentProductId: string | null = null;
+    
+    for (const line of lines) {
+      if (line.startsWith('Nombre:')) {
+        // This is a new product, extract its ID from the product info
+        const productName = line.replace('Nombre:', '').trim();
+        const product = await this.productDb.getProductByName(chatAgentId, productName);
+        if (product) {
+          currentProductId = product.id;
+          if (currentProductId) {
+            productIds.push(currentProductId);
+          }
+        }
+      }
+    }
+    
+    return productIds;
+  }
+
+  async routeMessage(message: string, userId: string, chatAgent?: any): Promise<string> {
     try {
       const sessionData = await this.sessionManager.getSessionData(userId);
       console.log(
@@ -154,25 +187,30 @@ export class AgentOrchestator {
 
       console.log("type: MarkerType.ArrowClosed: ", routerResult.agent);
       console.log("Chat history", chatHistory.chat_history);
+      const chat_agent_info = chatAgent
+        ? `Nombre: ${chatAgent.name}\nDescripción: ${chatAgent.description || ""}`
+        : "";
+
       switch (routerResult.agent) {
         case "greeter":
-          response = await this.productExpertAgent.process({
+          response = await this.greeterAgent.process({
             message,
             chat_history: chatHistory.chat_history || "",
+            chat_agent_info,
           });
           break;
         case "product_expert":
           response = await this.productExpertAgent.process({
             message,
             chat_history: chatHistory.chat_history || "",
+            chatAgentId: chatAgent?.id || "",
           });
 
           if (!sessionData.productInterest) {
             sessionData.productInterest = [];
           }
-          sessionData.productInterest.push(
-            this.extractProductInterest(message)
-          );
+          const productIds = await this.extractProductInterest(message, chatAgent?.id || "");
+          sessionData.productInterest.push(...productIds);
           break;
 
         case "objection_handler":
@@ -186,21 +224,23 @@ export class AgentOrchestator {
           }
           break;
         case "closer":
-          response = await this.closerAgent.process({
-            message,
-            chat_history: chatHistory.chat_history || "",
-          });
 
-          if (sessionData.state === conversationState.PAYMENT) {
-            const paymentLink = await this.paymentService.generatePaymentLink(
-              sessionData
-            );
-            response += `\n\nAquí está tu enlace de pago: ${paymentLink}`;
-          }
+
+          // Heurística simple: si el mensaje del usuario indica aceptación de compra
+            // 1. Crear orden
+            const orderId = await this.orderAgent.process(sessionData, chatAgent);
+            // 2. Generar link y enviarlo
+            const paymentLink = await this.paymentLinkAgent.process(orderId);
+
+            
+            sessionData.state = conversationState.PAYMENT;
+            response = paymentLink;
+          break;
         default:
           response = await this.greeterAgent.process({
             message,
             chat_history: chatHistory.chat_history || "",
+            chat_agent_info,
           });
           break;
       }
@@ -215,9 +255,6 @@ export class AgentOrchestator {
     }
   }
 
-  private extractProductInterest(message: string): string {
-    return message;
-  }
   private extractObjection(message: string): string {
     return message;
   }

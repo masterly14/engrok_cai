@@ -31,15 +31,19 @@ export class MessageHandler {
     return response;
   }
 
-  async handleIncomingMessage(message: WhatsAppMessage): Promise<void> {
+  async handleIncomingMessage(message: WhatsAppMessage, AgentNumber: string): Promise<void> {
     console.log("[handleIncomingMessage]: mensaje recibido", message);
     try {
       // Obtener el chatAgent basado en el número de teléfono del agente
-      const chatAgent = await db.chatAgent.findFirst({
+      console.log("El numero de telefono es: ", AgentNumber)
+      console.log('El mensaje recibido es: ', message)
+      const chatAgent = await db.chatAgent.findUnique({
         where: {
-          phoneNumber: message.metadata?.display_phone_number
+          phoneNumber: AgentNumber
         }
       });
+
+      console.log('EL chatAgent es: ', chatAgent)
 
       if (!chatAgent) {
         console.error("[handleIncomingMessage]: No se encontró el agente para el número", message.metadata?.display_phone_number);
@@ -63,7 +67,7 @@ export class MessageHandler {
       switch (message.type) {
         case "text":
           console.log("[handleIncomingMessage]: procesando mensaje de texto");
-          await this.handleTextMessage(message);
+          await this.handleTextMessage(message, chatAgent);
           break;
 
         default:
@@ -75,7 +79,7 @@ export class MessageHandler {
     }
   }
 
-  private async handleTextMessage(message: WhatsAppMessage): Promise<void> {
+  private async handleTextMessage(message: WhatsAppMessage, chatAgent: any): Promise<void> {
     console.log("[handleTextMessage]: iniciando");
 
     if (!message.text || !message.from) {
@@ -92,7 +96,7 @@ export class MessageHandler {
     console.log(`[handleTextMessage]: ¿es nueva sesión?: ${isNewSession}`);
 
     try {
-      const response = await this.orchestator.routeMessage(text, userId);
+      const response = await this.orchestator.routeMessage(text, userId, chatAgent);
       console.log("[handleTextMessage]: respuesta generada por el orquestador:", response);
 
       // Guardar respuesta en caché
@@ -108,10 +112,38 @@ export class MessageHandler {
       });
 
       // Añadir a la cola para procesamiento
-      await queueService.addToQueue({
-        ...message,
-        text: { body: response }
-      });
+      if (response.includes("res.cloudinary.com")) {
+       let parsedResponse = JSON.parse(response);
+        await queueService.addToQueue({
+          ...message,
+          text: { body: parsedResponse.text }
+        });
+        if (Array.isArray(parsedResponse.images)) {
+          for (const img of parsedResponse.images) {
+            await whatsappService.sendImageMessage(userId, img.link, img.caption);
+        
+            await this.saveOutgoingMessage({
+              to: userId,
+              from: process.env.NEXT_PUBLIC_WHATSAPP_PHONE_NUMBER_ID || "",
+              text: img.caption,
+              timestamp: new Date(),
+              type: "image"
+            });
+          }
+        } else {
+                                                                                                                                                                                                                                            
+          await queueService.addToQueue({
+            ...message,
+            text: { body: "No se pudo procesar el mensaje con imagenes" }
+          });
+        }
+      } else {
+        await queueService.addToQueue({
+          ...message,
+          text: { body: response }
+        });
+      }
+      
 
       await this.sessionManager.updateSession(userId);
       console.log("[handleTextMessage]: sesión actualizada");

@@ -61,35 +61,57 @@ export const getAgentConversations = async (agentId: string) => {
 };
 
 // Recuperar los mensajes de un contacto concreto
-export const getMessagesByContact = async (contactId: string) => {
+export const getMessagesByContact = async (contactId: string, options?: { page?: number; limit?: number }) => {
   const user = await onBoardUser();
   if (!user?.data?.id) throw new Error("User not found");
 
-  // Obtenemos el contacto con su agente y mensajes
+  const page = options?.page || 1;
+  const limit = options?.limit || 50;
+  const skip = (page - 1) * limit;
+
+  // Obtenemos el contacto con sus mensajes paginados
   const contact = await db.contact.findFirst({
     where: { id: contactId },
-    include: {
-      chatAgent: true,
+    select: {
+      id: true,
+      phoneNumber: true,
       messages: {
-        orderBy: { timestamp: "asc" },
+        orderBy: { timestamp: "desc" }, // Más recientes primero
+        take: limit,
+        skip: skip,
+        select: {
+          id: true,
+          from: true,
+          textBody: true,
+          timestamp: true,
+          type: true,
+        },
       },
+      _count: {
+        select: { messages: true }
+      }
     },
   });
 
   if (!contact) return { status: 404, message: "Contact not found" } as const;
 
-  const formattedMessages = contact.messages.map((msg) => {
-    // Si el mensaje viene del número de teléfono del contacto, el remitente es "user", de lo contrario "agent"
-    const sender = msg.from === contact.phoneNumber ? "user" : "agent";
-    return {
-      id: msg.id,
-      sender,
-      content: msg.textBody ?? "",
-      timestamp: msg.timestamp,
-    };
-  });
+  // Invertimos el orden para mostrar los más antiguos primero en la UI
+  const formattedMessages = contact.messages.reverse().map((msg) => ({
+    id: msg.id,
+    sender: msg.from === contact.phoneNumber ? "user" : "agent",
+    content: msg.textBody ?? "",
+    timestamp: msg.timestamp,
+  }));
 
-  return { status: 200, data: formattedMessages } as const;
+  const totalMessages = contact._count.messages;
+  const hasMore = skip + limit < totalMessages;
+
+  return { 
+    status: 200, 
+    data: formattedMessages,
+    nextPage: hasMore ? page + 1 : undefined,
+    totalMessages
+  } as const;
 };
 
 // Crear un mensaje nuevo (enviado por el agente)

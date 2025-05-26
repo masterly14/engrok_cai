@@ -1,128 +1,130 @@
 import { Document } from "@langchain/core/documents";
 import { OpenAIEmbeddings } from "@langchain/openai";
 import { MemoryVectorStore } from "langchain/vectorstores/memory";
+import { db } from "@/utils";
+
+// Mapa en memoria para almacenar un vector store por cada ChatAgent
+type StoreMap = Record<string, MemoryVectorStore>;
 
 export class productDatabase {
-  private vectorStore!: MemoryVectorStore;
-  private products: any[];
+  private stores: StoreMap = {};
 
-  constructor() {
-    this.products = [
-      {
-        id: "prod-1",
-        name: "Paquete de Servicio Premium - Desarrollo de página web y SEO",
-        description: "Nuestra oferta de servicio más completa con soporte 24/7",
-        price: "$299/mes",
-        features: [
-          "Soporte 24/7",
-          "Atención Prioritaria",
-          "Gerente de Cuenta Dedicado",
-        ],
-        faq: [
-          {
-            q: "¿Puedo cancelar en cualquier momento?",
-            a: "Sí, sin penalización.",
-          },
-          {
-            q: "¿Cuánto tarda la implementación?",
-            a: "Normalmente 2-3 días hábiles.",
-          },
-        ],
-      },
-      {
-        id: "prod-2",
-        name: "Paquete Profesional - Desarrollo de página web",
-        description:
-          "Solución ideal para negocios en crecimiento que necesitan asistencia confiable",
-        price: "$149/mes",
-        features: [
-          "Soporte de lunes a viernes",
-          "Tiempo de respuesta en 12h",
-          "Consultor asignado",
-        ],
-        faq: [
-          {
-            q: "¿Incluye soporte técnico?",
-            a: "Sí, dentro del horario laboral.",
-          },
-          {
-            q: "¿Se puede actualizar al paquete Premium?",
-            a: "Sí, en cualquier momento.",
-          },
-        ],
-      },
-      {
-        id: "prod-3",
-        name: "Paquete Básico - Prototipado web",
-        description:
-          "Perfecto para emprendedores o pequeños negocios que inician",
-        price: "$49/mes",
-        features: [
-          "Acceso a recursos básicos",
-          "Asistencia por correo electrónico",
-          "Panel de usuario simple",
-        ],
-        faq: [
-          {
-            q: "¿Tiene soporte incluido?",
-            a: "Solo por correo electrónico, en horario laboral.",
-          },
-          {
-            q: "¿Se puede cancelar el plan?",
-            a: "Sí, puedes cancelar cuando quieras sin cargos.",
-          },
-        ],
-      },
-    ];
+  /**
+   * Devuelve información formateada de los productos relevantes para un chatAgent.
+   * Construye (y cachea) el vector store a partir de los productos de la DB.
+   */
+  async getRelevanProducts(chatAgentId: string, query: string): Promise<string> {
+    console.log(`[productDatabase] Getting relevant products for chatAgentId: ${chatAgentId}`);
+    console.log(`[productDatabase] Search query: ${query}`);
 
-    this.initVectorStore();
+    const store = await this.getStoreForAgent(chatAgentId);
+    console.log(`[productDatabase] Vector store retrieved/created for chatAgentId: ${chatAgentId}`);
+
+    const results = await store.similaritySearch(query, 3);
+    console.log(`[productDatabase] Similarity search results count: ${results.length}`);
+
+    const productIds = Array.from(
+      new Set(results.map((doc) => doc.metadata?.productId as string))
+    );
+    console.log(`[productDatabase] Unique product IDs found: ${productIds.length}`);
+
+    // Obtener los productos directamente de la DB
+    const products = await db.product.findMany({
+      where: { id: { in: productIds } },
+    });
+    console.log(`[productDatabase] Products retrieved from DB: ${products.length}`);
+
+    const formatted = products.map(this.formatProduct).join("\n\n");
+    console.log(`[productDatabase] Formatted products response length: ${formatted.length} characters`);
+    
+    return formatted;
   }
 
-  private async initVectorStore() {
-    const documents = this.products.flatMap((product) => {
-      const docs = [
+  /**
+   * Obtiene (o crea) el vector store para un ChatAgent concreto.
+   */
+  private async getStoreForAgent(chatAgentId: string): Promise<MemoryVectorStore> {
+    console.log(`[productDatabase] Getting/Creating store for chatAgentId: ${chatAgentId}`);
+    
+    if (this.stores[chatAgentId]) {
+      console.log(`[productDatabase] Using cached store for chatAgentId: ${chatAgentId}`);
+      return this.stores[chatAgentId];
+    }
+
+    console.log(`[productDatabase] Fetching products from DB for chatAgentId: ${chatAgentId}`);
+    const products = await db.product.findMany({ where: { chatAgentId } });
+    console.log(`[productDatabase] Found ${products.length} products in DB`);
+
+    // Si el agente no tiene productos, devolvemos un vector store vacío para evitar errores
+    if (!products.length) {
+      console.log(`[productDatabase] No products found, creating empty store for chatAgentId: ${chatAgentId}`);
+      const emptyStore = await MemoryVectorStore.fromTexts([], [], new OpenAIEmbeddings());
+      this.stores[chatAgentId] = emptyStore;
+      return emptyStore;
+    }
+
+    console.log(`[productDatabase] Creating documents from products`);
+    const documents = products.flatMap((product) => {
+      const docs: Document[] = [];
+
+      // Descripción principal
+      docs.push(
         new Document({
-          pageContent: `${product.name}: ${product.description}. Price: ${product.price}`,
+          pageContent: `${product.name}: ${product.description ?? ""}. Precio: ${product.price}`,
           metadata: { productId: product.id, docType: "overview" },
-        }),
-      ];
+        })
+      );
 
-      product.features.forEach((feature: any) => {
-        docs.push(
-          new Document({
-            pageContent: `Feature of ${product.name}: ${feature}`,
-            metadata: { productId: product.id, docType: "feature" },
-          })
-        );
-      });
-
-      product.faq.forEach((faq: any) => {
-        docs.push(
-          new Document({
-            pageContent: `FAQ about ${product.name}: Q: ${faq.q} A: ${faq.a}`,
-            metadata: { productId: product.id, docType: "faq" },
-          })
-        );
-      });
+      // Características (si es que existen en JSON metadata)
+      if ((product as any).features) {
+        (product as any).features.forEach((feature: string) => {
+          docs.push(
+            new Document({
+              pageContent: `Característica de ${product.name}: ${feature}`,
+              metadata: { productId: product.id, docType: "feature" },
+            })
+          );
+        });
+      }
 
       return docs;
     });
+    console.log(`[productDatabase] Created ${documents.length} documents from products`);
 
+    console.log(`[productDatabase] Creating vector store with OpenAI embeddings`);
     const embeddings = new OpenAIEmbeddings();
-    this.vectorStore = await MemoryVectorStore.fromDocuments(documents, embeddings)
+    const vectorStore = await MemoryVectorStore.fromDocuments(documents, embeddings);
+    console.log(`[productDatabase] Vector store created successfully`);
+    
+    this.stores[chatAgentId] = vectorStore;
+    return vectorStore;
   }
 
-  async getRelevanProducts(query: string): Promise<string> {
-    const results = await this.vectorStore.similaritySearch(query, 3);
+  private formatProduct(product: any): string {
+    console.log(`[productDatabase] Formatting product: ${product.name}`);
+    const images: string[] = (product.images || []) as string[];
+    console.log(`[productDatabase] Product ${product.name} has ${images.length} images`);
+    
+    const imgSection = images.length
+      ? `Imágenes:\n${images.map((u) => `- ${u}`).join("\n")}`
+      : "";
 
-    return results.map(doc => doc.pageContent).join('\n\n');
+    const formatted = `Nombre: ${product.name}\nDescripción: ${product.description ?? ""}\nPrecio: ${product.price}\n${imgSection}`;
+    console.log(`[productDatabase] Formatted product ${product.name} successfully`);
+    return formatted;
   }
 
-  getProductById(productId: string): any {
-    return this.products.find(p => p.id === productId);
-  }
+  async getProductByName(chatAgentId: string, productName: string): Promise<any> {
+    console.log(`[productDatabase] Getting product by name: ${productName} for chatAgentId: ${chatAgentId}`);
+    
+    const product = await db.product.findFirst({
+      where: {
+        chatAgentId,
+        name: productName
+      }
+    });
 
-  getAllProducts(): any[] {
-    return this.products;
+    console.log(`[productDatabase] Found product:`, product ? product.name : 'none');
+    return product;
   }
 }
