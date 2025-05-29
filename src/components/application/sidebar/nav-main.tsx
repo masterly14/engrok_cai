@@ -58,8 +58,42 @@ export function NavMain() {
       isActive: false,
       items: [
         {
+          title: "Agentes de voz",
+          url: "/application/agents/voice",
+          hasSubmenu: true,
+          items: [
+            {
+              title: "Todos",
+              url: "/application/agents/voice",
+            },
+            {
+              title: "Salientes",
+              url: "/application/agents/voice/outbound",
+            },
+            {
+              title: "Entrantes",
+              url: "/application/agents/voice/inbound",
+            },
+          ],
+        },
+        {
           title: "Agentes de chat",
           url: "/application/agents/chat",
+        },
+      ],
+    },
+    {
+      title: "Flujos de trabajo",
+      url: "/application/workflows",
+      icon: Workflow,
+      items: [
+        {
+          title: "Flujos de trabajo",
+          url: "/application/workflows",
+        },
+        {
+          title: "Estudio",
+          url: "/application/workflow-studio",
         },
       ],
     },
@@ -67,6 +101,16 @@ export function NavMain() {
       title: "Crm",
       url: "/application/crm",
       icon: Users,
+    },
+    {
+      title: "Análisis",
+      url: "/analytics",
+      icon: BarChart3,
+    },
+    {
+      title: "Historial de llamadas",
+      url: "/call-history",
+      icon: Phone,
     },
   ]
 
