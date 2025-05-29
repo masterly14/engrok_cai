@@ -18,7 +18,7 @@ export default function HomePage() {
             <h1 className="text-3xl font-bold">Agentes de Chat</h1>
             <p className="text-muted-foreground mt-1">Gestione sus agentes de chat y sus conversaciones</p>
           </div>
-          <Link href="/crear">
+          <Link href="/application/agents/chat/crear">
             <Button className="flex items-center gap-2">
               <PlusCircle size={18} />
               Crear Agente

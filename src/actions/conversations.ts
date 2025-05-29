@@ -2,6 +2,7 @@
 
 import { db } from "@/utils";
 import { onBoardUser } from "./user";
+import { whatsappService } from "@/services/whatsapp";
 
 // Obtener la información básica de un agente por su ID (verificando que pertenezca al usuario logueado)
 export const getAgentById = async (agentId: string) => {
@@ -118,7 +119,8 @@ export const getMessagesByContact = async (contactId: string, options?: { page?:
 export const sendMessage = async (
   agentId: string,
   contactId: string,
-  content: string
+  content: string,
+  type: "TEXT" | "IMAGE"  
 ) => {
   const user = await onBoardUser();
   if (!user?.data?.id) throw new Error("User not found");
@@ -130,22 +132,72 @@ export const sendMessage = async (
 
   if (!chatAgent) return { status: 404, message: "Agent not found" } as const;
 
-  const contact = await db.contact.findFirst({ where: { id: contactId } });
+  const contact = await db.contact.findFirst({ 
+    where: { id: contactId }
+  });
+  
   if (!contact)
     return { status: 404, message: "Contact not found" } as const;
 
-  const message = await db.message.create({
-    data: {
-      waId: `${Date.now()}`, // Placeholder id. Debería provenir de proveedor WhatsApp.
-      from: chatAgent.phoneNumber ?? "",
-      to: contact.phoneNumber,
-      timestamp: new Date(),
-      type: "TEXT",
-      textBody: content,
-      contactId: contact.id,
-      chatAgentId: chatAgent.id,
+  // Obtener el último mensaje del contacto (usuario)
+  const lastMessage = await db.message.findFirst({
+    where: { 
+      contactId,
+      from: contact.phoneNumber // Solo mensajes enviados por el contacto
     },
+    orderBy: { timestamp: 'desc' }
   });
 
-  return { status: 201, data: message } as const;
+  // Calcular tiempo desde el último mensaje del contacto
+  const now = new Date();
+  const hoursSinceLastMessage = lastMessage 
+    ? (now.getTime() - lastMessage.timestamp.getTime()) / (1000 * 60 * 60)
+    : 0;
+
+  // Validar si han pasado más de 24 horas
+  if (hoursSinceLastMessage >= 24) {
+    console.log('No puedes enviar un mensaje en esta conversación: Más de 24 horas desde el último mensaje del contacto. Por favor, envía una plantilla de mensaje o espera a que el cliente responda.');
+    return { 
+      status: 400, 
+      message: "No puedes enviar un mensaje en esta conversación: Más de 24 horas desde el último mensaje del contacto. Por favor, envía una plantilla de mensaje o espera a que el cliente responda.",
+      data: { hoursSinceLastMessage }
+    } as const;
+  }
+  
+  // Crear o actualizar la conversación
+  const conversation = await db.conversation.upsert({
+    where: { contactId: contact.id },
+    create: {
+      contactId: contact.id,
+      lastMessageAt: now,
+      lastAgentMessageAt: now,
+      isActive: true,
+      isOver24Hours: false,
+      totalMessages: 1,
+      totalAgentMessages: 1,
+      lastResponseTime: 0
+    },
+    update: {
+      lastMessageAt: now,
+      lastAgentMessageAt: now,
+      isActive: true,
+      isOver24Hours: false,
+      totalMessages: { increment: 1 },
+      totalAgentMessages: { increment: 1 },
+      lastResponseTime: lastMessage ? Math.floor(hoursSinceLastMessage * 60) : 0 // Convertir a minutos
+    }
+  });
+
+  if (type === "TEXT") {
+    await whatsappService.updateConfiguration(agentId);
+    await whatsappService.sendTextMessage(contact.phoneNumber, content);
+  }
+
+  return { 
+    status: 201, 
+    data: {
+      conversation,
+      hoursSinceLastMessage
+    }
+  } as const;
 }; 

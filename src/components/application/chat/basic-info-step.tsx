@@ -37,7 +37,6 @@ export default function BasicInfoStep({ formData, updateFormData }: BasicInfoSte
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="SALES">Ventas</SelectItem>
-              <SelectItem value="SUPPORT">Soporte</SelectItem>
             </SelectContent>
           </Select>
         </div>

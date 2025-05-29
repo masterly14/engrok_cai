@@ -21,7 +21,7 @@ interface AgentListProps {
 export default function AgentList({ searchTerm }: AgentListProps) {
   // Datos de ejemplo - en una aplicación real, estos vendrían de una API
   const { chatAgentsData } =  useAllChatAgents();
-
+  
   // Filtrar agentes según el término de búsqueda
   const filteredAgents = chatAgentsData?.data?.filter((agent) => agent.name.toLowerCase().includes(searchTerm.toLowerCase())) ?? []
   console.log(filteredAgents)

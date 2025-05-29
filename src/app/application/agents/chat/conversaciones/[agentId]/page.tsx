@@ -29,6 +29,7 @@ import Pusher from "pusher-js"
 import Image from "next/image"
 import { LeadDetailModal } from "@/components/application/crm/lead-detail-modal"
 import type { Lead } from "@/lib/data"
+import { toast } from "sonner"
 
 export default function ConversationsPage() {
   const { agentId } = useParams<{ agentId: string }>()
@@ -44,6 +45,7 @@ export default function ConversationsPage() {
   const [showLeadDetailModal, setShowLeadDetailModal] = useState(false)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [isImageLoading, setIsImageLoading] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const [shouldScrollToBottom, setShouldScrollToBottom] = useState(true)
@@ -67,7 +69,18 @@ export default function ConversationsPage() {
   const sendMessageMutation = useMutation({
     mutationFn: async (content: string) => {
       if (!selectedContactId) return
-      await sendMessage(agentId, selectedContactId, content)
+      const response = await sendMessage(agentId, selectedContactId, content, "TEXT")
+      if (response.status === 400) {
+        // Mostrar mensaje de error al usuario
+      toast.error(response.message)
+        return
+      }
+      if (response.data && response.data.conversation && 'message' in response.data && 'hoursSinceLastMessage' in response.data) {
+        const { message, conversation, hoursSinceLastMessage } = response.data
+        if (conversation.isOver24Hours) {
+          toast.error("La conversación ha estado inactiva por más de 24 horas. Por favor, envía una plantilla de mensaje o espera a que el cliente responda.")
+        }
+      }
     },
     onSuccess: () => {
       // Limpiar input y refrescar mensajes
@@ -176,23 +189,39 @@ export default function ConversationsPage() {
   })
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files
-    if (!files?.length) return
-
-    const file = files[0]
-    const reader = new FileReader()
-    reader.onloadend = () => {
-      const result = reader.result as string
-      const isImage = file.type.startsWith("image/")
-      sendMediaMutation.mutate({
-        fileUrl: result,
-        type: isImage ? "IMAGE" : "DOCUMENT",
-      })
+    const file = e.target.files?.[0];
+    if (!file) return;
+  
+    // Validación MIME opcional
+    if (!file.type.startsWith("image/")) {
+      console.warn("Solo se permiten imágenes");
+      return;
     }
-    reader.readAsDataURL(file)
-    // limpiamos
-    if (fileInputRef.current) fileInputRef.current.value = ""
-  }
+  
+    // Mostrar loader
+    setIsImageLoading(true);
+  
+    const formData = new FormData();
+    formData.append("file", file);
+  
+    try {
+      const res = await fetch("/api/upload-image", {
+        method: "POST",
+        body: formData,
+      });
+      const { url } = await res.json();
+      console.log(url)
+      // Envía el mensaje con la URL de Cloudinary
+      sendMediaMutation.mutate({ fileUrl: url, type: "IMAGE" });
+    } catch (err) {
+      console.error("Error subiendo la imagen:", err);
+    } finally {
+      // Limpieza
+      setIsImageLoading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+  
 
   const handleSendImageMessage = async () => {
     if (imagePreview && !sendMediaMutation.isPending) {
@@ -235,6 +264,16 @@ export default function ConversationsPage() {
       })
     }
   }
+
+  function isImageUrl(text: string) {
+    try {
+      const url = new URL(text);
+      return /\.(jpe?g|png|gif|webp|bmp|svg)(\?.*)?$/.test(url.pathname);
+    } catch {
+      return false;
+    }
+  }
+  
 
   return (
     <div className="min-h-screen bg-background py-8 px-4 sm:px-6 lg:px-8 overflow-x-hidden">
@@ -388,7 +427,6 @@ export default function ConversationsPage() {
                         <div className="text-sm text-muted-foreground">Cargando mensajes antiguos...</div>
                       </div>
                     )}
-
                     {messagesData?.data?.map((msg: any) => (
                       <div key={msg.id} className={`flex ${msg.sender === "user" ? "justify-start" : "justify-end"}`}>
                         <div
@@ -396,7 +434,17 @@ export default function ConversationsPage() {
                             msg.sender === "user" ? "bg-primary text-primary-foreground" : "bg-muted"
                           }`}
                         >
-                          <div className="text-sm break-words overflow-wrap-anywhere">{msg.content}</div>
+                          {isImageUrl(msg.content) ? (
+                            <Image
+                              src={msg.content}
+                              alt="Imagen enviada"
+                              width={200}
+                              height={200}
+                              className="rounded-lg object-contain"
+                            />
+                          ) : (
+                            <div className="text-sm break-words overflow-wrap-anywhere">{msg.content}</div>
+                          )}
                           <div
                             className={`text-xs mt-1 text-right ${
                               msg.sender === "user" ? "text-primary-foreground/70" : "text-muted-foreground"
@@ -421,7 +469,7 @@ export default function ConversationsPage() {
                   {imagePreview && (
                     <div className="relative rounded-md overflow-hidden border border-border max-w-full">
                       <Image
-                        src={imagePreview || "/placeholder.svg"}
+                        src={imagePreview}
                         alt="Preview"
                         className="h-20 object-contain max-w-full"
                         width={80}
@@ -436,6 +484,9 @@ export default function ConversationsPage() {
                         ×
                       </Button>
                     </div>
+                  )}
+                  {isImageLoading && (
+                    <div className="text-sm text-muted-foreground">Cargando imagen...</div>
                   )}
                   <div className="flex items-center gap-2 w-full">
                     <Button

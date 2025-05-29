@@ -6,13 +6,22 @@ import {
   CheckCircle,
   XCircle,
   ArrowRight,
+  ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import Link from "next/link";
-import { Product } from "@prisma/client";
+import type { Product } from "@prisma/client";
 import AssignProductsModal from "@/components/application/chat/assign-products-modal";
+import CreateTemplateModal from "@/components/application/chat/create-template-modal";
+import { useState } from "react";
 
 // Tipo para los agentes de chat
 type ChatAgent = {
@@ -33,6 +42,7 @@ interface AgentCardProps {
 }
 
 export default function AgentCard({ agent }: AgentCardProps) {
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   return (
     <Card className="overflow-hidden transition-all hover:shadow-md">
       <div
@@ -87,7 +97,7 @@ export default function AgentCard({ agent }: AgentCardProps) {
         >
           <Button
             variant="outline"
-            className="w-full flex items-center justify-center gap-2 bg-muted-foreground"
+            className="w-full flex items-center justify-center gap-2"
             disabled={agent.products.length === 0}
           >
             Entrar a conversaciones
@@ -113,11 +123,13 @@ export default function AgentCard({ agent }: AgentCardProps) {
 
             {agent.products.length === 0 && (
               <>
-              <div className="flex items-center justify-center gap-2 border rounded-md p-2 border-b">
-                <p className="text-xs text-muted-foreground">
-                  Este agente no tiene productos asignados. Agrega prodouctos para que pueda empezar a vender. El proceso es muy sencillo, toca el siguiente boton para agregar productos.
-                </p>
-              </div>
+                <div className="flex items-center justify-center gap-2 border rounded-md p-2 border-b">
+                  <p className="text-md text-muted-foreground">
+                    Este agente no tiene productos asignados. Agrega prodouctos
+                    para que pueda empezar a vender. El proceso es muy sencillo,
+                    toca el siguiente boton para agregar productos.
+                  </p>
+                </div>
                 <AssignProductsModal
                   agentId={agent.id}
                   trigger={
@@ -134,6 +146,16 @@ export default function AgentCard({ agent }: AgentCardProps) {
             )}
           </div>
         )}
+
+        
+        {/* Template Dropdown Menu */}
+        <Link
+          href={`/application/agents/chat/templates/${agent.id}`}
+          className="flex items-center gap-2 text-sm border px-8 py-2 rounded-md"
+        >
+          Mis plantillas
+          <ArrowRight className="h-4 w-4 ml-auto" />
+        </Link>
       </CardFooter>
     </Card>
   );

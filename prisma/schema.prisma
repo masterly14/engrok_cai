@@ -32,23 +32,24 @@ model User {
 }
 
 model Contact {
-  id          String     @id @default(uuid()) @db.Uuid
-  waId        String     @unique
-  name        String?
-  phoneNumber String
-  company     String?
-  email       String?
-  lastSeen    DateTime?
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  stageId     String?
-  notes       String?
-  stageUserId String?    @db.Uuid
-  chatAgentId String?    @db.Uuid
-  chatAgent   ChatAgent? @relation(fields: [chatAgentId], references: [id])
-  stage       Stage?     @relation(fields: [stageId, stageUserId], references: [id, userId])
-  messages    Message[]
-  tags        Tag[]      @relation("ContactToTag")
+  id           String        @id @default(uuid()) @db.Uuid
+  waId         String        @unique
+  name         String?
+  phoneNumber  String
+  company      String?
+  email        String?
+  lastSeen     DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  stageId      String?
+  notes        String?
+  stageUserId  String?       @db.Uuid
+  chatAgentId  String?       @db.Uuid
+  chatAgent    ChatAgent?    @relation(fields: [chatAgentId], references: [id])
+  stage        Stage?        @relation(fields: [stageId, stageUserId], references: [id, userId])
+  conversation Conversation?
+  messages     Message[]
+  tags         Tag[]         @relation("ContactToTag")
 
   @@index([phoneNumber])
   @@index([stageId, stageUserId])
@@ -281,34 +282,53 @@ model Template {
   createdAt   DateTime @default(now())
 }
 
+model MessageTemplate {
+  id          String         @id @default(uuid()) @db.Uuid
+  externalId  String?        @unique
+  name        String
+  language    String
+  category    String
+  status      TemplateStatus @default(PENDING)
+  components  Json
+  chatAgentId String         @db.Uuid
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  chatAgent   ChatAgent      @relation(fields: [chatAgentId], references: [id], onDelete: Cascade)
+
+  @@unique([name, chatAgentId])
+}
+
 model ChatAgent {
-  id                  String          @id @default(uuid()) @db.Uuid
-  name                String
-  isActive            Boolean         @default(true)
-  createdAt           DateTime        @default(now())
-  updatedAt           DateTime        @updatedAt
-  whatsappBusinessId  String
-  apiKey              String
-  totalMessages       Int             @default(0)
-  activeChats         Int             @default(0)
-  averageResponseTime Int             @default(0)
-  userId              String          @db.Uuid
-  stageId             String?
-  stageUserId         String?         @db.Uuid
-  phoneNumber         String          @unique
-  phoneNumberId       String
-  type                TYPE_CHAT_AGENT @default(SALES)
-  wompiEventsKey      String?
-  wompiPrivateKey     String?
-  businessInfo        Json?
-  stage               Stage?          @relation(fields: [stageId, stageUserId], references: [id, userId])
-  user                User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  contacts            Contact[]
-  leads               Lead[]
-  messages            Message[]
-  orders              Order[]
-  products            Product[]
-  tags                Tag[]           @relation("ChatAgentToTag")
+  id                    String            @id @default(uuid()) @db.Uuid
+  name                  String
+  isActive              Boolean           @default(true)
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  whatsappBusinessId    String
+  apiKey                String
+  totalMessages         Int               @default(0)
+  activeChats           Int               @default(0)
+  averageResponseTime   Int               @default(0)
+  userId                String            @db.Uuid
+  stageId               String?
+  stageUserId           String?           @db.Uuid
+  phoneNumber           String            @unique
+  phoneNumberId         String
+  type                  TYPE_CHAT_AGENT   @default(SALES)
+  wompiEventsKey        String?
+  wompiPrivateKey       String?
+  businessInfo          Json?
+  whatsappWebhookSecret String            @default("") @unique
+  webhook_verify        Boolean           @default(false)
+  stage                 Stage?            @relation(fields: [stageId, stageUserId], references: [id, userId])
+  user                  User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contacts              Contact[]
+  leads                 Lead[]
+  messages              Message[]
+  messageTemplates      MessageTemplate[]
+  orders                Order[]
+  products              Product[]
+  tags                  Tag[]             @relation("ChatAgentToTag")
 
   @@index([userId])
   @@index([stageId, stageUserId])
@@ -342,6 +362,25 @@ model Order {
   user        User        @relation(fields: [userId], references: [id])
 }
 
+model Conversation {
+  id                  String    @id @default(uuid()) @db.Uuid
+  contactId           String    @unique @db.Uuid
+  lastMessageAt       DateTime  @default(now())
+  lastAgentMessageAt  DateTime?
+  isActive            Boolean   @default(true)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  totalMessages       Int       @default(0)
+  totalAgentMessages  Int       @default(0)
+  averageResponseTime Int       @default(0)
+  lastResponseTime    Int?
+  isOver24Hours       Boolean   @default(false)
+  contact             Contact   @relation(fields: [contactId], references: [id])
+
+  @@index([lastMessageAt])
+  @@index([isActive])
+}
+
 enum MessageType {
   TEXT
   IMAGE
@@ -369,4 +408,10 @@ enum OrderStatus {
   APPROVED
   FAILED
   CANCELLED
+}
+
+enum TemplateStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }

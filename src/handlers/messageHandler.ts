@@ -102,15 +102,6 @@ export class MessageHandler {
       // Guardar respuesta en caché
       cacheService.set(`response:${text}`, response);
 
-      // Guardar mensaje saliente en la base de datos
-      await this.saveOutgoingMessage({
-        to: userId,
-        from: process.env.NEXT_PUBLIC_WHATSAPP_PHONE_NUMBER_ID || "",
-        text: response,
-        timestamp: new Date(),
-        type: "text"
-      });
-
       // Añadir a la cola para procesamiento
       if (response.includes("res.cloudinary.com")) {
        let parsedResponse = JSON.parse(response);
@@ -121,17 +112,8 @@ export class MessageHandler {
         if (Array.isArray(parsedResponse.images)) {
           for (const img of parsedResponse.images) {
             await whatsappService.sendImageMessage(userId, img.link, img.caption);
-        
-            await this.saveOutgoingMessage({
-              to: userId,
-              from: process.env.NEXT_PUBLIC_WHATSAPP_PHONE_NUMBER_ID || "",
-              text: img.caption,
-              timestamp: new Date(),
-              type: "image"
-            });
           }
         } else {
-                                                                                                                                                                                                                                            
           await queueService.addToQueue({
             ...message,
             text: { body: "No se pudo procesar el mensaje con imagenes" }
@@ -144,7 +126,6 @@ export class MessageHandler {
         });
       }
       
-
       await this.sessionManager.updateSession(userId);
       console.log("[handleTextMessage]: sesión actualizada");
     } catch (error) {
@@ -165,25 +146,6 @@ export class MessageHandler {
     } catch (error) {
       console.error("[sendErrorMessage]: error al enviar mensaje de error", error);
     }
-  }
-
-  // Nueva función para guardar mensajes salientes
-  private async saveOutgoingMessage({ to, from, text, timestamp, type }: { to: string, from: string, text: string, timestamp: Date, type: string }) {
-    // Buscar o crear el contacto y el agente
-    const contact = await whatsappService["getOrCreateContact"](to);
-    // Guardar el mensaje en la base de datos
-    await db.message.create({
-      data: {
-        waId: `${from}_${Date.now()}`,
-        from,
-        to,
-        timestamp,
-        type: "TEXT",
-        textBody: text,
-        metadata: { text },
-        contactId: contact.id,
-      },
-    });
   }
 }
 

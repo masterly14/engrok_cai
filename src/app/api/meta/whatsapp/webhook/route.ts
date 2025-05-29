@@ -1,5 +1,6 @@
 import { messageHandler } from "@/handlers/messageHandler";
 import { WhatsAppMessage, WhatsAppWebhookPayload } from "@/types/whatsapp";
+import { db } from "@/utils";
 import { NextRequest, NextResponse } from "next/server";
 
 async function handleMessage(message: WhatsAppMessage, AgentNumber: string): Promise<void> {
@@ -11,7 +12,11 @@ export async function GET(request: NextRequest) {
   const token = searchParams.get("hub.verify_token");
   const challenge = searchParams.get("hub.challenge");
 
-  const verifyToken = process.env.NEXT_PUBLIC_WHATSAPP_VERIFY_TOKEN;
+  const verifyToken = await db.chatAgent.findUnique({
+    where: {
+      whatsappWebhookSecret: token!,
+    },
+  });
 
   if (!verifyToken) {
     return NextResponse.json(
@@ -20,8 +25,16 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  if (mode === "subscribe" && token === verifyToken) {
-    console.log("Webhook verificado con éxito");
+  if (mode === "subscribe" && token === verifyToken.whatsappWebhookSecret) {
+    await db.chatAgent.update({
+      where: {
+        whatsappWebhookSecret: token!,
+      },
+      data: {
+        webhook_verify: true,
+      }
+    })
+    
     return new NextResponse(challenge);
   } else {
     return NextResponse.json(

@@ -336,6 +336,57 @@ export class WhatsAppService {
       return false;
     }
   }
+
+  async createMessageTemplate(agentId: string, templatePayload: any) {
+    console.log("Template Payload:", templatePayload);
+    try {
+      // Obtener datos del agente para credenciales
+      const agent = await db.chatAgent.findUnique({
+        where: { id: agentId },
+        select: {
+          apiKey: true,
+          whatsappBusinessId: true,
+        },
+      });
+
+      if (!agent) {
+        throw new Error(`No se encontró el agente con ID: ${agentId}`);
+      }
+      if (!agent.apiKey || !agent.whatsappBusinessId) {
+        throw new Error(
+          "El agente no tiene configuradas las credenciales necesarias para crear plantillas"
+        );
+      }
+
+      const url = `https://graph.facebook.com/v19.0/${agent.whatsappBusinessId}/message_templates`;
+
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${agent.apiKey}`,
+        },
+        body: JSON.stringify(templatePayload),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        console.error("[WhatsAppService.createMessageTemplate] Error:", result);
+        throw new Error(
+          `Error creando plantilla: ${result.error?.message || "Unknown"}`
+        );
+      }
+
+      return result as { id: string; name: string; status: string };
+    } catch (error) {
+      console.error(
+        "[WhatsAppService.createMessageTemplate] Error al crear plantilla:",
+        error
+      );
+      throw error;
+    }
+  }
 }
 
 export const whatsappService = new WhatsAppService();

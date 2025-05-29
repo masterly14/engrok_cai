@@ -90,7 +90,6 @@ export default function ProductsPage() {
         <ProductsGrid
           products={products.map((product) => ({
             ...product,
-            description: product.description || undefined,
             category: product.category || undefined,
           }))}
         />

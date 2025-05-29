@@ -26,7 +26,6 @@ interface ReviewStepProps {
     welcomeMessage: string
     fallbackMessage: string
     maxResponseTime: number
-    knowledgeBaseId: string
   }
 }
 

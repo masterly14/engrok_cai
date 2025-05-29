@@ -95,3 +95,15 @@ export const deleteChatAgent = async (id: string) => {
   });
   return { status: 204 };
 };
+
+
+export const finishSetupServer = async (id: string, whatsappWebhookSecret: string) => {
+  const updatedAgent = await db.chatAgent.update({
+    where: { id },
+    data: {
+      whatsappWebhookSecret: whatsappWebhookSecret,
+    }
+  });
+  if (!updatedAgent) throw new Error("Agent not found");
+  return { status: 200, data: updatedAgent };
+};
