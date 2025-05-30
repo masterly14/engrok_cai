@@ -5,7 +5,7 @@ import { useState } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-import { Package, PlusCircle, Trash2, ImageIcon, Loader2, Save } from "lucide-react"
+import { Package, PlusCircle, Trash2, ImageIcon, Loader2, Save, AlertCircle } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
@@ -16,6 +16,7 @@ import { toast } from "sonner"
 import { Form } from "@/components/ui/form"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { createAgentProducts } from "@/actions/producs"
+import { productValidatorAgent } from "@/agents/productValidatorAgent"
 
 // Esquema de validación para un producto
 const productSchema = z.object({
@@ -84,6 +85,9 @@ export default function ProductForm({ initialProducts = [], onSubmitSuccess, age
 
   // Estado para controlar la carga durante el envío
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Estado para las validaciones de cada producto
+  const [productValidations, setProductValidations] = useState<Record<string, { isValid: boolean; recommendations?: string[] }>>({})
 
   // Configuración del formulario con React Hook Form
   const form = useForm<FormData>({
@@ -193,10 +197,47 @@ export default function ProductForm({ initialProducts = [], onSubmitSuccess, age
     }
   }
 
-  // Maneja el envío del formulario
+  // Función para validar un producto individual
+  const validateProduct = async (product: ProductForm) => {
+    const validation = await productValidatorAgent.validateProduct({
+      name: product.name,
+      description: product.description,
+      category: product.category,
+      price: product.price
+    })
+    
+    setProductValidations(prev => ({
+      ...prev,
+      [product.id]: validation
+    }))
+    
+    return validation.isValid
+  }
+
+  // Función para validar todos los productos
+  const validateAllProducts = async () => {
+    const validations: Record<string, { isValid: boolean; recommendations?: string[] }> = {}
+    let allValid = true
+    
+    for (const product of localProducts) {
+      const isValid = await validateProduct(product)
+      if (!isValid) {
+        allValid = false
+      }
+    }
+    
+    return allValid
+  }
+
+  // Modificar el onSubmit para incluir la validación
   const onSubmit = async (data: FormData) => {
     try {
       setIsSubmitting(true)
+      const isValid = await validateAllProducts()
+      if (!isValid) {
+        toast.error("Por favor, revisa las recomendaciones para mejorar tus productos")
+        return
+      }
       await createProductsMutation.mutateAsync(data)
     } catch (error) {
       console.error("Error al enviar el formulario:", error)
@@ -214,7 +255,7 @@ export default function ProductForm({ initialProducts = [], onSubmitSuccess, age
             <h2 className="text-xl font-semibold">Productos</h2>
           </div>
 
-          <Button type="submit" disabled={isSubmitting} className="flex items-center gap-2">
+          <Button type="button" disabled={isSubmitting} className="flex items-center gap-2" onClick={() => onSubmit(form.getValues())}>
             {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             Guardar productos
           </Button>
@@ -309,6 +350,24 @@ export default function ProductForm({ initialProducts = [], onSubmitSuccess, age
                       <p className="text-sm text-destructive">
                         {form.formState.errors.products[idx]?.description?.message}
                       </p>
+                    )}
+                    
+                    {/* Mostrar recomendaciones solo si existen y el producto no es válido */}
+                    {productValidations[product.id] && !productValidations[product.id].isValid && (
+                      <div className="mt-3 space-y-2 p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                        <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 font-medium text-sm">
+                          <AlertCircle size={16} />
+                          Sugerencias para mejorar tu descripción:
+                        </div>
+                        <ul className="space-y-1.5 text-sm text-amber-600 dark:text-amber-500">
+                          {productValidations[product.id].recommendations?.map((rec, index) => (
+                            <li key={index} className="flex items-start gap-1">
+                              <span className="mt-0.5">•</span>
+                              <span>{rec}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
                     )}
                   </div>
                 </div>

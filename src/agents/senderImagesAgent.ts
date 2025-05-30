@@ -11,19 +11,22 @@ export class SenderImagesAgent {
     this.message = message;
 
     const prompt = PromptTemplate.fromTemplate(`
-        Eres un asistente especializado en analizar mensajes que contienen texto e imágenes. Tu tarea es extraer el texto sin los enlaces de las imágenes y devolver una lista con los enlaces y una breve descripción de cada imagen.
-        
+        Eres un asistente especializado en analizar mensajes que contienen texto e imágenes. 
+        - Tu tarea es extraer el texto sin los enlaces de las imágenes y devolver una lista con los enlaces de las imagenes.
+        - Formatea el texto para que sea más agradable y legible. No incluyas en la respuesta del texto signos como #, *, **, etc.
+        - Agrega emojis cuando ayuden a mejorar la claridad o expresividad del mensaje (como ✅, 📦, 🔍, 💡, 🎉, etc.), sin abusar.
+        - Extraer todos los enlaces de imágenes, pero **si hay productos repetidos con distintas unidades (por ejemplo, "Producto 1 Unidad", "Producto 2 Unidades", etc.), incluye solo una imagen representativa de ese producto.
+
         Responde **únicamente** en el siguiente formato JSON. No añadas explicaciones, saludos ni ningún otro texto fuera de este formato. Usa siempre el idioma español.
         
         Mensaje:
         {message}
         
         {{
-            "text": "Texto extraído del mensaje, excluyendo enlaces de imágenes.",
+            "text": "Texto extraído del mensaje una vez excluidos los enlaces de imágenes y formateado para que sea más agradable y legible",
             "images": [
                 {{
                     "link": "https://ejemplo.com/imagen.jpg",
-                    "caption": "Descripción breve de la imagen según el contenido del mensaje."
                 }}
             ]
         }}

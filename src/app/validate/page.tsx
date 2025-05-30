@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 const page = async () => {
   const user = await onBoardUser();
   if (user?.status === 201 || user?.status === 200) {
-    return redirect("/application/dashboard")
+    return redirect("/application/agents/chat")
   }
   return redirect("/sign-in");
 };

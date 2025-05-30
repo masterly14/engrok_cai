@@ -318,7 +318,7 @@ model ChatAgent {
   wompiEventsKey        String?
   wompiPrivateKey       String?
   businessInfo          Json?
-  whatsappWebhookSecret String            @default("") @unique
+  whatsappWebhookSecret String            @unique @default("")
   webhook_verify        Boolean           @default(false)
   stage                 Stage?            @relation(fields: [stageId, stageUserId], references: [id, userId])
   user                  User              @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -349,18 +349,35 @@ model Product {
 }
 
 model Order {
-  id          String      @id @default(uuid()) @db.Uuid
-  chatAgentId String      @db.Uuid
-  userId      String      @db.Uuid
-  productIds  String[]
-  totalAmount Float
-  paymentLink String
-  status      OrderStatus @default(PENDING)
-  productQuantities Json?
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  chatAgent   ChatAgent   @relation(fields: [chatAgentId], references: [id], onDelete: Cascade)
-  user        User        @relation(fields: [userId], references: [id])
+  id                     String      @id @default(uuid()) @db.Uuid
+  chatAgentId            String      @db.Uuid
+  userId                 String      @db.Uuid
+  productIds             String[]
+  totalAmount            Float
+  paymentLink            String
+  status                 OrderStatus @default(PENDING)
+  createdAt              DateTime    @default(now())
+  updatedAt              DateTime    @default(now())
+  amountInCents          Int?
+  billingData            Json?
+  currency               String?
+  customerData           Json?
+  customerEmail          String?
+  origin                 String?
+  paymentLinkId          String?
+  paymentMethod          Json?
+  paymentMethodType      String?
+  paymentSourceId        String?
+  productQuantities      Json?
+  redirectUrl            String?
+  reference              String?
+  shippingAddress        Json?
+  statusMessage          String?
+  transactionCreatedAt   DateTime?
+  transactionFinalizedAt DateTime?
+  transactionId          String?
+  chatAgent              ChatAgent   @relation(fields: [chatAgentId], references: [id], onDelete: Cascade)
+  user                   User        @relation(fields: [userId], references: [id])
 }
 
 model Conversation {
@@ -409,6 +426,7 @@ enum OrderStatus {
   APPROVED
   FAILED
   CANCELLED
+  DELIVERED
 }
 
 enum TemplateStatus {

@@ -18,9 +18,12 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import ProductForm from "@/components/application/chat/individual-product-form";
+import { useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 
 export default function ProductsPage() {
   const params = useParams();
+  const [isOpen, setIsOpen] = useState(false);
   const agentId = params.agentId as string;
 
   const { productsData, productsLoading, productsError } =
@@ -50,20 +53,21 @@ export default function ProductsPage() {
   }
 
   const products = productsData || [];
+  const queryClient = useQueryClient();
 
   return (
     <div className="container py-8 space-y-6 p-5">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Productos</h1>
         {products.length > 0 && (
-          <Sheet>
+          <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild>
               <Button>
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Nuevo producto
               </Button>
             </SheetTrigger>
-            <SheetContent>
+            <SheetContent className="max-w-2xl overflow-y-auto">
               <SheetHeader>
                 <SheetTitle>Edit profile</SheetTitle>
                 <SheetDescription>
@@ -71,14 +75,12 @@ export default function ProductsPage() {
                   done.
                 </SheetDescription>
               </SheetHeader>
-              <div className="py-4">
-                <ProductForm />
+              <div className="py-4 overflow-y-auto">
+                <ProductForm agentId={agentId} onSubmitSuccess={() => {
+                  queryClient.invalidateQueries({ queryKey: ["agent-products", agentId] });
+                  setIsOpen(false);
+                }}/>
               </div>
-              <SheetFooter>
-                <SheetClose asChild>
-                  <Button type="submit">Save changes</Button>
-                </SheetClose>
-              </SheetFooter>
             </SheetContent>
           </Sheet>
         )}

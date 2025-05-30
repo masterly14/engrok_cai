@@ -25,7 +25,17 @@ export class OrderAgent {
     
     // Extraer productos con cantidades del nuevo formato
     const productInterest = sessionData.productInterest || {};
-    const productIds = Object.keys(productInterest);
+    // Filtrar productos con cantidad mayor a 0
+    const filteredProductInterest: Record<string, number> = {};
+    Object.entries(productInterest).forEach(([productId, qty]) => {
+      const quantityNum = Number(qty);
+      if (quantityNum > 0) {
+        filteredProductInterest[productId] = quantityNum;
+      }
+    });
+
+    // Utilizamos únicamente los productos válidos
+    const productIds = Object.keys(filteredProductInterest);
 
     if (!productIds.length) {
       throw new Error("No products found in sessionData.productInterest");
@@ -47,7 +57,7 @@ export class OrderAgent {
     const orderDetails: string[] = [];
 
     products.forEach(product => {
-      const quantity = productInterest[product.id] || 1;
+      const quantity = filteredProductInterest[product.id] || 1;
       const subtotal = (product.price ?? 0) * quantity;
       totalAmount += subtotal;
       orderDetails.push(`${product.name} x${quantity} = $${subtotal}`);
@@ -56,22 +66,44 @@ export class OrderAgent {
     console.log("Order details:", orderDetails.join(", "));
     console.log("Total amount:", totalAmount);
 
-    // Crear orden con información adicional en metadata
-    const order = await db.order.create({
-      data: {
-        chatAgentId: chatAgent.id,
-        userId: chatAgent.userId,
-        productIds,
-        totalAmount,
-        paymentLink: "", // se actualizará luego
-        status: OrderStatus.PENDING,
-      },
-    });
+    let order;
+    if (sessionData.orderId) {
+      // Intentar reutilizar la orden si está pendiente
+      order = await db.order.findUnique({ where: { id: sessionData.orderId } });
+
+      if (order && order.status === OrderStatus.PENDING) {
+        // Actualizar productos y total
+        order = await db.order.update({
+          where: { id: order.id },
+          data: {
+            productIds,
+            totalAmount,
+            paymentLink: "", // se regenerará
+          }
+        });
+      } else {
+        order = null;
+      }
+    }
+
+    if (!order) {
+      // Crear nueva orden
+      order = await db.order.create({
+        data: {
+          chatAgentId: chatAgent.id,
+          userId: chatAgent.userId,
+          productIds,
+          totalAmount,
+          paymentLink: "", // se actualizará luego
+          status: OrderStatus.PENDING
+        }
+      });
+    }
 
     // Guardar información adicional de cantidades en sessionData
     sessionData.orderDetails = {
       orderId: order.id,
-      productQuantities: productInterest,
+      productQuantities: filteredProductInterest,
       orderSummary: orderDetails
     };
 

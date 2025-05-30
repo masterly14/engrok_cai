@@ -184,6 +184,7 @@ export class AgentOrchestator {
         - Puede haber referencias a productos mencionados anteriormente en el historial
         - Si dice "quiero ambos" o "los dos", revisa qué productos se mencionaron antes
         - Expresiones como "un par", "dos", "tres", etc. indican cantidades
+        - Si el usuario indica que ya no quiere un producto o que lo elimines ("ya no quiero", "quita", "sin", "no"), asigna la cantidad 0 para ese producto o exclúyelo.
         
         Devuelve SOLO un JSON con el siguiente formato:
         {{
@@ -295,8 +296,17 @@ export class AgentOrchestator {
             chatAgent?.id || ""
           );
           
-          // Actualizar sessionData con productos y cantidades
+          // Si el usuario indica que solo quiere los productos mencionados, reiniciamos su interés previo
+          if (this.isExclusiveSelection(message)) {
+            sessionData.productInterest = {};
+          }
+          
+          // Actualizar sessionData con productos y cantidades, permitiendo eliminar con quantity 0
           productsWithQuantities.forEach(item => {
+            if (item.quantity <= 0) {
+              delete sessionData.productInterest[item.productId];
+              return;
+            }
             if (sessionData.productInterest[item.productId]) {
               sessionData.productInterest[item.productId] += item.quantity;
             } else {
@@ -323,14 +333,15 @@ export class AgentOrchestator {
             chatAgent?.id || ""
           );
           
-          // Si hay productos nuevos, actualizarlos en sessionData
           if (closingProducts.length > 0) {
-            if (!sessionData.productInterest) {
-              sessionData.productInterest = {};
-            }
-            
+            // En fase de cierre, se considera que el usuario está confirmando su selección final.
+            // Por ello, reiniciamos su interés previo y los reemplazamos por la nueva selección.
+            sessionData.productInterest = {};
+
             closingProducts.forEach(item => {
-              sessionData.productInterest[item.productId] = item.quantity;
+              if (item.quantity > 0) {
+                sessionData.productInterest[item.productId] = item.quantity;
+              }
             });
           }
 
@@ -364,5 +375,11 @@ export class AgentOrchestator {
 
   private extractObjection(message: string): string {
     return message;
+  }
+
+  private isExclusiveSelection(message: string): boolean {
+    // Detecta si el usuario usa palabras que indiquen que solo quiere los productos mencionados
+    const exclusivityRegex = /\b(?:solo|solamente|únicamente|solo quiero|solo quisiera|único|únicamente el|solamente el)\b/i;
+    return exclusivityRegex.test(message);
   }
 }

@@ -30,6 +30,11 @@ export class PaymentLinkAgent {
       throw new Error("Payment link can only be generated for PENDING orders");
     }
 
+    // Si la orden ya tiene un paymentLink válido, lo reutilizamos
+    if (order.paymentLink && order.paymentLink.startsWith("http")) {
+      return order.paymentLink;
+    }
+
     const { chatAgent } = order;
 
     // Obtener detalles de los productos

@@ -13,6 +13,8 @@ import {
   Link,
   Sparkles,
   Building2,
+  AlertCircle,
+  CheckCircle,
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -21,6 +23,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
 import Image from "next/image"
 import { toast } from "sonner"
+import { productValidatorAgent } from "@/agents/productValidatorAgent"
 
 // Tipo para un producto individual
 export type ProductForm = {
@@ -40,11 +43,11 @@ interface ProductsStepProps {
     products: ProductForm[]
   }
   updateFormData: (data: Partial<ProductsStepProps["formData"]>) => void
+  onValidationComplete?: (isValid: boolean, validations: Record<string, { isValid: boolean; recommendations?: string[] }>) => void
 }
 
-export default function ProductsStep({ formData, updateFormData }: ProductsStepProps) {
+export default function ProductsStep({ formData, updateFormData, onValidationComplete }: ProductsStepProps) {
   const [localProducts, setLocalProducts] = useState<ProductForm[]>(() => {
-    // Si no hay productos, crear uno por defecto
     if (!formData.products || formData.products.length === 0) {
       const defaultProduct: ProductForm = {
         id: crypto.randomUUID(),
@@ -60,15 +63,18 @@ export default function ProductsStep({ formData, updateFormData }: ProductsStepP
     return formData.products
   })
 
-  // Sincronizar el estado local con formData cuando se inicializa
+  // Estado para las validaciones de cada producto
+  const [productValidations, setProductValidations] = useState<Record<string, { isValid: boolean; recommendations?: string[] }>>({})
+  
   useEffect(() => {
     if (localProducts.length > 0 && (!formData.products || formData.products.length === 0)) {
       updateFormData({ products: localProducts })
     }
   }, [])
 
+
   // Añade un nuevo producto vacío
-  const addProduct = () => {
+  const addProduct = (): void => {
     const newProduct: ProductForm = {
       id: crypto.randomUUID(),
       name: "",
@@ -90,13 +96,29 @@ export default function ProductsStep({ formData, updateFormData }: ProductsStepP
     updateFormData({ products: updated })
   }
 
-  // Maneja cambios en un campo de un producto
+  // Modificar la función handleChange para eliminar la validación automática
   const handleChange = (id: string, field: keyof ProductForm, value: any) => {
     const updated = localProducts.map((p) => (p.id === id ? { ...p, [field]: value } : p))
     setLocalProducts(updated)
     updateFormData({ products: updated })
   }
-
+  
+  // Función para validar un producto individual
+  const validateProduct = async (product: ProductForm) => {
+    const validation = await productValidatorAgent.validateProduct({
+      name: product.name,
+      description: product.description,
+      category: product.category,
+      price: product.price
+    })
+    
+    setProductValidations(prev => ({
+      ...prev,
+      [product.id]: validation
+    }))
+    
+    return validation.isValid
+  }
 
   // Sube la imagen a la API que integra Cloudinary y guarda la URL resultante
   const handleImageUpload = async (id: string, files: FileList | null) => {
@@ -139,6 +161,35 @@ export default function ProductsStep({ formData, updateFormData }: ProductsStepP
     return Math.round((completedChecks / totalChecks) * 100)
   }
 
+  // Función para validar todos los productos
+  const validateAllProducts = async () => {
+    const validations: Record<string, { isValid: boolean; recommendations?: string[] }> = {}
+    let allValid = true
+    
+    for (const product of localProducts) {
+      const isValid = await validateProduct(product)
+      if (!isValid) {
+        allValid = false
+      }
+    }
+    
+    // Notificar al componente padre si se proporcionó el callback
+    if (onValidationComplete) {
+      onValidationComplete(allValid, validations)
+    }
+    
+    return allValid
+  }
+  
+  // Exponer la función de validación para que el padre pueda llamarla
+  useEffect(() => {
+    // Agregar la función al objeto window temporalmente para que el padre pueda acceder
+    (window as any).validateProducts = validateAllProducts
+    
+    return () => {
+      delete (window as any).validateProducts
+    }
+  }, [localProducts])
 
   return (
     <div className="space-y-8 max-w-4xl mx-auto">
@@ -289,6 +340,24 @@ export default function ProductsStep({ formData, updateFormData }: ProductsStepP
                     placeholder="Describe tu producto de manera atractiva. ¿Qué lo hace especial?"
                     className="min-h-[100px] border-2 focus:border-orange-500 transition-colors resize-none"
                   />
+                  
+                  {/* Mostrar recomendaciones solo si existen y el producto no es válido */}
+                  {productValidations[product.id] && !productValidations[product.id].isValid && (
+                    <div className="mt-3 space-y-2 p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                      <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 font-medium text-sm">
+                        <AlertCircle size={16} />
+                        Sugerencias para mejorar tu descripción:
+                      </div>
+                      <ul className="space-y-1.5 text-sm text-amber-600 dark:text-amber-500">
+                        {productValidations[product.id].recommendations?.map((rec, index) => (
+                          <li key={index} className="flex items-start gap-1">
+                            <span className="mt-0.5">•</span>
+                            <span>{rec}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
 
                 {/* Sección de imágenes mejorada */}

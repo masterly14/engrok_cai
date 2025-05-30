@@ -1,0 +1,15 @@
+-- AlterTable
+ALTER TABLE "Order" ALTER COLUMN "amountInCents" DROP NOT NULL,
+ALTER COLUMN "billingData" DROP NOT NULL,
+ALTER COLUMN "currency" DROP NOT NULL,
+ALTER COLUMN "customerData" DROP NOT NULL,
+ALTER COLUMN "customerEmail" DROP NOT NULL,
+ALTER COLUMN "paymentLinkId" DROP NOT NULL,
+ALTER COLUMN "paymentMethod" DROP NOT NULL,
+ALTER COLUMN "paymentMethodType" DROP NOT NULL,
+ALTER COLUMN "redirectUrl" DROP NOT NULL,
+ALTER COLUMN "reference" DROP NOT NULL,
+ALTER COLUMN "shippingAddress" DROP NOT NULL,
+ALTER COLUMN "transactionCreatedAt" DROP NOT NULL,
+ALTER COLUMN "transactionFinalizedAt" DROP NOT NULL,
+ALTER COLUMN "transactionId" DROP NOT NULL;

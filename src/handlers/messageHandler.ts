@@ -104,14 +104,36 @@ export class MessageHandler {
 
       // Añadir a la cola para procesamiento
       if (response.includes("res.cloudinary.com")) {
-       let parsedResponse = JSON.parse(response);
+        // Extraer JSON válido desde la respuesta (puede venir rodeado de ```json ... ``` o texto)
+        let jsonString = response;
+        const fencedMatch = response.match(/```json\s*([\s\S]*?)\s*```/i);
+        if (fencedMatch) {
+          jsonString = fencedMatch[1].trim();
+        } else {
+          const braceMatch = response.match(/\{[\s\S]*\}/);
+          if (braceMatch) {
+            jsonString = braceMatch[0];
+          }
+        }
+        let parsedResponse;
+        try {
+          parsedResponse = JSON.parse(jsonString);
+        } catch (err) {
+          console.error("[handleTextMessage]: fallo al parsear JSON de la respuesta", err);
+          // Fallback: enviar respuesta como texto plano
+          await queueService.addToQueue({
+            ...message,
+            text: { body: response }
+          });
+          return;
+        }
         await queueService.addToQueue({
           ...message,
           text: { body: parsedResponse.text }
         });
         if (Array.isArray(parsedResponse.images)) {
           for (const img of parsedResponse.images) {
-            await whatsappService.sendImageMessage(userId, img.link, img.caption);
+            await whatsappService.sendImageMessage(userId, img.link);
           }
         } else {
           await queueService.addToQueue({

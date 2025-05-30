@@ -76,12 +76,32 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
     }
 
-    // Actualizar el estado de la orden
+    // Actualizar la orden con todos los campos relevantes del webhook
+    const tx = data.transaction;
     await db.order.update({
       where: { id: orderId },
-      data: { status: data.transaction.status },
+      data: {
+        status: tx.status,
+        transactionId: tx.id,
+        transactionCreatedAt: tx.created_at ? new Date(tx.created_at) : undefined,
+        transactionFinalizedAt: tx.finalized_at ? new Date(tx.finalized_at) : undefined,
+        amountInCents: tx.amount_in_cents,
+        reference: tx.reference,
+        customerEmail: tx.customer_email,
+        currency: tx.currency,
+        paymentMethodType: tx.payment_method_type,
+        paymentMethod: tx.payment_method,
+        statusMessage: tx.status_message,
+        shippingAddress: tx.shipping_address,
+        redirectUrl: tx.redirect_url,
+        paymentSourceId: tx.payment_source_id,
+        paymentLinkId: tx.payment_link_id,
+        customerData: tx.customer_data,
+        billingData: tx.billing_data,
+        origin: tx.origin,
+      },
     });
-
+    
     // Llamar directamente al ConfirmationAgent
     try {
       await confirmationAgent.handle({
