@@ -98,7 +98,6 @@ export default function Dashboard() {
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-background">
-      <CreateFirstAgentForm isOpen={isOpen} />
       <header className="sticky top-0 z-10 flex items-center gap-4 bg-background px-6">
         <div className="ml-auto flex items-center gap-4">
           <div className="flex items-center gap-2 rounded-full bg-muted px-3 py-1.5 text-sm font-medium">
