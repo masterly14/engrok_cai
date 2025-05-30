@@ -2,6 +2,7 @@ import { db } from "@/utils";
 import { PaymentService } from "@/integrations/paymentService";
 import { whatsappService } from "@/services/whatsapp";
 import { OrderStatus } from "@prisma/client";
+import redisClient from "@/lib/redis";
 
 /**
  * PaymentLinkAgent
@@ -31,10 +32,43 @@ export class PaymentLinkAgent {
 
     const { chatAgent } = order;
 
-    // 2. Preparar payload para PaymentService → puedes ajustarlo a tu endpoint real
+    // Obtener detalles de los productos
+    const products = await db.product.findMany({
+      where: { id: { in: order.productIds } },
+      select: { id: true, name: true, price: true },
+    });
+
+    // Intentar obtener las cantidades desde Redis
+    let productQuantities: Record<string, number> = {};
+    try {
+      // Buscar el contacto más reciente
+      const contact = await db.contact.findFirst({
+        where: { chatAgentId: chatAgent.id },
+        orderBy: { createdAt: "desc" },
+      });
+      
+      if (contact) {
+        const sessionKey = `sessionData:${contact.waId}`;
+        const sessionDataStr = await redisClient.get(sessionKey);
+        if (sessionDataStr && typeof sessionDataStr === 'string') {
+          const sessionData = JSON.parse(sessionDataStr) as { orderDetails?: { productQuantities?: Record<string, number> } };
+          if (sessionData.orderDetails?.productQuantities) {
+            productQuantities = sessionData.orderDetails.productQuantities;
+          }
+        }
+      }
+    } catch (err) {
+      console.error("[PaymentLinkAgent] Error obteniendo cantidades de Redis", err);
+    }
+
+    // Construir descripción detallada de la orden
+    const productNames = products.map(p => p.name).join(", ");
+    const orderDescription = `Pago de productos: ${productNames}`;
+
+    // 2. Preparar payload para PaymentService
     const orderData = {
       name: `Pedido ${order.id}`,
-      description: `Pago de productos (${order.productIds.length})`,
+      description: orderDescription,
       currency: "COP", 
       amount_in_cents: Math.round(order.totalAmount * 100),
       sku: order.id,
@@ -61,13 +95,23 @@ export class PaymentLinkAgent {
         orderBy: { createdAt: "desc" },
       });
       if (contact) {
-        await whatsappService.updateConfiguration(chatAgent.id);
-        await whatsappService.sendTextMessage(
-          contact.waId,
-          `¡Perfecto, gracias por tu interés! 🙌 Completa tu pago en el siguiente enlace: 🔗 ${paymentLink}
+        // Construir mensaje detallado con los productos
+        let detailMessage = "📝 *Resumen de tu pedido:*\n\n";
+        
+        products.forEach(product => {
+          const quantity = productQuantities[product.id] || 1;
+          const subtotal = product.price * quantity;
+          detailMessage += `• ${product.name} x${quantity} - $${subtotal.toLocaleString('es-CO')}\n`;
+        });
+        
+        detailMessage += `\n💰 *Total a pagar:* $${order.totalAmount.toLocaleString('es-CO')} COP\n\n`;
+        detailMessage += `¡Perfecto, gracias por tu interés! 🙌 Completa tu pago en el siguiente enlace:\n\n`;
+        detailMessage += `🔗 ${paymentLink}\n\n`;
+        detailMessage += `📋 *Identificador de tu orden:* ${order.id}\n`;
+        detailMessage += `Copia este identificador, ya que se te pedira en el pago, en el campo Orden ID`;
 
-            Se te pedira el numero de orden. Copia y pega el siguiente identificador: ${order.id}`
-        );
+        await whatsappService.updateConfiguration(chatAgent.id);
+        await whatsappService.sendTextMessage(contact.waId, detailMessage);
       }
     } catch (err) {
       console.error("[PaymentLinkAgent] Error enviando WhatsApp", err);

@@ -127,4 +127,17 @@ export class productDatabase {
     console.log(`[productDatabase] Found product:`, product ? product.name : 'none');
     return product;
   }
+
+  async getAllProducts(chatAgentId: string): Promise<any[]> {
+    console.log(`[productDatabase] Getting all products for chatAgentId: ${chatAgentId}`);
+    
+    const products = await db.product.findMany({
+      where: {
+        chatAgentId
+      }
+    });
+
+    console.log(`[productDatabase] Found ${products.length} products`);
+    return products;
+  }
 }

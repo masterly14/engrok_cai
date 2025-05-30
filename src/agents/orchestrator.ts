@@ -82,9 +82,9 @@ export class AgentOrchestator {
 
         Los agentes disponibles son:
         - **greeter**: Para saludos iniciales y construcción de relación.
-        - **product_expert**: Para brindar información detallada sobre productos.
+        - **product_expert**: Para brindar información detallada sobre productos, cuando el usuario pregunta sobre productos o menciona cantidades específicas.
         - **objection_handler**: Para responder a dudas o preocupaciones del cliente.
-        - **closer**: Para avanzar hacia el cierre de la venta cuando el cliente muestra interés.
+        - **closer**: Para avanzar hacia el cierre de la venta cuando el cliente muestra interés definitivo de compra.
 
         Los estados posibles de la conversación son:
         - **greeting**: Interacción inicial con el cliente.
@@ -94,6 +94,11 @@ export class AgentOrchestator {
         - **closing**: Avance hacia la decisión de compra.
         - **payment**: Facilitación del proceso de pago.
         - **follow_up**: Interacción posterior a la venta.
+
+        Instrucciones especiales:
+        1. Si el usuario menciona cantidades de productos ("quiero 2", "dame 3", "necesito varios"), siempre usa product_expert.
+        2. Si el usuario dice cosas como "quiero comprar", "lo voy a llevar", "me lo llevo", "sí, quiero ordenar", usa closer.
+        3. Si el usuario está ajustando su pedido final con cantidades específicas y muestra intención de compra, usa closer.
 
         Estado actual de la conversación: {current_state}
 
@@ -146,6 +151,79 @@ export class AgentOrchestator {
     }
     
     return productIds;
+  }
+
+  private async extractProductsWithQuantities(
+    message: string, 
+    chatHistory: string, 
+    chatAgentId: string
+  ): Promise<Array<{ productId: string; quantity: number }>> {
+    try {
+      // Obtener todos los productos disponibles
+      const allProducts = await this.productDb.getAllProducts(chatAgentId);
+      
+      // Crear un prompt para extraer productos y cantidades
+      const extractionPrompt = PromptTemplate.fromTemplate(
+        `Eres un asistente que extrae información sobre productos y cantidades de los mensajes de los usuarios.
+        
+        Productos disponibles:
+        {products}
+        
+        Historial del chat:
+        {chatHistory}
+        
+        Mensaje del usuario:
+        {message}
+        
+        Analiza el mensaje y el historial para identificar:
+        1. Qué productos está solicitando el usuario (pueden estar mencionados con nombres similares o variaciones)
+        2. Las cantidades de cada producto (si no se especifica cantidad, asume 1)
+        
+        Ten en cuenta:
+        - El usuario puede referirse a los productos de manera informal (ej: "dame 2 de la roja" refiriéndose a una camisa roja)
+        - Puede haber referencias a productos mencionados anteriormente en el historial
+        - Si dice "quiero ambos" o "los dos", revisa qué productos se mencionaron antes
+        - Expresiones como "un par", "dos", "tres", etc. indican cantidades
+        
+        Devuelve SOLO un JSON con el siguiente formato:
+        {{
+          "products": [
+            {{"productId": "id_del_producto", "productName": "nombre_del_producto", "quantity": numero}},
+            ...
+          ]
+        }}`
+      );
+
+      const extractionChain = new LLMChain({
+        llm: this.model,
+        prompt: extractionPrompt,
+        outputParser: new StringOutputParser(),
+      });
+
+      const productList = allProducts.map((p: any) => 
+        `ID: ${p.id}\nNombre: ${p.name}\nDescripción: ${p.description || 'N/A'}\nPrecio: $${p.price}`
+      ).join('\n\n');
+
+      const result = await extractionChain.predict({
+        products: productList,
+        chatHistory: chatHistory,
+        message: message,
+      });
+
+      // Parsear el resultado JSON
+      const jsonMatch = result.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        return parsed.products.map((p: any) => ({
+          productId: p.productId,
+          quantity: p.quantity || 1
+        }));
+      }
+    } catch (error) {
+      console.error("Error extracting products with quantities:", error);
+    }
+    
+    return [];
   }
 
   async routeMessage(message: string, userId: string, chatAgent?: any): Promise<string> {
@@ -207,10 +285,24 @@ export class AgentOrchestator {
           });
 
           if (!sessionData.productInterest) {
-            sessionData.productInterest = [];
+            sessionData.productInterest = {};
           }
-          const productIds = await this.extractProductInterest(message, chatAgent?.id || "");
-          sessionData.productInterest.push(...productIds);
+          
+          // Extraer productos con cantidades
+          const productsWithQuantities = await this.extractProductsWithQuantities(
+            message, 
+            chatHistory.chat_history || "", 
+            chatAgent?.id || ""
+          );
+          
+          // Actualizar sessionData con productos y cantidades
+          productsWithQuantities.forEach(item => {
+            if (sessionData.productInterest[item.productId]) {
+              sessionData.productInterest[item.productId] += item.quantity;
+            } else {
+              sessionData.productInterest[item.productId] = item.quantity;
+            }
+          });
           break;
 
         case "objection_handler":
@@ -224,17 +316,32 @@ export class AgentOrchestator {
           }
           break;
         case "closer":
-
+          // Verificar si el usuario está agregando o modificando productos en el cierre
+          const closingProducts = await this.extractProductsWithQuantities(
+            message, 
+            chatHistory.chat_history || "", 
+            chatAgent?.id || ""
+          );
+          
+          // Si hay productos nuevos, actualizarlos en sessionData
+          if (closingProducts.length > 0) {
+            if (!sessionData.productInterest) {
+              sessionData.productInterest = {};
+            }
+            
+            closingProducts.forEach(item => {
+              sessionData.productInterest[item.productId] = item.quantity;
+            });
+          }
 
           // Heurística simple: si el mensaje del usuario indica aceptación de compra
-            // 1. Crear orden
-            const orderId = await this.orderAgent.process(sessionData, chatAgent);
-            // 2. Generar link y enviarlo
-            const paymentLink = await this.paymentLinkAgent.process(orderId);
-
-            
-            sessionData.state = conversationState.PAYMENT;
-            response = paymentLink;
+          // 1. Crear orden
+          const orderId = await this.orderAgent.process(sessionData, chatAgent);
+          // 2. Generar link y enviarlo
+          await this.paymentLinkAgent.process(orderId);
+          response = "Estaremos pendientes de tu pago, te avisaremos cuando se haya realizado."
+          sessionData.state = conversationState.PAYMENT;
+  
           break;
         default:
           response = await this.greeterAgent.process({

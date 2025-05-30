@@ -5,7 +5,7 @@ import { OrderStatus, ChatAgent } from "@prisma/client";
 /**
  * OrderAgent
  * 1.  Recibe la sessionData actual y el ChatAgent.
- * 2.  Calcula el total con base en productIds dentro de sessionData.productInterest.
+ * 2.  Calcula el total con base en productIds y cantidades dentro de sessionData.productInterest.
  * 3.  Crea una Order con estado PENDING, la asocia al ChatAgent y al User.
  * 4.  Guarda orderId en sessionData y persiste nuevamente en Redis.
  */
@@ -22,28 +22,41 @@ export class OrderAgent {
     if (!chatAgent) throw new Error("chatAgent is required");
 
     console.log("Session data", sessionData);
-    const productIds: string[] = Array.isArray(sessionData.productInterest)
-      ? sessionData.productInterest.filter(Boolean)
-      : [];
+    
+    // Extraer productos con cantidades del nuevo formato
+    const productInterest = sessionData.productInterest || {};
+    const productIds = Object.keys(productInterest);
 
     if (!productIds.length) {
       throw new Error("No products found in sessionData.productInterest");
     }
 
-    // Traer productos de la DB y calcular total
+    // Traer productos de la DB y calcular total con cantidades
     console.log("Id de los productos", productIds);
     const products = await db.product.findMany({
       where: { id: { in: productIds } },
-      select: { price: true, id: true },
+      select: { price: true, id: true, name: true },
     });
 
     if (!products.length) {
       throw new Error("No products found in database for provided productIds");
     }
 
-    const totalAmount = products.reduce((acc, p) => acc + (p.price ?? 0), 0);
+    // Calcular el total considerando las cantidades
+    let totalAmount = 0;
+    const orderDetails: string[] = [];
 
-    // Crear Order
+    products.forEach(product => {
+      const quantity = productInterest[product.id] || 1;
+      const subtotal = (product.price ?? 0) * quantity;
+      totalAmount += subtotal;
+      orderDetails.push(`${product.name} x${quantity} = $${subtotal}`);
+    });
+
+    console.log("Order details:", orderDetails.join(", "));
+    console.log("Total amount:", totalAmount);
+
+    // Crear orden con información adicional en metadata
     const order = await db.order.create({
       data: {
         chatAgentId: chatAgent.id,
@@ -54,6 +67,13 @@ export class OrderAgent {
         status: OrderStatus.PENDING,
       },
     });
+
+    // Guardar información adicional de cantidades en sessionData
+    sessionData.orderDetails = {
+      orderId: order.id,
+      productQuantities: productInterest,
+      orderSummary: orderDetails
+    };
 
     // Persistir en sessionData y Redis
     sessionData.orderId = order.id;

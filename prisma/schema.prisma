@@ -356,6 +356,7 @@ model Order {
   totalAmount Float
   paymentLink String
   status      OrderStatus @default(PENDING)
+  productQuantities Json?
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
   chatAgent   ChatAgent   @relation(fields: [chatAgentId], references: [id], onDelete: Cascade)
