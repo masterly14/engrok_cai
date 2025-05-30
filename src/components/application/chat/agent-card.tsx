@@ -301,11 +301,11 @@ export default function AgentCard({ agent }: AgentCardProps) {
           )}
           <TabsContent value="overview" className="mt-0 space-y-3">
             <Link
-              href={`${
+              href={
                 agent.products.length === 0 && agent.type === "SALES"
                   ? "#"
-                  : "/application/agents/chat/conversaciones/${agent.id}"
-              }`}
+                  : `/application/agents/chat/conversaciones/${agent.id}`
+              }
             >
               <Button
                 variant="default"
