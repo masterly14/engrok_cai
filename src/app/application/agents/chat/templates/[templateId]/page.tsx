@@ -22,7 +22,8 @@ interface TemplateDetails {
 
 export default function TemplateDetailsPage() {
   const params = useParams() as { templateId: string }
-  const agentId = params.templateId
+  const rawAgentId = params.templateId
+  const agentId = decodeURIComponent(rawAgentId || "").replace(/%[0-9A-Fa-f]{2}/g, '')
 
   const { templates, templatesLoading, templatesError } = useAgentMessageTemplates(agentId)
 

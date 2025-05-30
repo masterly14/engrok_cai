@@ -416,7 +416,10 @@ function OrderDetailsModal({ order, products }: { order: OrderWithQuantities; pr
 export default function AgentOrdersPage() {
   const pathname = usePathname()
   const segments = pathname.split("/")
-  const agentId = segments[segments.length - 1]
+  const rawAgentId = segments[segments.length - 1];
+
+  // Decode and clean the agentId
+  const agentId = decodeURIComponent(rawAgentId || '').replace(/%[0-9A-Fa-f]{2}/g, '');
 
   const { orders, loading, error, updateStatus } = useAllOrders(agentId)
   const { productsData: products } = useAgentProducts(agentId)

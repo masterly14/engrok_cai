@@ -24,7 +24,10 @@ import { useState } from "react";
 export default function ProductsPage() {
   const params = useParams();
   const [isOpen, setIsOpen] = useState(false);
-  const agentId = params.agentId as string;
+  const rawAgentId = params.agentId as string;
+  const agentId = decodeURIComponent(rawAgentId || "").replace(/%[0-9A-Fa-f]{2}/g, '');
+
+  
 
   const { productsData, productsLoading, productsError } =
     useAgentProducts(agentId);

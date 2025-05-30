@@ -32,7 +32,10 @@ import type { Lead } from "@/lib/data"
 import { toast } from "sonner"
 
 export default function ConversationsPage() {
-  const { agentId } = useParams<{ agentId: string }>()
+  const { agentId: rawAgentId } = useParams<{ agentId: string }>()
+
+  const agentId = decodeURIComponent(rawAgentId || "").replace(/%[0-9A-Fa-f]{2}/g, '')
+  
   console.log(agentId)
   const router = useRouter()
   const queryClient = useQueryClient()
