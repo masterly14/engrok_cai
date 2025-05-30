@@ -25,10 +25,6 @@ export async function AppSidebar({
       </SidebarHeader>
       <SidebarContent>
         <NavMain />
-        <CreditDisplay
-          amount={user?.credits!}
-          maxAmount={user?.initialCredits}
-        />
       </SidebarContent>
       <SidebarFooter>
         <SidebarSeparator />
