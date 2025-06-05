@@ -1,4 +1,4 @@
-import React from "react";
+import type React from "react"
 import {
   Sidebar,
   SidebarContent,
@@ -6,18 +6,16 @@ import {
   SidebarHeader,
   SidebarRail,
   SidebarSeparator,
-} from "../../ui/sidebar";
-import { Team } from "./team";
-import { NavMain } from "./nav-main";
-import { CreditDisplay } from "./credit-display";
-import { onBoardUser } from "@/actions/user";
-import { NavUser } from "./nav-user";
-import { ModeToggle } from "@/components/mode-toggle";
+} from "../../ui/sidebar"
+import { Team } from "./team"
+import { NavMain } from "./nav-main"
+import { CreditDisplay } from "./credit-display"
+import { onBoardUser } from "@/actions/user"
+import { NavUser } from "./nav-user"
 
-export async function AppSidebar({
-  ...props
-}: React.ComponentProps<typeof Sidebar>) {
-  const user = await onBoardUser();
+export async function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const user = await onBoardUser()
+
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
@@ -25,21 +23,20 @@ export async function AppSidebar({
       </SidebarHeader>
       <SidebarContent>
         <NavMain />
-        <CreditDisplay
-          amount={user?.credits!}
-          maxAmount={user?.initialCredits}
-        />
+        {/* Ocultar CreditDisplay cuando el sidebar está colapsado */}
+        <div className="group-data-[collapsible=icon]:hidden">
+          <CreditDisplay amount={user?.credits!} maxAmount={user?.initialCredits!} />
+        </div>
       </SidebarContent>
       <SidebarFooter>
         <SidebarSeparator />
         <div className="flex gap-x-3 items-center">
           <NavUser user={user?.data} />
-          <ModeToggle />
         </div>
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
-  );
+  )
 }
 
-export default AppSidebar;
+export default AppSidebar

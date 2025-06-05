@@ -1,7 +1,8 @@
 "use client"
 
+import type React from "react"
+
 import {
-  BarChart3,
   Bot,
   ChevronRight,
   LayoutDashboard,
@@ -9,6 +10,10 @@ import {
   Phone,
   Users,
   Workflow,
+  Wrench,
+  UserCheck,
+  PhoneCall,
+  BarChart3,
 } from "lucide-react"
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
@@ -26,11 +31,13 @@ import {
 interface NestedMenuItem {
   title: string
   url: string
+  icon?: React.ElementType
 }
 
 interface SubMenuItem {
   title: string
   url: string
+  icon?: React.ElementType
   hasSubmenu?: boolean
   items?: NestedMenuItem[]
 }
@@ -40,6 +47,7 @@ interface MenuItem {
   url: string
   icon?: React.ElementType
   isActive?: boolean
+  hasSubmenu?: boolean
   items?: SubMenuItem[]
 }
 
@@ -79,21 +87,40 @@ export function NavMain() {
         {
           title: "Agentes de chat",
           url: "/application/agents/chat",
-        },
-      ],
-    },
-    {
-      title: "Flujos de trabajo",
-      url: "/application/workflows",
-      icon: Workflow,
-      items: [
-        {
-          title: "Flujos de trabajo",
-          url: "/application/workflows",
+          icon: LucideBotMessageSquare,
         },
         {
-          title: "Estudio",
-          url: "/application/workflow-studio",
+          title: "Agentes de voz",
+          url: "/application/agents/voice",
+          icon: PhoneCall,
+          hasSubmenu: true,
+          items: [
+            {
+              title: "Agentes",
+              url: "/application/agents/voice-agents/agents",
+              icon: Bot,
+            },
+            {
+              title: "Números de teléfono",
+              url: "/application/agents/voice-agents/numbers",
+              icon: Phone,
+            },
+            {
+              title: "Tools",
+              url: "/application/agents/voice-agents/tools",
+              icon: Wrench,
+            },
+            {
+              title: "Flujos",
+              url: "/application/agents/voice-agents/workflows",
+              icon: Workflow,
+            },
+            {
+              title: "Equipos",
+              url: "/application/agents/voice-agents/squads",
+              icon: UserCheck,
+            },
+          ],
         },
       ],
     },
@@ -132,21 +159,23 @@ export function NavMain() {
                 <CollapsibleContent>
                   <SidebarMenuSub>
                     {item.items.map((subItem) =>
-                      subItem.hasSubmenu ? (
+                      subItem.hasSubmenu && subItem.items ? (
                         <Collapsible key={subItem.title} asChild className="group/subcollapsible">
                           <SidebarMenuSubItem>
                             <CollapsibleTrigger asChild>
                               <SidebarMenuSubButton>
+                                {subItem.icon && <subItem.icon />}
                                 <span>{subItem.title}</span>
                                 <ChevronRight className="ml-auto h-4 w-4 transition-transform duration-200 group-data-[state=open]/subcollapsible:rotate-90" />
                               </SidebarMenuSubButton>
                             </CollapsibleTrigger>
                             <CollapsibleContent>
                               <div className="ml-2 mt-1 border-l border-sidebar-border pl-2">
-                                {subItem.items?.map((nestedItem) => (
+                                {subItem.items.map((nestedItem) => (
                                   <SidebarMenuSubItem key={nestedItem.title}>
                                     <SidebarMenuSubButton asChild size="sm">
                                       <a href={nestedItem.url}>
+                                        {nestedItem.icon && <nestedItem.icon />}
                                         <span>{nestedItem.title}</span>
                                       </a>
                                     </SidebarMenuSubButton>
@@ -160,6 +189,7 @@ export function NavMain() {
                         <SidebarMenuSubItem key={subItem.title}>
                           <SidebarMenuSubButton asChild>
                             <a href={subItem.url}>
+                              {subItem.icon && <subItem.icon />}
                               <span>{subItem.title}</span>
                             </a>
                           </SidebarMenuSubButton>
