@@ -11,10 +11,9 @@ import {
 } from "@/hooks/use-create-phone-number";
 import { useAllAgents } from "@/hooks/use-all-agents";
 import { useState } from "react";
-import { useAllSquads } from "@/hooks/use-all-squads";
 import InboundSettingsCard from "./InboundSettingsCard";
 import NumberConfigurationCard from "./NumberConfigurationCard";
-import CreateCampaign from "./create-campaign";
+import CreateCall from "./create-call";
 
 const NumberAgentsClient = () => {
   const {
@@ -30,11 +29,9 @@ const NumberAgentsClient = () => {
   const createPhoneNumberMutation = useCreatePhoneNumber();
   const updatePhoneNumberMutation = useUpdatePhoneNumber();
   const { agentsData, agentsLoading, agentsError } = useAllAgents();
-  const { squadData, squadLoading, squadError } = useAllSquads();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
-  const [selectedSquad, setSelectedSquad] = useState<string | null>(null);
   const [selectedWorkflow, setSelectedWorkflow] = useState<string | null>(null);
 
   const handleStartBlank = () => {
@@ -115,7 +112,6 @@ const NumberAgentsClient = () => {
           twilioAuthToken: formData.twilioAuthToken,
           assistantId: formData.assistantId,
           workflowId: formData.workflowId,
-          squadId: formData.squadId,
         });
         resetForm();
         setIsCreatingNew(false);
@@ -165,20 +161,10 @@ const NumberAgentsClient = () => {
                     Acciones del número
                   </h2>
                   <div className="flex gap-3">
-                    <Button
-                      variant="outline"
-                      className="border-slate-300 hover:bg-slate-50"
-                      onClick={() => {
-                        // TODO: Implement call functionality
-                        toast.info("Initiating call functionality...");
-                      }}
-                    >
-                      <Phone className="h-4 w-4 mr-2" />
-                      Llamar
-                    </Button>
-                    <CreateCampaign
+                    <CreateCall
                       phoneNumberId={selectedPhoneNumber.id}
                       phoneNumberVapiId={selectedPhoneNumber.vapiId!}
+                      assistans={agentsData}
                     />
                   </div>
                 </div>
@@ -264,11 +250,8 @@ const NumberAgentsClient = () => {
                   formData={formData}
                   handleInputChange={handleInputChange}
                   agentsData={Array.isArray(agentsData) ? agentsData : []}
-                  squadData={Array.isArray(squadData) ? squadData : []}
                   selectedAgent={selectedAgent}
                   setSelectedAgent={setSelectedAgent}
-                  selectedSquad={selectedSquad}
-                  setSelectedSquad={setSelectedSquad}
                   selectedWorkflow={selectedWorkflow}
                   setSelectedWorkflow={setSelectedWorkflow}
                 />

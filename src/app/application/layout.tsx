@@ -34,7 +34,9 @@ export default async function ApplicationLayout({
             <Separator orientation="vertical" className="mr-2 h-4" />
           </div>
         </header>
+        <div className="h-[calc(100vh-4rem)]">  
         {children}
+        </div>
       </SidebarInset>
     </SidebarProvider>
   );

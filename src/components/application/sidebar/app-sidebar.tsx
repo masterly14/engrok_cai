@@ -12,6 +12,7 @@ import { NavMain } from "./nav-main"
 import { CreditDisplay } from "./credit-display"
 import { onBoardUser } from "@/actions/user"
 import { NavUser } from "./nav-user"
+import { ModeToggle } from "@/components/mode-toggle"
 
 export async function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const user = await onBoardUser()
@@ -32,6 +33,7 @@ export async function AppSidebar({ ...props }: React.ComponentProps<typeof Sideb
         <SidebarSeparator />
         <div className="flex gap-x-3 items-center">
           <NavUser user={user?.data} />
+          <ModeToggle />
         </div>
       </SidebarFooter>
       <SidebarRail />

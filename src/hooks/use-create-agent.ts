@@ -65,11 +65,12 @@ export function usePublishAgent() {
       if (response.status !== 201 && response.status !== 200) {
         throw new Error(response.message || "Error al actualizar el agente");
       }
-      return response;
+      return response.data;
     },
-    onSuccess: () => {
+    onSuccess: (updatedAgent) => {
       toast.success("Agente actualizado correctamente");
       queryClient.invalidateQueries({ queryKey: ["agents"] });
+      return updatedAgent;
     },
     onError: (error: any) => {
       toast.error(error.message || "Error al actualizar el agente");

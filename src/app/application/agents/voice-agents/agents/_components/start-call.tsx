@@ -77,9 +77,10 @@ const StartCall = ({ vapiId }: Props) => {
 
     try {
       setIsCalling(true)
-      await vapi.start()
+      await vapi.start(vapiId)
       setActiveCall(true)
-    } catch {
+    } catch (error) {
+      console.log(error)
       toast.error("Error al iniciar la llamada")
       setIsCalling(false)
     }

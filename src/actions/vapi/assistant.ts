@@ -3,6 +3,7 @@
 import { VapiClient } from "@vapi-ai/server-sdk";
 import { db } from "@/utils";
 import { onBoardUser } from "../user";
+import { revalidateTag } from "next/cache";
 
 const client = new VapiClient({
   token: process.env.VAPI_API_KEY!,
@@ -41,6 +42,11 @@ export async function createAssistantAction(formData: FormData) {
     voice: {
       provider: "11labs",
       voiceId: (formData.get("voiceId") as string) || "21m00Tcm4TlvDq8ikWAM",
+      optimizeStreamingLatency: 4,
+      model: "eleven_multilingual_v2",
+      stability: 0.5,
+      similarityBoost: 0.75,
+      style: 0.1,
     },
   });
 
@@ -92,6 +98,9 @@ export async function createAssistantAction(formData: FormData) {
     };
   }
 
+  // Revalidar la caché para reflejar el nuevo agente
+  revalidateTag("agents")
+
   return {
     status: 201,
     message: "Asistente y agente creados correctamente",
@@ -120,8 +129,9 @@ export async function updateAssistantAction(formData: FormData, vapiId: string) 
       provider: "11labs",
       voiceId: (formData.get("voiceId") as string) || "21m00Tcm4TlvDq8ikWAM",
       optimizeStreamingLatency: 4,
-      stability: 0.6,
-      similarityBoost: 0.7,
+      model: "eleven_multilingual_v2",
+      stability: 0.5,
+      similarityBoost: 0.75,
       style: 0.1,
     },
     stopSpeakingPlan: {
@@ -159,8 +169,12 @@ export async function updateAssistantAction(formData: FormData, vapiId: string) 
     }
   }
 
+  // Revalidar la caché para que las consultas obtengan los datos actualizados
+  revalidateTag("agents")
+
   return {
     status: 201,
     message: "Asistente y agente actualizados correctamente",
+    data: updateDb,
   }
 }

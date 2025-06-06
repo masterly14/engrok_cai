@@ -1,10 +1,19 @@
 import { messageHandler } from "@/handlers/messageHandler";
+import { persistentQueue } from "@/services/persistentQueue";
 import { WhatsAppMessage, WhatsAppWebhookPayload } from "@/types/whatsapp";
 import { db } from "@/utils";
 import { NextRequest, NextResponse } from "next/server";
 
 async function handleMessage(message: WhatsAppMessage, AgentNumber: string): Promise<void> {
-  await messageHandler.handleIncomingMessage(message, AgentNumber);
+  try {
+    // Use persistent queue for serverless environment
+    await persistentQueue.enqueue(message, AgentNumber, 1);
+    console.log(`[Webhook] Message ${message.id} enqueued successfully`);
+  } catch (error) {
+    console.error(`[Webhook] Error enqueuing message ${message.id}:`, error);
+    // Fallback to direct processing if queue fails
+    await messageHandler.handleIncomingMessage(message, AgentNumber);
+  }
 }
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;

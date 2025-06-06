@@ -10,7 +10,6 @@ interface CreatePhoneNumberParams {
   credentialId?: string
   assistantId?: string
   workflowId?: string
-  squadId?: string
   twilioAccountSid?: string
   twilioAuthToken?: string
   vonageApiKey?: string

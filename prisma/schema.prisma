@@ -25,11 +25,12 @@ model User {
   leads                Lead[]
   orders               Order[]
   phoneNumbers         PhoneNumber[]
-  squads               Squad[]
   stages               Stage[]
   subscriptions        Subscription[]
   tags                 Tag[]
   transactions         Transaction[]
+  workflows            Workflow[]
+  connections          Connection[]
 }
 
 model Contact {
@@ -67,7 +68,6 @@ model Agent {
   vapiId          String?      @unique
   voiceId         String?
   User            User         @relation(fields: [userId], references: [id])
-  squads          AgentSquad[]
 }
 
 model PhoneNumber {
@@ -87,37 +87,33 @@ model PhoneNumber {
   vapiId          String?  @unique @db.Uuid
   credentialId    String?  @db.Uuid
   assistantId     String?  @db.Uuid
-  squadId         String?  @db.Uuid
   workflowId      String?  @db.Uuid
   user            User     @relation(fields: [userId], references: [id])
 }
 
-model Squad {
-  id        String       @id @default(uuid()) @db.Uuid
-  name      String
-  createdAt DateTime     @default(now())
-  vapiId    String?      @unique
-  updatedAt DateTime     @updatedAt
-  userId    String       @db.Uuid
-  agents    AgentSquad[]
-  user      User         @relation(fields: [userId], references: [id])
+model Workflow {
+  id String @id @default(uuid()) @db.Uuid
+  name String
+  vapiId String? @unique
+  tools Json?
+  workflowJson Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId String @db.Uuid
+  user User @relation(fields: [userId], references: [id])
 }
 
-model AgentSquad {
-  id           String   @id @default(uuid()) @db.Uuid
-  prompt       String?
-  firstMessage String?
-  voiceId      String?
-  agentId      String   @db.Uuid
-  squadId      String   @db.Uuid
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  agent        Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
-  squad        Squad    @relation(fields: [squadId], references: [id], onDelete: Cascade)
+model Connection {
+  id String @id @default(uuid()) @db.Uuid
+  connectionId String
+  providerConfigKey String 
+  authMode String
+  endUserId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  @@unique([agentId, squadId])
-  @@index([agentId])
-  @@index([squadId])
+  userId String @db.Uuid
+  user User @relation(fields: [userId], references: [id])
 }
 
 model KnowledgeBase {

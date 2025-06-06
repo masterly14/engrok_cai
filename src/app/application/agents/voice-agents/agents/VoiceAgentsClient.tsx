@@ -21,8 +21,9 @@ import DeleteAgent from "./_components/delete-agent"
 import StartCall from "./_components/start-call"
 import { createKnowledgeBase } from "@/actions/vapi/knowledge-bases"
 import { saveFileInDatabase } from "@/actions/vapi/files"
+import { Agent } from "@prisma/client"
 
-const VoiceAgentsClient = () => {
+const VoiceAgentsClient = ({ agents }: { agents: Agent[] }) => {
   const { selectedAgent, formData, setFormData, hasChanges, resetForm, isCreatingNew, setIsCreatingNew, setSelectedAgent } = useAgent()
   const createAgentMutation = useCreateAgent()
   const publishAgent = usePublishAgent()
@@ -47,6 +48,30 @@ const VoiceAgentsClient = () => {
   const [isCreatingKnowledgeBase, setIsCreatingKnowledgeBase] = useState<boolean>(false)
   const [showTemplateDialog, setShowTemplateDialog] = useState<boolean>(false)
   const [isPublishing, setIsPublishing] = useState<boolean>(false)
+
+  // Effect to initialize form data when an agent is selected
+  useEffect(() => {
+    if (selectedAgent) {
+      setFormData({
+        name: selectedAgent.name,
+        firstMessage: selectedAgent.firstMessage || "",
+        prompt: selectedAgent.prompt || "",
+        backgroundSound: selectedAgent.backgroundSound || "off",
+        voiceId: selectedAgent.voiceId || "",
+      })
+      // Only set fileId if knowledgeBaseId exists
+      if ('knowledgeBaseId' in selectedAgent) {
+        setFileId(selectedAgent.knowledgeBaseId as string | null)
+      }
+    }
+  }, [selectedAgent, setFormData])
+
+  // Effect to handle agent selection from props
+  useEffect(() => {
+    if (agents.length > 0 && !selectedAgent && !isCreatingNew) {
+      setSelectedAgent(agents[0])
+    }
+  }, [agents, selectedAgent, isCreatingNew, setSelectedAgent])
 
   // Función para abrir el diálogo de plantillas
   const openTemplateDialog = () => {
@@ -159,25 +184,18 @@ const VoiceAgentsClient = () => {
         return;
       }
       
-      const response = await publishAgent.mutateAsync({
+      const updatedAgent = await publishAgent.mutateAsync({
         name: formData.name,
         firstMessage: formData.firstMessage,
         prompt: formData.prompt,
         backgroundSound: formData.backgroundSound,
         voiceId: formData.voiceId,
         knowledgeBaseId: fileId,
-        vapiId: selectedAgent.vapiId
-      });
-      
-      // Actualizar el estado del formulario con los nuevos valores
-      setFormData({
-        name: formData.name,
-        firstMessage: formData.firstMessage,
-        prompt: formData.prompt,
-        backgroundSound: formData.backgroundSound,
-        voiceId: formData.voiceId,
-      });
-      
+        vapiId: selectedAgent.vapiId,
+      }) as Agent;
+
+      // Actualizar el estado global con el agente actualizado; el useEffect en el contexto sincronizará el formulario automáticamente
+      setSelectedAgent(updatedAgent);
       toast.success("Agente actualizado correctamente");
     } catch (error) {
       console.error("Error publishing agent:", error);

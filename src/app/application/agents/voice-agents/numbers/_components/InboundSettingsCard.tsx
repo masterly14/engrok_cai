@@ -26,16 +26,10 @@ interface AgentOption {
   name: string;
   vapiId: string | null;
 }
-interface SquadOption {
-  id: string;
-  name: string;
-  vapiId: string | null;
-}
 
 interface FormData {
   number: string;
   assistantId: string;
-  squadId: string;
   workflowId: string;
   alternativeDestination: string;
   [key: string]: any;
@@ -46,11 +40,8 @@ interface Props {
   formData: FormData;
   handleInputChange: (field: keyof FormData, value: string) => void;
   agentsData: AgentOption[];
-  squadData: SquadOption[];
   selectedAgent: string | null;
   setSelectedAgent: React.Dispatch<React.SetStateAction<string | null>>;
-  selectedSquad: string | null;
-  setSelectedSquad: React.Dispatch<React.SetStateAction<string | null>>;
   selectedWorkflow: string | null;
   setSelectedWorkflow: React.Dispatch<React.SetStateAction<string | null>>;
 }
@@ -60,11 +51,8 @@ const InboundSettingsCard: React.FC<Props> = ({
   formData,
   handleInputChange,
   agentsData,
-  squadData,
   selectedAgent,
   setSelectedAgent,
-  selectedSquad,
-  setSelectedSquad,
   selectedWorkflow,
   setSelectedWorkflow,
 }) => {
@@ -73,14 +61,10 @@ const InboundSettingsCard: React.FC<Props> = ({
     if (formData.assistantId) {
       setSelectedAgent(formData.assistantId);
     }
-    if (formData.squadId) {
-      setSelectedSquad(formData.squadId);
-    }
     if (formData.workflowId) {
       setSelectedWorkflow(formData.workflowId);
     }
-    console.log(formData.assistantId, formData.squadId, formData.workflowId, "estados", selectedAgent, selectedSquad, selectedWorkflow)
-  }, [formData.assistantId, formData.squadId, formData.workflowId, setSelectedAgent, setSelectedSquad, setSelectedWorkflow]);
+  }, [formData.assistantId, formData.workflowId, setSelectedAgent, setSelectedWorkflow]);
   return (
     <Card>
       <CardHeader>
@@ -117,7 +101,7 @@ const InboundSettingsCard: React.FC<Props> = ({
             <p className="text-sm font-medium text-slate-900">Agente</p>
             <Select
               value={formData.assistantId}
-              disabled={!!selectedSquad || !!selectedWorkflow}
+              disabled={!!selectedWorkflow}
               onValueChange={(value) => {
                 handleInputChange("assistantId", value);
                 setSelectedAgent(value);
@@ -128,7 +112,7 @@ const InboundSettingsCard: React.FC<Props> = ({
               </SelectTrigger>
               <SelectContent className="border-slate-200 w-full">
                 {Array.isArray(agentsData) && agentsData.length > 0 ? (
-                  <div className="space-x-2 flex">
+                  <div className="max-h-[200px] overflow-y-auto flex flex-col">
                     {agentsData.map((agent) => (
                       <SelectItem
                         key={agent.vapiId}
@@ -170,54 +154,10 @@ const InboundSettingsCard: React.FC<Props> = ({
         <div className="flex gap-x-3 items-center">
           <div className="space-y-2">
             <p className="text-sm font-medium text-slate-900">
-              Escuadron de agentes
-            </p>
-            <Select
-              disabled={!!selectedAgent || !!selectedWorkflow}
-              value={formData.squadId}
-              onValueChange={(value) => {
-                handleInputChange("squadId", value);
-                setSelectedSquad(value);
-              }}
-            >
-              <SelectTrigger className="h-12 border-slate-300 focus:border-slate-500 focus:ring-slate-200">
-                <SelectValue placeholder="Selecciona un escuadron" />
-              </SelectTrigger>
-              <SelectContent className="border-slate-200 w-full">
-                {Array.isArray(squadData) && squadData.length > 0 ? (
-                  squadData.map((squad) => (
-                    <SelectItem key={squad.id} value={squad.id}>
-                      {squad.name} {squad.vapiId}
-                    </SelectItem>
-                  ))
-                ) : (
-                  <div className="px-4 py-2 text-sm text-slate-500">
-                    No tienes escuadrones creados
-                  </div>
-                )}
-              </SelectContent>
-            </Select>
-          </div>
-          {selectedSquad && (
-            <Button
-              variant="outline"
-              onClick={() => {
-                setSelectedSquad(null);
-                handleInputChange("squadId", "");
-              }}
-            >
-              Deseleccionar
-            </Button>
-          )}
-        </div>
-        <Separator orientation="horizontal" />
-        <div className="flex gap-x-3 items-center">
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-slate-900">
               Flujo de trabajo
             </p>
             <Select
-              disabled={!!selectedAgent || !!selectedSquad}
+              disabled={!!selectedAgent}
               value={formData.workflowId}
               onValueChange={(value) => {
                 handleInputChange("workflowId", value);

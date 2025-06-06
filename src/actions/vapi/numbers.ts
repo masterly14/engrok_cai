@@ -18,7 +18,6 @@ interface CreatePhoneNumberParams {
   vonageApiKey?: string;
   assistantId?: string;
   workflowId?: string;
-  squadId?: string;
   vonageApiSecret?: string;
   extension?: string;
   credentialId?: string;
@@ -170,11 +169,10 @@ export const updatePhoneNumber = async (params: CreatePhoneNumberParams) => {
 
   if (params.assistantId != null && params.assistantId !== "") {
     console.log("Actualizando assistantId, previamente era: ", params.assistantId)
-    
+
     await vapi.phoneNumbers.update(phoneNumber.vapiId!, {
       assistantId: params.assistantId,
       workflowId: undefined,
-      squadId: undefined,
     })
 
     const updatedPhoneNumber = await db.phoneNumber.update({
@@ -184,7 +182,6 @@ export const updatePhoneNumber = async (params: CreatePhoneNumberParams) => {
       data: {
         assistantId: params.assistantId,
         workflowId: null,
-        squadId: null,
       }
     })
     console.log("updatedPhoneNumber", updatedPhoneNumber)
@@ -192,7 +189,6 @@ export const updatePhoneNumber = async (params: CreatePhoneNumberParams) => {
     await vapi.phoneNumbers.update(phoneNumber.vapiId!, {
       workflowId: params.workflowId,
       assistantId: undefined,
-      squadId: undefined,
     })
     await db.phoneNumber.update({
       where: {
@@ -201,44 +197,13 @@ export const updatePhoneNumber = async (params: CreatePhoneNumberParams) => {
       data: {
         workflowId: params.workflowId,
         assistantId: null,
-        squadId: null,
       },
     })
-  } else if (params.squadId != null && params.squadId !== "") {
-    console.log("Actualizando squadId")
-    
-    const vapiId = await db.squad.findFirst({
-      where: {
-        id: params.squadId,
-      },
-      select: {
-        vapiId: true,
-      },
-    })
-
-    if (vapiId?.vapiId) {
-      await vapi.phoneNumbers.update(phoneNumber.vapiId!, {
-        squadId: vapiId.vapiId,
-        assistantId: undefined,
-        workflowId: undefined,
-      })
-    await db.phoneNumber.update({
-      where: {
-        id: phoneNumber.id,
-      },
-      data: {
-          squadId: vapiId.vapiId,
-          workflowId: null,
-          assistantId: null,
-        },
-      })
-    }
   } else {
     console.log("Actualizando a null")
     await vapi.phoneNumbers.update(phoneNumber.vapiId!, {
       assistantId: undefined,
       workflowId: undefined,
-      squadId: undefined,
     })
     await db.phoneNumber.update({
       where: {
@@ -247,7 +212,6 @@ export const updatePhoneNumber = async (params: CreatePhoneNumberParams) => {
       data: {
         assistantId: null,
         workflowId: null,
-        squadId: null,
       },
     })
   }

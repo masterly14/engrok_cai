@@ -4,8 +4,8 @@ import { UserSessionManager } from "@/services/userSessionManager";
 import { whatsappService } from "@/services/whatsapp";
 import { WhatsAppMessage } from "@/types/whatsapp";
 import { pusherService } from "@/services/pusher";
-import { queueService } from "@/services/queue";
 import { cacheService } from "@/services/cache";
+import { queueInitializer } from "@/services/queueInitializer";
 import { db } from "@/utils";
 
 export class MessageHandler {
@@ -34,6 +34,9 @@ export class MessageHandler {
   async handleIncomingMessage(message: WhatsAppMessage, AgentNumber: string): Promise<void> {
     console.log("[handleIncomingMessage]: mensaje recibido", message);
     try {
+      // Ensure queue is initialized (important for Vercel)
+      await queueInitializer.ensureInitialized();
+      
       // Obtener el chatAgent basado en el número de teléfono del agente
       console.log("El numero de telefono es: ", AgentNumber)
       console.log('El mensaje recibido es: ', message)
@@ -102,28 +105,18 @@ export class MessageHandler {
       // Guardar respuesta en caché
       cacheService.set(`response:${text}`, response);
 
-      // Añadir a la cola para procesamiento
+      // Enviar mensaje directamente en lugar de usar la cola
       if (response.includes("res.cloudinary.com")) {
-       let parsedResponse = JSON.parse(response);
-        await queueService.addToQueue({
-          ...message,
-          text: { body: parsedResponse.text }
-        });
+        let parsedResponse = JSON.parse(response);
         if (Array.isArray(parsedResponse.images)) {
           for (const img of parsedResponse.images) {
             await whatsappService.sendImageMessage(userId, img.link, img.caption);
           }
         } else {
-          await queueService.addToQueue({
-            ...message,
-            text: { body: "No se pudo procesar el mensaje con imagenes" }
-          });
+          await whatsappService.sendTextMessage(userId, "No se pudo procesar el mensaje con imagenes");
         }
       } else {
-        await queueService.addToQueue({
-          ...message,
-          text: { body: response }
-        });
+        await whatsappService.sendTextMessage(userId, response);
       }
       
       await this.sessionManager.updateSession(userId);

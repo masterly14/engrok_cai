@@ -6,21 +6,25 @@ import type { Agent } from "@/types/agent"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { useAllAgents } from "@/hooks/use-all-agents"
 import { LoadingSpinner } from "@/components/loading-spinner"
 import { useAgent } from "@/context/agent-context"
 import { cn } from "@/lib/utils"
 
-export function Sidebar() {
-  const { agentsData, agentsLoading, agentsError } = useAllAgents()
+export function Sidebar({ agents: initialAgents }: { agents: Agent[] }) {
   const { selectedAgent, setSelectedAgent, setIsCreatingNew } = useAgent()
   const [searchTerm, setSearchTerm] = React.useState("")
+  const [agents, setAgents] = React.useState<Agent[]>(initialAgents)
+
+  // Actualizar los agentes cuando cambien los initialAgents
+  React.useEffect(() => {
+    setAgents(initialAgents)
+  }, [initialAgents])
 
   // Filtrar agentes basado en el término de búsqueda
   const filteredAgents = React.useMemo(() => {
-    if (!Array.isArray(agentsData)) return []
-    return agentsData.filter((agent) => agent.name.toLowerCase().includes(searchTerm.toLowerCase()))
-  }, [agentsData, searchTerm])
+    if (!Array.isArray(agents)) return []
+    return agents.filter((agent) => agent.name.toLowerCase().includes(searchTerm.toLowerCase()))
+  }, [agents, searchTerm])
 
   const handleAgentSelect = (agent: Agent) => {
     setSelectedAgent(agent)
@@ -34,6 +38,17 @@ export function Sidebar() {
       window.openVoiceAgentTemplateDialog()
     }
   }
+
+  // Suscribirse a los cambios del agente seleccionado
+  React.useEffect(() => {
+    if (selectedAgent) {
+      setAgents(prevAgents => 
+        prevAgents.map(agent => 
+          agent.id === selectedAgent.id ? selectedAgent : agent
+        )
+      )
+    }
+  }, [selectedAgent])
 
   return (
     <div className="h-screen w-[280px] border-r border-slate-300 shadow-xl">
@@ -87,22 +102,23 @@ export function Sidebar() {
             </div>
 
             <div className="space-y-2 overflow-y-auto max-h-[calc(100vh-280px)] pr-1">
-              {agentsLoading ? (
+              {!agents ? (
                 <div className="flex items-center justify-center py-12">
                   <div className="text-center">
                     <LoadingSpinner />
                     <p className="text-sm text-slate-400 mt-3">Cargando agentes...</p>
                   </div>
                 </div>
-              ) : agentsError ? (
+              ) : filteredAgents.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 px-4">
-                  <div className="h-16 w-16 rounded-full bg-red-900/30 flex items-center justify-center mb-4 ring-1 ring-red-800/50">
-                    <User className="h-8 w-8 text-red-400" />
-                  </div>
-                  <p className="text-sm font-medium text-red-400 text-center mb-1">Error al cargar agentes</p>
-                  <p className="text-xs text-red-500 text-center">Intenta recargar la página</p>
+                  <p className="text-sm font-medium text-slate-600 text-center mb-2">
+                    {searchTerm ? "No se encontraron agentes" : "No tienes agentes aún"}
+                  </p>
+                  <p className="text-xs text-slate-400 text-center mb-4">
+                    {searchTerm ? "Intenta con otro término de búsqueda" : "Crea tu primer agente de voz para comenzar"}
+                  </p>
                 </div>
-              ) : filteredAgents.length > 0 ? (
+              ) : (
                 filteredAgents.map((agent: Agent) => (
                   <div
                     key={agent.id}
@@ -153,15 +169,6 @@ export function Sidebar() {
                     </div>
                   </div>
                 ))
-              ) : (
-                <div className="flex flex-col items-center justify-center py-12 px-4">
-                  <p className="text-sm font-medium text-slate-600 text-center mb-2">
-                    {searchTerm ? "No se encontraron agentes" : "No tienes agentes aún"}
-                  </p>
-                  <p className="text-xs text-slate-400 text-center mb-4">
-                    {searchTerm ? "Intenta con otro término de búsqueda" : "Crea tu primer agente de voz para comenzar"}
-                  </p>
-                </div>
               )}
             </div>
           </div>

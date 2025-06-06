@@ -66,25 +66,6 @@ export function NavMain() {
       isActive: false,
       items: [
         {
-          title: "Agentes de voz",
-          url: "/application/agents/voice",
-          hasSubmenu: true,
-          items: [
-            {
-              title: "Todos",
-              url: "/application/agents/voice",
-            },
-            {
-              title: "Salientes",
-              url: "/application/agents/voice/outbound",
-            },
-            {
-              title: "Entrantes",
-              url: "/application/agents/voice/inbound",
-            },
-          ],
-        },
-        {
           title: "Agentes de chat",
           url: "/application/agents/chat",
           icon: LucideBotMessageSquare,
@@ -114,11 +95,6 @@ export function NavMain() {
               title: "Flujos",
               url: "/application/agents/voice-agents/workflows",
               icon: Workflow,
-            },
-            {
-              title: "Equipos",
-              url: "/application/agents/voice-agents/squads",
-              icon: UserCheck,
             },
           ],
         },
