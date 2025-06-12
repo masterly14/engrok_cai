@@ -13,9 +13,7 @@ export class UserSessionManager {
   }
 
   async updateSession(userId: string): Promise<void> {
-    await this.Redis.set(`session:${userId}`, Date.now().toString(), {
-      ex: this.sessionTTL,
-    });
+    await this.Redis.set(`session:${userId}`, Date.now().toString(), 'EX', this.sessionTTL);
   }
 
   async getSessionData(userId: string): Promise<any> {
@@ -49,9 +47,7 @@ export class UserSessionManager {
       // Properly stringify the object before saving
       const jsonString = JSON.stringify(sanitizedData);
 
-      await this.Redis.set(`sessionData:${userId}`, jsonString, {
-        ex: this.sessionTTL,
-      });
+      await this.Redis.set(`sessionData:${userId}`, jsonString, 'EX', this.sessionTTL);
     } catch (error) {
       console.error("Error saving session data to Redis:", error);
     }

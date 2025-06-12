@@ -8,9 +8,10 @@ export const getCachedAllWorkflows = unstable_cache(
     async (userId: string) => {
         const workflows = await db.workflow.findMany({
             where: {
-                userId
+                userId: userId
             }
         })
+        console.log('workflows', workflows);
         return workflows
     },
     ["workflows"],

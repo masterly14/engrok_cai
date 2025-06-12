@@ -19,10 +19,17 @@ export class PersistentMessageQueue {
 
   private constructor() {
     // Initialize Redis connection
-    this.connection = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
+    const redisUrl = "redis://default:AUjLAAIjcDE0OTc1Yzg0YTQwMjE0ODQ4Yjg2MzlhMmNlZDQ0YWM4YXAxMA@top-mullet-18635.upstash.io:6379";
+    
+    if (!redisUrl) {
+      throw new Error('Redis configuration required. Please set REDIS_URL environment variable.');
+    }
+
+    this.connection = new Redis(redisUrl, {
       maxRetriesPerRequest: 3,
       enableReadyCheck: false,
       lazyConnect: true,
+      connectTimeout: 10000,
     });
     
 

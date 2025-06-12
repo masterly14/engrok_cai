@@ -8,29 +8,32 @@ datasource db {
 }
 
 model User {
-  id                   String          @id @default(uuid()) @db.Uuid
-  clerkId              String          @unique
-  email                String          @unique
-  name                 String?
-  createdAt            DateTime        @default(now())
-  updatedAt            DateTime        @default(now())
-  amountCredits        Int
-  totalConversations   Int             @default(0)
-  totalAverageDuration Int             @default(0)
-  totalCost            Int             @default(0)
-  initialAmountCredits Int             @default(1000)
-  agents               Agent[]
-  chatAgents           ChatAgent[]
-  knowledgeBases       KnowledgeBase[]
-  leads                Lead[]
-  orders               Order[]
-  phoneNumbers         PhoneNumber[]
-  stages               Stage[]
-  subscriptions        Subscription[]
-  tags                 Tag[]
-  transactions         Transaction[]
-  workflows            Workflow[]
-  connections          Connection[]
+  id                           String          @id @default(uuid()) @db.Uuid
+  clerkId                      String          @unique
+  email                        String          @unique
+  name                         String?
+  createdAt                    DateTime        @default(now())
+  updatedAt                    DateTime        @default(now())
+  amountCredits                Int
+  totalConversations           Int             @default(0)
+  totalAverageDuration         Int             @default(0)
+  totalCost                    Int             @default(0)
+  initialAmountCredits         Int             @default(1000)
+  nangoConnectSessionExpiresAt DateTime?
+  nangoConnectSessionToken     String?
+  agents                       Agent[]
+  chatAgents                   ChatAgent[]
+  connections                  Connection[]
+  integrations                 Integration[]
+  knowledgeBases               KnowledgeBase[]
+  leads                        Lead[]
+  orders                       Order[]
+  phoneNumbers                 PhoneNumber[]
+  stages                       Stage[]
+  subscriptions                Subscription[]
+  tags                         Tag[]
+  transactions                 Transaction[]
+  workflows                    Workflow[]
 }
 
 model Contact {
@@ -59,15 +62,15 @@ model Contact {
 }
 
 model Agent {
-  id              String       @id @default(uuid()) @db.Uuid
-  userId          String       @db.Uuid
+  id              String  @id @default(uuid()) @db.Uuid
+  userId          String  @db.Uuid
   prompt          String
   name            String
   backgroundSound String?
   firstMessage    String
-  vapiId          String?      @unique
+  vapiId          String? @unique
   voiceId         String?
-  User            User         @relation(fields: [userId], references: [id])
+  User            User    @relation(fields: [userId], references: [id])
 }
 
 model PhoneNumber {
@@ -92,28 +95,27 @@ model PhoneNumber {
 }
 
 model Workflow {
-  id String @id @default(uuid()) @db.Uuid
-  name String
-  vapiId String? @unique
-  tools Json?
+  id           String   @id @default(uuid()) @db.Uuid
+  name         String
+  vapiId       String?  @unique
+  tools        Json?
   workflowJson Json?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  userId String @db.Uuid
-  user User @relation(fields: [userId], references: [id])
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  userId       String   @db.Uuid
+  user         User     @relation(fields: [userId], references: [id])
 }
 
 model Connection {
-  id String @id @default(uuid()) @db.Uuid
-  connectionId String
-  providerConfigKey String 
-  authMode String
-  endUserId String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  userId String @db.Uuid
-  user User @relation(fields: [userId], references: [id])
+  id                String   @id @default(uuid()) @db.Uuid
+  connectionId      String
+  providerConfigKey String?
+  authMode          String
+  endUserId         String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  userId            String   @db.Uuid
+  user              User     @relation(fields: [userId], references: [id])
 }
 
 model KnowledgeBase {
@@ -397,6 +399,43 @@ model Transaction {
   status    String
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Integration {
+  id             String              @id @default(uuid()) @db.Uuid
+  userId         String              @db.Uuid
+  provider       IntegrationProvider
+  status         IntegrationStatus   @default(ACTIVE)
+  accessToken    String?
+  refreshToken   String?
+  tokenExpiresAt DateTime?
+  scopes         String[]
+  metadata       Json?
+  lastSyncedAt   DateTime?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  user           User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([provider])
+  @@index([status])
+}
+
+enum IntegrationProvider {
+  FACEBOOK
+  GOOGLE_CALENDAR
+  GOOGLE_SHEETS
+  CAL_COM
+  HUBSPOT
+  AIRTABLE
+}
+
+enum IntegrationStatus {
+  ACTIVE
+  INACTIVE
+  ERROR
+  PENDING
+  EXPIRED
 }
 
 enum MessageType {

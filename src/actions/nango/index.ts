@@ -1,0 +1,170 @@
+"use server";
+import { db } from "@/utils";
+import { Nango } from "@nangohq/node";
+import axios from "axios";
+
+const nango = new Nango({ secretKey: process.env.NANGO_SECRET_KEY! });
+
+const generateConnectSessionToken = async (
+  userId: string,
+  email: string,
+  name: string | null
+) => {
+  const { data } = await nango.createConnectSession({
+    end_user: {
+      id: userId,
+      email: email,
+      display_name: name || undefined,
+    },
+    allowed_integrations: [
+      "google-calendar",
+      "facebook",
+      "cal-com-v2",
+      "google-sheet",
+      "hubspot",
+      "airtable",
+    ],
+  });
+
+  await db.user.update({
+    where: {
+      id: userId,
+    },
+    data: {
+      nangoConnectSessionToken: data.token,
+      nangoConnectSessionExpiresAt: data.expires_at,
+    },
+  });
+
+  return {
+    token: data.token,
+    expires_at: data.expires_at,
+  };
+};
+
+export const getSessionToken = async (userId: string) => {
+  const user = await db.user.findUnique({
+    where: {
+      id: userId,
+    },
+    select: {
+      nangoConnectSessionToken: true,
+      nangoConnectSessionExpiresAt: true,
+      name: true,
+      email: true,
+    },
+  });
+
+  if (!user) {
+    throw new Error("User not found");
+  }
+
+  const now = new Date();
+  const bufferTime = 5 * 60 * 1000; // 5 minutes buffer
+  const expirationDate = user.nangoConnectSessionExpiresAt
+    ? new Date(user.nangoConnectSessionExpiresAt)
+    : null;
+
+  if (expirationDate && expirationDate.getTime() > now.getTime() + bufferTime) {
+    return user.nangoConnectSessionToken;
+  } else {
+    const { token } = await generateConnectSessionToken(
+      userId,
+      user.email,
+      user.name
+    );
+    return {
+      token,
+    };
+  }
+};
+
+export const createConnection = async ({
+  integrationId,
+  providerConfigKey,
+  authMode,
+  endUserId,
+}: {
+  integrationId: string;
+  providerConfigKey: string;
+  authMode: string;
+  endUserId: string;
+}) => {
+  const connection = await db.connection.create({
+    data: {
+      connectionId: integrationId,
+      providerConfigKey: providerConfigKey,
+      authMode: authMode,
+      endUserId: endUserId,
+      userId: endUserId,
+    },
+  });
+
+  return connection;
+};
+
+export const ConnectionExists = async (
+  userId: string,
+  providerConfigKey: string
+) => {
+  const connection = await db.connection.findFirst({
+    where: {
+      userId: userId,
+      providerConfigKey: providerConfigKey,
+    },
+  });
+
+  if (!connection) {
+    return {
+      connection: null,
+      isConnected: false,
+    };
+  }
+
+  return {
+    connection: connection,
+    isConnected: true,
+  };
+};
+
+export const getAccessToken = async (connectionId: string) => {
+  try {
+    const token = await nango.getToken("google-calendar", connectionId);
+    console.log(token);
+    return token.toString();
+  } catch (error) {
+    console.error(error);
+    console.log(connectionId);
+    throw new Error("Error getting access token");
+  }
+};
+
+export const getGoogleCalendarCalendarsList = async (userId: string) => {
+  const connection = await db.connection.findFirst({
+    where: {
+      userId: userId,
+      providerConfigKey: "google-calendar",
+    },
+  });
+
+  if (!connection) {
+    throw new Error("Connection not found");
+  }
+
+  try {
+    const accessToken = await getAccessToken(connection.connectionId);
+    const response = await axios.get(
+      "https://www.googleapis.com/calendar/v3/users/me/calendarList",
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    );
+    console.log(response.data);
+    return response.data.items;
+  } catch (error) {
+    console.error(error);
+    throw new Error("Error getting google calendar calendars list");
+  }
+};

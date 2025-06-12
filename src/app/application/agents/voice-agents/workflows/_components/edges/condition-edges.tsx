@@ -35,7 +35,7 @@ export function conditionEdges({
   selected,
 }: EdgeProps) {
   const [isEditing, setIsEditing] = useState(false);
-  const [condition, setCondition] = useState(data?.condition || "Condition");
+  const [condition, setCondition] = useState(data?.condition?.prompt || "Condition");
   const [tempCondition, setTempCondition] = useState(condition);
 
   const [edgePath, labelX, labelY] = getStraightEdgePath(

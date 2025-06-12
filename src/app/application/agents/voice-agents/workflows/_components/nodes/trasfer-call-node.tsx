@@ -29,19 +29,13 @@ export function TransferCallNode({ data, isConnectable, selected }: TransferCall
         </div>
       </div>
       <div className="bg-white border-x border-b border-gray-200 p-3 rounded-b-lg">
-        <div className="text-sm text-gray-600">Transfer call to another destination</div>
+        <div className="text-sm text-gray-600">Transfiere la llamada a otro destino</div>
       </div>
       <Handle
         type="target"
         position={Position.Top}
         isConnectable={isConnectable}
         className="w-3 h-3 bg-green-600 border-2 border-white top-0"
-      />
-      <Handle
-        type="source"
-        position={Position.Bottom}
-        isConnectable={isConnectable}
-        className="w-3 h-3 bg-green-600 border-2 border-white bottom-0"
       />
     </motion.div>
   )

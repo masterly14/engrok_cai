@@ -90,15 +90,20 @@ export const updateWorkflow = async (data: any, id: string) => {
     }
     
     try {
+        console.log(data, "data")
         const workflow = await db.workflow.update({
             where: {
                 id: id
             },
             data: {
-                ...data,
+                name: data.name,
+                ...(data.workflowJson !== undefined && { workflowJson: data.workflowJson }),
+                ...(data.tools !== undefined && { tools: data.tools }),
                 userId: user.data.id
             }
         })
+
+        console.log(workflow, "workflow")
 
         return {
             status: 200,
