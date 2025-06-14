@@ -68,8 +68,7 @@ export function IntegrationNode({ data, isConnectable, selected }: IntegrationNo
   const providerKey = integration?.providerConfigKey;
   const action = integration?.action;
   const calendarId = integration?.calendarId;
-  const timeMin = integration?.timeMin;
-  const timeMax = integration?.timeMax;
+  const rangeDays = integration?.rangeDays;
 
   // Obtener información de la integración seleccionada
   const integrationDetails = providerKey ? integrationInfo[providerKey] : null;
@@ -136,9 +135,9 @@ export function IntegrationNode({ data, isConnectable, selected }: IntegrationNo
             Calendario: {calendarId}
           </div>
         )}
-        {timeMin && timeMax && (
+        {rangeDays && (
           <div className="text-xs text-gray-600">
-            {new Date(timeMin).toLocaleDateString()} - {new Date(timeMax).toLocaleDateString()}
+            Rango de días: {rangeDays}
           </div>
         )}
           <div className="text-sm text-gray-600">{integrationDetails ? "Conectado a servicio externo de " + integrationDetails.name : "Conecta a un servicio externo."}</div>

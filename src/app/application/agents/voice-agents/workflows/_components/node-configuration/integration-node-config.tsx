@@ -4,8 +4,7 @@ import Image from "next/image"
 import type { NodeConfigurationProps } from "./types"
 import { Button } from "@/components/ui/button"
 import { useState, useEffect } from "react"
-import IntegrationComponent from "@/components/nango/integrationComponent"
-import WhatsAppIntegrationComponent from "@/components/integrations/whatsappIntegrationComponent"
+import IntegrationComponent from "@/components/nango/integrationComponent"    
 import NativeCrmIntegrationComponent from "@/components/integrations/nativeCrmIntegrationComponent"
 
 const integrations = [
@@ -71,6 +70,7 @@ export function IntegrationNodeConfig({ selectedNode, updateNode }: NodeConfigur
     const newIntegration = (selectedNode as any)?.metadataIntegration?.providerConfigKey ?? null
     setSelectedIntegration(newIntegration)
   }, [selectedNode])
+
 
   const handleIntegrationSelect = (integrationId: string) => {
     setSelectedIntegration(integrationId)
@@ -173,11 +173,6 @@ export function IntegrationNodeConfig({ selectedNode, updateNode }: NodeConfigur
       {
         selectedIntegration === "airtable" && (
           <IntegrationComponent setIntegrationConnection={setIntegrationConnection} visibleName="Airtable" providerConfigKey="airtable" authMode="oauth2" nodeId={selectedNode.id} updateNode={updateNode} selectedNode={selectedNode} />
-        )
-      }
-      {
-        selectedIntegration === "whatsapp" && (
-          <WhatsAppIntegrationComponent setIntegrationConnection={setIntegrationConnection} />
         )
       }
       {

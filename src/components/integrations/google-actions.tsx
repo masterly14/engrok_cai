@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
   Select,
   SelectContent,
@@ -10,7 +10,6 @@ import {
 } from "../ui/select";
 import { getGoogleCalendarCalendarsList } from "@/actions/nango";
 import { Label } from "../ui/label";
-import { Input } from "../ui/input";
 import { toast } from "sonner";
 import {
   Card,
@@ -27,10 +26,12 @@ import {
   Trash2,
   Edit,
   CalendarRange,
+  ChevronDown,
 } from "lucide-react";
 import { Badge } from "../ui/badge";
 import { Separator } from "../ui/separator";
 import { Button } from "../ui/button";
+import { useReactFlow } from "reactflow";
 
 type Props = {
   setJsonData: (data: any) => void;
@@ -56,14 +57,60 @@ const GoogleActions = ({
     (selectedNode as any)?.metadataIntegration?.calendarId || ""
   );
   const [calendars, setCalendars] = useState<any[]>([]);
-  const [startDate, setStartDate] = useState<string>(
-    (selectedNode as any)?.metadataIntegration?.timeMin || ""
+  const [rangeDays, setRangeDays] = useState<number>(
+    Number((selectedNode as any)?.metadataIntegration?.rangeDays || 15)
   );
-  const [endDate, setEndDate] = useState<string>(
-    (selectedNode as any)?.metadataIntegration?.timeMax || ""
-  );
+  
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const actualDate = new Date().toISOString().split("T")[0];
+
+  // Estados específicos para eventos
+  const [eventSummary, setEventSummary] = useState<string>("");
+  const [eventDescription, setEventDescription] = useState<string>("");
+  const [eventStartDate, setEventStartDate] = useState<string>(actualDate);
+  const [eventStartTime, setEventStartTime] = useState<string>("09:00");
+  const [eventEndDate, setEventEndDate] = useState<string>(actualDate);
+  const [eventEndTime, setEventEndTime] = useState<string>("10:00");
+  const [eventId, setEventId] = useState<string>("");
+
+  // Rango para getEvents
+  const [eventsStartDate, setEventsStartDate] = useState<string>(actualDate);
+  const [eventsEndDate, setEventsEndDate] = useState<string>(actualDate);
+
+  /* -------------------------------- Variables globales -------------------------------- */
+  const reactFlowInstance = useReactFlow();
+  const variablesList = useMemo(() => {
+    const vars: string[] = [];
+    reactFlowInstance.getNodes().forEach((n) => {
+      if (n.type === "conversation") {
+        const outputs = (n.data as any)?.variableExtractionPlan?.output ?? [];
+        outputs.forEach((v: any) => {
+          const varName = v?.title || v?.name;
+          if (varName && !vars.includes(varName)) vars.push(varName);
+        });
+      }
+    });
+    return vars;
+  }, [reactFlowInstance]);
+
+  /* -------------------------------- Componente Helper -------------------------------- */
+  const VariableSelect = ({ onSelect }: { onSelect: (v: string) => void }) => {
+    if (variablesList.length === 0) return null;
+    return (
+      <Select onValueChange={onSelect}>
+        <SelectTrigger className="h-8 w-8 border-gray-300 ml-2 p-0 flex items-center justify-center">
+          <ChevronDown className="h-4 w-4" />
+        </SelectTrigger>
+        <SelectContent>
+          {variablesList.map((v) => (
+            <SelectItem key={v} value={v} className="cursor-pointer">
+              {v}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    );
+  };
 
   const convertDateToUTC = (dateString: string) => {
     const localDate = new Date(`${dateString}T00:00:00-05:00`);
@@ -103,10 +150,6 @@ const GoogleActions = ({
         return <CalendarRange className="h-4 w-4 text-blue-500" />;
       case "createEvent":
         return <Plus className="h-4 w-4 text-green-500" />;
-      case "deleteEvent":
-        return <Trash2 className="h-4 w-4 text-red-500" />;
-      case "updateEvent":
-        return <Edit className="h-4 w-4 text-amber-500" />;
       default:
         return null;
     }
@@ -118,10 +161,6 @@ const GoogleActions = ({
         return "border-blue-200 bg-blue-50";
       case "createEvent":
         return "border-green-200 bg-green-50";
-      case "deleteEvent":
-        return "border-red-200 bg-red-50";
-      case "updateEvent":
-        return "border-amber-200 bg-amber-50";
       default:
         return "";
     }
@@ -133,44 +172,82 @@ const GoogleActions = ({
         return "Verificar Disponibilidad";
       case "createEvent":
         return "Crear Evento";
-      case "deleteEvent":
-        return "Eliminar Evento";
-      case "updateEvent":
-        return "Actualizar Evento";
       default:
         return "";
     }
   };
 
   const updateNodeData = () => {
-    console.log("Actualizando nodo");
     setIsLoading(true);
-    const url = `${process.env.NEXT_PUBLIC_BASE_URL}/api/integrations/calendar?connectionId=${connectionId}&calendarId=${calendarId}&timeMin=${startDate}&timeMax=${endDate}`;
 
-    console.log("Tiempo max", endDate);
-    console.log("Tiempo min", startDate);
-    const updatedMetadata = {
+    let method: "GET" | "POST" = "GET";
+    let url = `${process.env.NEXT_PUBLIC_BASE_URL}/api/integrations/calendar?connectionId=${connectionId}&calendarId=${calendarId}`;
+    let bodyProps: Record<string, any> | undefined = undefined;
+
+    switch (typeAction) {
+      case "checkAvailability": {
+        url += `&action=checkAvailability&rangeDays=${rangeDays}`;
+        method = "GET";
+        break;
+      }
+      case "getEvents": {
+        url += `&action=getEvents&start=${eventsStartDate}&end=${eventsEndDate}`;
+        method = "GET";
+        break;
+      }
+      case "createEvent": {
+        url += `&action=createEvent`;
+        method = "POST";
+        bodyProps = {
+          summary: eventSummary,
+          description: eventDescription,
+          start: `${eventStartDate}T${eventStartTime}:00`,
+          end: `${eventEndDate}T${eventEndTime}:00`,
+        };
+        break;
+      }
+      default:
+        break;
+    }
+
+    const updatedMetadata: any = {
       providerConfigKey: "google-calendar",
       action: typeAction,
       calendarId,
-      timeMin: startDate,
-      timeMax: endDate,
     };
+
+    if (typeAction === "checkAvailability") {
+      updatedMetadata.rangeDays = rangeDays;
+    }
+
+    if (typeAction === "getEvents") {
+      updatedMetadata.start = eventsStartDate;
+      updatedMetadata.end = eventsEndDate;
+    }
+
+    if (["createEvent", "updateEvent"].includes(typeAction)) {
+      updatedMetadata.eventData = bodyProps;
+    }
 
     updateNode(nodeId, {
       ...selectedNode,
       metadataIntegration: updatedMetadata,
       data: {
         ...selectedNode.data,
-        metadataIntegration: updatedMetadata,
         tool: {
           ...((selectedNode.data as any)?.tool ?? {}),
           url,
-          method: "GET",
+          method,
+          ...(method === "POST" && {
+            body: {
+              type: "object",
+              properties: bodyProps || {},
+            },
+          }),
         },
       },
     });
-    console.log(selectedNode);
+
     setIsLoading(false);
   };
 
@@ -186,13 +263,10 @@ const GoogleActions = ({
       setCalendarId(meta.calendarId);
     }
 
-    if (meta.timeMin && typeof meta.timeMin === "string") {
-      setStartDate(meta.timeMin.split("T")[0]);
+    if (meta.rangeDays && !isNaN(Number(meta.rangeDays))) {
+      setRangeDays(Number(meta.rangeDays));
     }
-
-    if (meta.timeMax && typeof meta.timeMax === "string") {
-      setEndDate(meta.timeMax.split("T")[0]);
-    }
+    
   }, [selectedNode]);
 
   return (
@@ -296,18 +370,7 @@ const GoogleActions = ({
                       Crear evento
                     </div>
                   </SelectItem>
-                  <SelectItem value="deleteEvent">
-                    <div className="flex items-center gap-2">
-                      <Trash2 className="h-4 w-4 text-red-500" />
-                      Eliminar evento
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="updateEvent">
-                    <div className="flex items-center gap-2">
-                      <Edit className="h-4 w-4 text-amber-500" />
-                      Actualizar evento
-                    </div>
-                  </SelectItem>
+
                 </SelectContent>
               </Select>
             </div>
@@ -328,103 +391,109 @@ const GoogleActions = ({
 
               {typeAction === "checkAvailability" && (
                 <div className="space-y-4">
-                  <div className="flex items-start gap-2">
-                    <CheckCircle className="h-4 w-4 text-blue-600 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium text-gray-700">
-                        Configuración de rango de fechas
-                      </p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Por defecto, se buscarán los períodos disponibles para
-                        los próximos 15 días.
-                      </p>
+                <div className="flex items-start gap-2">
+                  <CheckCircle className="h-4 w-4 text-blue-600 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-gray-700">
+                      Configuración de rango en días
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Se buscará disponibilidad desde hoy hasta los próximos días que indiques.
+                    </p>
+                  </div>
+                </div>
+              
+                <div className="flex items-center gap-3">
+                  <Label className="text-sm">Días:</Label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={rangeDays}
+                    onChange={(e) => setRangeDays(parseInt(e.target.value))}
+                    className="w-20 border border-blue-200 rounded px-2 py-1 text-sm focus:outline-none focus:ring focus:ring-blue-300"
+                  />
+                </div>
+              
+                <Button onClick={updateNodeData} disabled={isLoading}>
+                  {isLoading ? "Guardando..." : "Guardar"}
+                </Button>
+              </div>
+              
+              )}
+
+              {/* CREATE EVENT FORM */}
+              {typeAction === "createEvent" && (
+                <div className="space-y-4">
+                  <div className="flex flex-col gap-2">
+                    <Label className="text-sm">Título del evento</Label>
+                    <div className="flex items-center">
+                      <input
+                        value={eventSummary}
+                        onChange={(e) => setEventSummary(e.target.value)}
+                        className="border rounded px-2 py-1 text-sm flex-1"
+                      />
+                      <VariableSelect onSelect={(v)=>setEventSummary(`{{${v}}}`)} />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-2">
-                      <Label className="text-xs text-gray-600">
-                        Fecha inicial
-                      </Label>
-                      <Input
+                    <div>
+                      <Label className="text-sm">Fecha inicio</Label>
+                      <input
                         type="date"
-                        value={startDate}
-                        className="border-blue-200 focus:ring-blue-500"
-                        onChange={(e) => {
-                          const newDate = e.target.value;
-                          if (newDate < actualDate) {
-                            setStartDate(actualDate);
-                            toast.error("La fecha no puede ser anterior a hoy");
-                          } else {
-                            setStartDate(newDate);
-                          }
-                        }}
+                        value={eventStartDate}
+                        onChange={(e) => setEventStartDate(e.target.value)}
+                        className="border rounded px-2 py-1 text-sm w-full"
                       />
                     </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs text-gray-600">
-                        Fecha final
-                      </Label>
-                      <Input
-                        type="date"
-                        value={endDate}
-                        className="border-blue-200 focus:ring-blue-500"
-                        onChange={(e) => {
-                          const newDate = e.target.value;
-                          if (newDate < startDate || newDate < actualDate) {
-                            setEndDate(startDate);
-                            toast.error(
-                              "La fecha final debe ser posterior a la inicial"
-                            );
-                          } else {
-                            setEndDate(newDate);
-                          }
-                        }}
+                    <div>
+                      <Label className="text-sm">Hora inicio</Label>
+                      <input
+                        type="time"
+                        value={eventStartTime}
+                        onChange={(e) => setEventStartTime(e.target.value)}
+                        className="border rounded px-2 py-1 text-sm w-full"
                       />
                     </div>
                   </div>
 
-                  {startDate && endDate && (
-                    <div className="bg-white border border-blue-100 rounded p-2 mt-2">
-                      <div className="flex items-center gap-2">
-                        <Badge
-                          variant="outline"
-                          className="bg-blue-50 text-blue-700 border-blue-200"
-                        >
-                          <Calendar className="h-3 w-3 mr-1" />
-                          Rango seleccionado
-                        </Badge>
-                        <span className="text-xs text-gray-600">
-                          {convertDateToUTC(startDate).split("T")[0]} -{" "}
-                          {convertDateToUTC(endDate).split("T")[0]}
-                        </span>
-                      </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-sm">Fecha fin</Label>
+                      <input
+                        type="date"
+                        value={eventEndDate}
+                        onChange={(e) => setEventEndDate(e.target.value)}
+                        className="border rounded px-2 py-1 text-sm w-full"
+                      />
                     </div>
-                  )}
+                    <div>
+                      <Label className="text-sm">Hora fin</Label>
+                      <input
+                        type="time"
+                        value={eventEndTime}
+                        onChange={(e) => setEventEndTime(e.target.value)}
+                        className="border rounded px-2 py-1 text-sm w-full"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <Label className="text-sm">Descripción</Label>
+                    <div className="flex items-start gap-2">
+                      <textarea
+                        value={eventDescription}
+                        onChange={(e) => setEventDescription(e.target.value)}
+                        className="border rounded px-2 py-1 text-sm flex-1"
+                      />
+                      <VariableSelect onSelect={(v)=>setEventDescription(`{{${v}}}`)} />
+                    </div>
+                  </div>
 
                   <Button onClick={updateNodeData} disabled={isLoading}>
                     {isLoading ? "Guardando..." : "Guardar"}
                   </Button>
                 </div>
-              )}
-
-              {/* Aquí se pueden agregar los formularios para las otras acciones */}
-              {typeAction === "createEvent" && (
-                <p className="text-sm text-gray-600">
-                  Configura los detalles del nuevo evento
-                </p>
-              )}
-
-              {typeAction === "deleteEvent" && (
-                <p className="text-sm text-gray-600">
-                  Selecciona el evento que deseas eliminar
-                </p>
-              )}
-
-              {typeAction === "updateEvent" && (
-                <p className="text-sm text-gray-600">
-                  Modifica los detalles del evento seleccionado
-                </p>
               )}
             </div>
           </>

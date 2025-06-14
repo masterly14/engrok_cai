@@ -45,6 +45,7 @@ import {
 } from "@/components/ui/dialog";
 import { NodeConfigurationSheet } from "./node-configuration";
 import { useWorkflowData } from "./hooks/use-workflow-data";
+import { v4 as uuidv4 } from "uuid";
 
 // Define node types
 export type NodeData = {
@@ -106,13 +107,8 @@ export function FlowBuilder({ workflowId }: { workflowId: string }) {
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
 
   // Use workflow data hook
-  const {
-    workflowName,
-    setWorkflowName,
-    isSaving,
-    isLoading,
-    saveWorkflow,
-  } = useWorkflowData({ workflowId, setNodes, setEdges });
+  const { workflowName, setWorkflowName, isSaving, isLoading, saveWorkflow } =
+    useWorkflowData({ workflowId, setNodes, setEdges });
 
   // Handle connections between nodes
   const onConnect = useCallback(
@@ -143,7 +139,7 @@ export function FlowBuilder({ workflowId }: { workflowId: string }) {
       // Create a new node with an incremented ID
       if (nodeType === "conversation") {
         newNode = {
-          id: `${nodeType}-${nodes.length + 1}`,
+          id: uuidv4(),
           type: nodeType,
           position,
           data: {
@@ -173,7 +169,7 @@ export function FlowBuilder({ workflowId }: { workflowId: string }) {
         };
       } else if (nodeType === "transferCall") {
         newNode = {
-          id: `${nodeType}-${nodes.length + 1}`,
+          id: uuidv4(),
           type: nodeType,
           position,
           data: {
@@ -197,8 +193,8 @@ export function FlowBuilder({ workflowId }: { workflowId: string }) {
                   number: "",
                   numberE164CheckEnabled: true,
                   transferPlan: {
-                    mode: "blind_transfer"
-                  }
+                    mode: "blind_transfer",
+                  },
                 },
               ],
             },
@@ -206,7 +202,7 @@ export function FlowBuilder({ workflowId }: { workflowId: string }) {
         };
       } else if (nodeType === "endCall") {
         newNode = {
-          id: `${nodeType}-${nodes.length + 1}`,
+          id: uuidv4(),
           type: nodeType,
           position,
           data: {
@@ -227,7 +223,7 @@ export function FlowBuilder({ workflowId }: { workflowId: string }) {
         };
       } else if (nodeType === "apiRequest") {
         newNode = {
-          id: `${nodeType}-${nodes.length + 1}`,
+          id: uuidv4(),
           type: nodeType,
           position,
           data: {
@@ -258,49 +254,36 @@ export function FlowBuilder({ workflowId }: { workflowId: string }) {
                 enum: [],
               },
             },
-          }
+          },
         };
       } else if (nodeType === "integration") {
         newNode = {
-          id: `${nodeType}-${nodes.length + 1}`,
+          id: uuidv4(),
           type: nodeType,
           position,
           metadataIntegration: {
             providerConfigKey: "",
             action: "",
             calendarId: "",
-            timeMin: "",
-            timeMax: "",
+            rangeDays: 15,
             url: "",
-            method: "GET"
+            method: "GET",
           },
           data: {
-            label: "Integración",
             type: "tool",
+            name: "Integración",
+            metadataIntegration: {
+              providerConfigKey: "",
+              action: "",
+              calendarId: "",
+              rangeDays: 15,
+              url: "",
+              method: "GET",
+            },
             tool: {
               type: "apiRequest",
               url: "",
               method: "GET",
-              headers: {
-                type: "object",
-                items: {},
-                properties: {},
-                description: "",
-                required: [],
-                value: "",
-                target: "",
-                enum: [],
-              },
-              body: {
-                type: "object",
-                items: {},
-                properties: {},
-                description: "",
-                required: [],
-                value: "",
-                target: "",
-                enum: [],
-              },
             },
           },
         };
@@ -372,9 +355,7 @@ export function FlowBuilder({ workflowId }: { workflowId: string }) {
   // Update node function for the sheet components
   const updateNode = (nodeId: string, updates: any) => {
     setNodes((prev) =>
-      prev.map((node) =>
-        node.id === nodeId ? { ...node, ...updates } : node
-      )
+      prev.map((node) => (node.id === nodeId ? { ...node, ...updates } : node))
     );
   };
 
@@ -417,56 +398,25 @@ export function FlowBuilder({ workflowId }: { workflowId: string }) {
             className="bg-white shadow-md rounded-md p-1 m-2 flex gap-1"
           >
             <Button
-              variant="ghost"
               size="icon"
-              className="h-9 w-9 text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+              className=" w-auto h-auto flex items-center justify-center p-2"
               onClick={() => setIsSaveDialogOpen(true)}
+              variant="outline"
             >
-              <Save className="h-5 w-5" />
+              <p>Guardar</p>
+              <Save className="h-5 w-5 ml-2" />
             </Button>
             <Button
-              variant="ghost"
+              variant="outline"
               size="icon"
               className="h-9 w-9 text-gray-600 hover:text-gray-900 hover:bg-gray-100"
             >
               <Undo className="h-5 w-5" />
             </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9 text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-            >
-              <Redo className="h-5 w-5" />
-            </Button>
-            <Button onClick={() => {
-              console.log(nodes);
-            }}>
-              <Download className="h-5 w-5" />
-            </Button>
-            <div className="w-px h-6 bg-gray-200 my-auto mx-1"></div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9 text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-            >
-              <ZoomIn className="h-5 w-5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9 text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-            >
-              <ZoomOut className="h-5 w-5" />
-            </Button>
-            <TemplateSelector onSelectTemplate={handleTemplateSelect} />
-            <div className="w-px h-6 bg-gray-200 my-auto mx-1"></div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9 text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-            >
-              <Download className="h-5 w-5" />
-            </Button>
+
+            {nodes.length === 0 && (
+              <TemplateSelector onSelectTemplate={handleTemplateSelect} />
+            )}
           </Panel>
 
           <Controls className="bg-white shadow-md rounded-md border-none overflow-hidden" />

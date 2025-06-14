@@ -6,11 +6,10 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const connectionId = searchParams.get("connectionId");
-    let timeMin = searchParams.get("timeMin");
-    let timeMax = searchParams.get("timeMax");
+    let rangeDays = Number(searchParams.get("rangeDays"));
     const calendarId = searchParams.get("calendarId") || "primary";
 
-    console.log("Parámetros recibidos:", { connectionId, timeMin, timeMax, calendarId });
+    console.log("Parámetros recibidos:", { connectionId, rangeDays, calendarId });
 
     // Validar parámetros
     if (!connectionId) {
@@ -20,15 +19,14 @@ export async function GET(request: NextRequest) {
       );
     }
     
-    if (!timeMin || !timeMax) {
-        timeMin = new Date().toISOString();
-        timeMax = new Date(new Date().setDate(new Date().getDate() + 7)).toISOString();
+    if (!rangeDays) {
+        rangeDays = 15;
     }
 
     // Validar formato de fechas
-    if (isNaN(Date.parse(timeMin)) || isNaN(Date.parse(timeMax))) {
+    if (isNaN(rangeDays)) {
       return NextResponse.json(
-        { error: "Invalid timeMin or timeMax format" },
+        { error: "Invalid rangeDays format" },
         { status: 400 }
       );
     }
@@ -37,8 +35,8 @@ export async function GET(request: NextRequest) {
     console.log("Access Token:", accessToken);
 
     const freeBusyRequest = {
-      timeMin: timeMin,
-      timeMax: timeMax,
+      timeMin: new Date().toISOString(),
+      timeMax: new Date(new Date().setDate(new Date().getDate() + rangeDays)).toISOString(),
       timeZone: "UTC",
       items: [{ id: calendarId }],
     };

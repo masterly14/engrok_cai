@@ -145,7 +145,7 @@ function transformNodeToMinimal(node: Node): any {
   if (node.type === "conversation") {
     return {
       type: "conversation",
-      name: d.name || d.label || node.id,
+      name: node.id,
       prompt: d.prompt || "",
       variableExtractionPlan: d.variableExtractionPlan || {},
       model: d.model
@@ -158,15 +158,17 @@ function transformNodeToMinimal(node: Node): any {
         : undefined,
       transcriber: d.transcription || d.transcriber,
       voice: d.voice,
+      position: node.position,
     };
   }
 
   // Integration node --------------------------------------------------------
   if (node.type === "integration") {
     return {
-      type: "integration",
-      name: d.name || d.label || node.id,
+      type: "tool",
+      name: node.id,
       metadataIntegration: (node as any).metadataIntegration || {},
+      position: node.position,
       tool: d.tool || {
         type: "apiRequest",
       },
@@ -176,10 +178,11 @@ function transformNodeToMinimal(node: Node): any {
   // Tool nodes (fallback) ---------------------------------------------------
   const baseToolNode: any = {
     type: "tool",
-    name: d.name || d.label || node.id,
+    name: node.id,
     tool: d.tool || {
       type: node.type, // fallback
     },
+    position: node.position,
   };
 
   return baseToolNode;
@@ -191,8 +194,8 @@ function transformEdgeToMinimal(edge: Edge, nodes: Node[]): any {
   const targetNode = nodes.find((n) => n.id === edge.target);
 
   return {
-    from: getNodeName(sourceNode),
-    to: getNodeName(targetNode),
+    from: sourceNode?.id || "",
+    to: targetNode?.id || "",
   };
 }
 
@@ -205,8 +208,14 @@ function getNodeName(node?: Node): string {
 // Transform minimal format coming from the API back to React-Flow nodes & edges
 function transformFromMinimalFormat(minNodes: any[], minEdges: any[]) {
   const builderNodes: Node[] = minNodes.map((minNode: any, idx: number) => {
-    const id = minNode.name || `${minNode.type}-${idx}`;
-    const position = { x: (idx % 5) * 250, y: Math.floor(idx / 5) * 160 };
+    let id = minNode.name || `${minNode.type}-${idx}`;
+    // Garantizar unicidad
+    const existingIds = new Set<string>();
+    if (existingIds.has(id)) {
+      id = `${id}-${idx}`;
+    }
+    existingIds.add(id);
+    const position = minNode.position || { x: (idx % 5) * 250, y: Math.floor(idx / 5) * 160 };
 
     if (minNode.type === "conversation") {
       return {
@@ -222,14 +231,33 @@ function transformFromMinimalFormat(minNodes: any[], minEdges: any[]) {
     }
 
     if (minNode.type === "integration") {
+      // Compatibilidad con antiguos flujos donde el tipo era "integration"
       return {
         id,
         type: "integration",
         position,
         metadataIntegration: minNode.metadataIntegration || {},
         data: {
-          label: minNode.name || "Integración",
           type: "tool",
+          name: minNode.name || "Integración",
+          metadataIntegration: minNode.metadataIntegration || {},
+          tool: minNode.tool || {
+            type: "apiRequest",
+          },
+        },
+      } as Node;
+    }
+
+    // Nuevo formato: minNode.type === "tool" pero incluye metadataIntegration
+    if (minNode.type === "tool" && minNode.metadataIntegration) {
+      return {
+        id,
+        type: "integration",
+        position,
+        metadataIntegration: minNode.metadataIntegration || {},
+        data: {
+          type: "tool",
+          name: minNode.name || "Integración",
           metadataIntegration: minNode.metadataIntegration || {},
           tool: minNode.tool || {
             type: "apiRequest",
@@ -261,12 +289,8 @@ function transformFromMinimalFormat(minNodes: any[], minEdges: any[]) {
 
   const builderEdges: Edge[] = minEdges.map((minEdge: any, idx: number) => {
     // find node ids based on names
-    const sourceNode = builderNodes.find(
-      (n) => getNodeName(n) === minEdge.from
-    );
-    const targetNode = builderNodes.find(
-      (n) => getNodeName(n) === minEdge.to
-    );
+    const sourceNode = builderNodes.find((n) => n.id === minEdge.from);
+    const targetNode = builderNodes.find((n) => n.id === minEdge.to);
 
     return {
       id: `e-${idx}`,

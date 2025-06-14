@@ -11,9 +11,9 @@ import {
   Users,
   Workflow,
   Wrench,
-  UserCheck,
   PhoneCall,
   BarChart3,
+  MessageSquare,
 } from "lucide-react"
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
@@ -69,6 +69,23 @@ export function NavMain() {
           title: "Agentes de chat",
           url: "/application/agents/chat",
           icon: LucideBotMessageSquare,
+          items: [
+            {
+              title: "Lineas WhatsApp",
+              url: "/application/agents/chat/whatsapp-lines",
+              icon: Phone,
+            },
+            {
+              title: "Flujos",
+              url: "/application/agents/chat/workflows",
+              icon: Workflow,
+            },
+            {
+              title: "Chat",
+              url: "/application/agents/chat/interface-chat",
+              icon: MessageSquare,
+            }
+          ]
         },
         {
           title: "Agentes de voz",
@@ -107,12 +124,12 @@ export function NavMain() {
     },
     {
       title: "Análisis",
-      url: "/analytics",
+      url: "/application/analytics",
       icon: BarChart3,
     },
     {
       title: "Historial de llamadas",
-      url: "/call-history",
+      url: "/application/call-history",
       icon: Phone,
     },
   ]
