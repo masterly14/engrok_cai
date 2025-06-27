@@ -9,6 +9,7 @@ import { ConversationNodeConfig } from "./conversation-node-config";
 import { TransferCallNodeConfig } from "./transfer-call-node-config";
 import { EndCallNodeConfig } from "./end-call-node-config";
 import { IntegrationNodeConfig } from "./integration-node-config";
+import { ApiRequestNodeConfig } from "./api-request-node-config";
 
 interface NodeConfigurationSheetProps {
   selectedNode: Node | null;
@@ -49,12 +50,19 @@ export function NodeConfigurationSheet({
           />
         );
       case "integration": 
-      return (
-        <IntegrationNodeConfig
-          selectedNode={selectedNode}
-          updateNode={updateNode}
-        />
-      )
+        return (
+          <IntegrationNodeConfig
+            selectedNode={selectedNode}
+            updateNode={updateNode}
+          />
+        );
+      case "apiRequest":
+        return (
+          <ApiRequestNodeConfig
+            selectedNode={selectedNode}
+            updateNode={updateNode}
+          />
+        );
       default:
         return (
           <div className="p-4 text-center text-gray-500">

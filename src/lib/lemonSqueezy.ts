@@ -12,10 +12,24 @@ function assertEnv(name: string, value?: string): asserts value is string {
 }
 
 assertEnv("LEMON_SQUEEZY_API_KEY", process.env.LEMON_SQUEEZY_API_KEY);
+assertEnv("LEMON_SQUEEZY_STORE_ID", process.env.LEMON_SQUEEZY_STORE_ID);
 
 const API_KEY = process.env.LEMON_SQUEEZY_API_KEY!;
+const STORE_ID = process.env.LEMON_SQUEEZY_STORE_ID!;
 
 async function lsFetch<T>(endpoint: string, init: RequestInit = {}): Promise<T> {
+  // Log básico de la petición
+  try {
+    if (process.env.NODE_ENV !== "production") {
+      console.debug("[LS] Request", endpoint, init.method ?? "GET");
+      if (init.body) {
+        console.debug("[LS] Body", init.body);
+      }
+    }
+  } catch {
+    // ignore log errors
+  }
+
   const res = await fetch(`${BASE_URL}${endpoint}`, {
     method: "GET",
     headers: {
@@ -46,26 +60,75 @@ export interface CreateCheckoutParams {
   submitType?: "pay" | "subscribe";
   checkoutOptions?: {
     expiresAt?: string;
+    cancelUrl?: string; // NB: pertenece a productOptions en la API, mantenido por compat
+  };
+
+  /**
+   * Opciones que realmente pertenecen a `product_options` en la API.
+   * Ej: redirect_url tras la compra o textos del recibo.
+   */
+  productOptions?: {
     redirectUrl?: string;
-    cancelUrl?: string;
+    receiptButtonText?: string;
+    receiptLinkUrl?: string;
+    receiptThankYouNote?: string;
   };
 }
 
 export async function createCheckout(params: CreateCheckoutParams) {
+  // Desglosamos opcionalmente checkoutOptions
+  const { checkoutOptions = {} } = params;
+  // Extraemos expiresAt (se envía aparte)
+  const { expiresAt, ...restOptions } = checkoutOptions as any;
+
+  // Map camelCase → snake_case únicamente para las keys con valor definido
+  const checkoutOptionsSnake: Record<string, unknown> = {};
+  Object.entries(restOptions).forEach(([key, value]) => {
+    if (value !== undefined && value !== null) {
+      const snakeKey = key.replace(/[A-Z]/g, (l) => `_${l.toLowerCase()}`);
+      checkoutOptionsSnake[snakeKey] = value;
+    }
+  });
+
+  const attributes: Record<string, any> = {
+    checkout_data: {
+      email: params.email,
+      custom: params.custom ?? {},
+    },
+    expires_at: expiresAt ?? null,
+  };
+
+  // Solo incluimos checkout_options si contiene algo útil
+  if (Object.keys(checkoutOptionsSnake).length > 0) {
+    attributes.checkout_options = checkoutOptionsSnake;
+  }
+
+  // ---------- product_options ----------
+  if (params.productOptions) {
+    const productOptionsSnake: Record<string, unknown> = {};
+    Object.entries(params.productOptions).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        const snakeKey = key.replace(/[A-Z]/g, (l) => `_${l.toLowerCase()}`);
+        productOptionsSnake[snakeKey] = value;
+      }
+    });
+
+    if (Object.keys(productOptionsSnake).length > 0) {
+      attributes.product_options = productOptionsSnake;
+    }
+  }
+
   const payload = {
     data: {
       type: "checkouts",
-      attributes: {
-        checkout_data: {
-          email: params.email,
-          custom: params.custom ?? {},
-          discount_code: null,
-          billing_address: null,
-        },
-        checkout_options: params.checkoutOptions ?? {},
-        expires_at: params.checkoutOptions?.expiresAt ?? null,
-      },
+      attributes,
       relationships: {
+        store: {
+          data: {
+            type: "stores",
+            id: STORE_ID.toString(),
+          },
+        },
         variant: {
           data: { type: "variants", id: params.variantId.toString() },
         },
@@ -73,14 +136,24 @@ export async function createCheckout(params: CreateCheckoutParams) {
     },
   };
 
-  const result = await lsFetch<{ data: { attributes: { url: string } } }>(
-    "/checkouts",
-    {
-      method: "POST",
-      body: JSON.stringify(payload),
-    },
-  );
-  return result.data.attributes.url;
+  // -------- DEBUG --------
+  if (process.env.NODE_ENV !== "production") {
+    console.debug("[LS] createCheckout payload", JSON.stringify(payload, null, 2));
+  }
+
+  try {
+    const result = await lsFetch<{ data: { attributes: { url: string } } }>(
+      "/checkouts",
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+      },
+    );
+    return result.data.attributes.url;
+  } catch (error) {
+    console.error("[LS] createCheckout error", error);
+    throw error;
+  }
 }
 
 export type LemonSubscriptionStatus =
@@ -107,8 +180,23 @@ export async function cancelSubscription(lsSubscriptionId: number) {
   });
 }
 
+export async function getVariant(variantId: number) {
+  return await lsFetch(`/variants/${variantId}`);
+}
+
 export const lemonSqueezy = {
   createCheckout,
   getSubscription,
   cancelSubscription,
+  getVariant,
+
+  /**
+   * Lista variantes del store.
+   * Lemon Squeezy aún no soporta filtro por store en /variants, así que
+   * simplemente paginamos todas y filtramos en código cuando sea necesario.
+   */
+  async listVariants(page = 1, perPage = 100) {
+    const endpoint = `/variants?page[number]=${page}&page[size]=${perPage}`;
+    return await lsFetch<{ data: any[] }>(endpoint);
+  },
 }; 

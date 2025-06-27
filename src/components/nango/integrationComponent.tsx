@@ -4,6 +4,7 @@ import {
   ConnectionExists,
   createConnection,
   getSessionToken,
+  createOrUpdateSync,
 } from "@/actions/nango";
 import { Button } from "../ui/button";
 import {
@@ -25,6 +26,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import GoogleActions from "../integrations/google-actions";
+import GoogleSheetsActions from "../integrations/google-sheets-actions";
+import { IntegrationNodeData } from "@/app/application/agents/voice-agents/workflows/types";
 
 const IntegrationComponent = ({
   setIntegrationConnection,
@@ -50,6 +53,10 @@ const IntegrationComponent = ({
   const [jsonData, setJsonData] = useState<any>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [connectionId, setConnectionId] = useState<string | null>(null);
+
+  const handleDataChange = (updates: Partial<IntegrationNodeData>) => {
+    updateNode(nodeId, updates);
+  };
 
   const handleConnect = async () => {
     toast("Asegurate de no bloquear las ventanas emergentes. Si no lo haces, no se podrá conectar con la aplicación.")
@@ -84,6 +91,17 @@ const IntegrationComponent = ({
         setIsConnected(true);
         console.log("Conexión creada:", connection);
         setConnectionId(connection.id);
+
+        // 1️⃣ Crear/actualizar Sync en Nango
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || window.location.origin;
+        const { syncName } = await createOrUpdateSync({
+          connectionId: connection.connectionId,
+          providerConfigKey,
+          webhookUrl: `${baseUrl}/api/nango/webhook/${providerConfigKey}`,
+        });
+
+        // 2️⃣ Persistir en nodo
+        updateNode(nodeId, { data: { connectionId: connection.id, syncName } });
       }
       
     } catch (error) {
@@ -112,9 +130,22 @@ const IntegrationComponent = ({
         user?.data.id,
         providerConfigKey
       );
-      setConnectionId(connection.connection?.id || null);
+      const connId = connection.connection?.connectionId || null;
+      console.log("connId", connection);
+      setConnectionId(connId);
       setIsConnected(connection.isConnected);
       setIntegrationConnection(connection.isConnected);
+
+      // Asegurarse de que existe el sync (por si aún no se creó)
+      if (connId) {
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || window.location.origin;
+        const { syncName } = await createOrUpdateSync({
+          connectionId: connId,
+          providerConfigKey,
+          webhookUrl: `${baseUrl}/api/nango/webhook/${providerConfigKey}`,
+        });
+        updateNode(nodeId, { data: { connectionId: connId, syncName } });
+      }
     } catch (error) {
       console.error("Error verificando conexión:", error);
       setError("Error al verificar la conexión");
@@ -153,8 +184,20 @@ const IntegrationComponent = ({
             </span>
           </div>
           {providerConfigKey === "google-calendar" && (
-            <GoogleActions setJsonData={setJsonData} userId={userId} connectionId={connectionId} nodeId={nodeId} updateNode={updateNode} selectedNode={selectedNode} />
+            <GoogleActions
+              data={selectedNode.data as IntegrationNodeData}
+              onDataChange={handleDataChange}
+              userId={userId}
+            />
           )}
+          {providerConfigKey === "google-sheet" && (
+            <GoogleSheetsActions
+              data={selectedNode.data as IntegrationNodeData}
+              onDataChange={handleDataChange}
+              userId={userId}
+            />
+          )}
+          
         </CardContent>
       </Card>
     );

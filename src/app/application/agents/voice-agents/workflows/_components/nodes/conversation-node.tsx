@@ -1,10 +1,10 @@
 import { motion } from "framer-motion";
 import { MessageSquare } from "lucide-react";
 import { Handle, Position } from "reactflow";
-import { NodeData } from "../flow-builder";
+import { ConversationNodeData, Variable } from "../../types";
 
 interface ConversationNodeProps {
-  data: NodeData;
+  data: ConversationNodeData;
   isConnectable: boolean;
   selected: boolean;
 }
@@ -38,16 +38,16 @@ export function ConversationNode({
             ? data.prompt
             : "Configura el prompt para la conversación."}
         </div>
-        {data.variableExtractionPlan?.output && data.variableExtractionPlan.output.length > 0 && (
+        {data.variables?.length > 0 && (
           <div className="mt-2 pt-2 border-t border-gray-100">
             <div className="text-xs text-gray-500 font-medium mb-1">Variables:</div>
             <div className="flex flex-wrap gap-1">
-              {data.variableExtractionPlan.output.map((variable: any, index: number) => (
+              {data.variables.map((variable: Variable, index: number) => (
                 <span
                   key={variable.id || index}
                   className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded-md font-mono"
                 >
-                  {`{{${variable.title || 'sin_nombre'}}}`}
+                  {`{{${variable.name || 'sin_nombre'}}}`}
                 </span>
               ))}
             </div>

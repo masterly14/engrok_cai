@@ -1,10 +1,15 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
-const isProtectedRoute = createRouteMatcher(['/application(.*)', '/validate'])
+const isProtectedRoute = createRouteMatcher(['/application(.*)']);
 
 export default clerkMiddleware(async (auth, req) => {
-  if (isProtectedRoute(req)) await auth.protect()
-})
+  const { userId, redirectToSignIn } = await auth();
+
+  if (isProtectedRoute(req) && !userId) {
+    return redirectToSignIn({ returnBackUrl: req.url });
+  }
+});
+
 export const config = {
   matcher: [
     // Skip Next.js internals and all static files, unless found in search params
@@ -13,3 +18,4 @@ export const config = {
     '/(api|trpc)(.*)',
   ],
 };
+

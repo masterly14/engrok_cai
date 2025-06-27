@@ -1,26 +1,13 @@
-import { getAllChatAgents, createChatAgent, updateChatAgent, deleteChatAgent } from "@/actions/chat-agents";
+import { createChatAgent, updateChatAgent, deleteChatAgent } from "@/actions/chat-agents";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getChatAgents } from "@/actions/chat-agents";
 
-export function useAllChatAgents() {
-  const {
-    data: chatAgentsData,
-    isLoading: chatAgentsLoading,
-    error: chatAgentsError,
-    isFetching: chatAgentsFetching,
-  } = useQuery({
+export const useAllChatAgents = () => {
+  return useQuery({
     queryKey: ["chat-agents"],
-    queryFn: async () => {
-      const response = await getAllChatAgents();
-      return response;
-    },
-    staleTime: 1000 * 60 * 5,
-    gcTime: 1000 * 60 * 30,
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
+    queryFn: async () => getChatAgents(),
   });
-
-  return { chatAgentsData, chatAgentsLoading, chatAgentsError, chatAgentsFetching };
-}
+};
 
 export function useCreateChatAgent() {
   const queryClient = useQueryClient();

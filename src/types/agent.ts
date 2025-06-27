@@ -1,3 +1,18 @@
+
+import type { Agent as PrismaAgent, ChatAgent as PrismaChatAgent, ChatWorkflow } from "@prisma/client"
+
+
+export type Voice = {
+  voice_id: string
+  name: string
+  preview_url: string
+}
+
+
+export type ChatAgentWithWorkflows = PrismaChatAgent & {
+  workflows: ChatWorkflow[]
+}
+
 export interface Agent {
     id: string
     vapiId: string | null

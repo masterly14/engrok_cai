@@ -127,9 +127,9 @@ export const ConnectionExists = async (
   };
 };
 
-export const getAccessToken = async (connectionId: string) => {
+export const getAccessToken = async (connectionId: string, provider: string = "google-calendar") => {
   try {
-    const token = await nango.getToken("google-calendar", connectionId);
+    const token = await nango.getToken(provider, connectionId);
     console.log(token);
     return token.toString();
   } catch (error) {
@@ -152,7 +152,7 @@ export const getGoogleCalendarCalendarsList = async (userId: string) => {
   }
 
   try {
-    const accessToken = await getAccessToken(connection.connectionId);
+    const accessToken = await getAccessToken(connection.connectionId, "google-calendar");
     const response = await axios.get(
       "https://www.googleapis.com/calendar/v3/users/me/calendarList",
       {
@@ -167,4 +167,50 @@ export const getGoogleCalendarCalendarsList = async (userId: string) => {
     console.error(error);
     throw new Error("Error getting google calendar calendars list");
   }
+};
+
+export const createOrUpdateSync = async (params: {
+  connectionId: string;
+  providerConfigKey: string;
+  syncName?: string;
+  cron?: string; // e.g. "*/5 * * * *"
+  webhookUrl: string;
+}) => {
+  console.log("createOrUpdateSync", params);
+  const {
+    connectionId,
+    providerConfigKey,
+    syncName = `${providerConfigKey}-sync`,
+    cron = "*/5 * * * *",
+    webhookUrl,
+  } = params;
+
+  const nangoBase = process.env.NANGO_API_BASE_URL || "https://api.nango.dev/v1";
+  console.log("createOrUpdateSync payload", params);
+  try {
+    await axios.post(
+      `${nangoBase}/sync/start`,
+      {
+        connection_id: connectionId,
+        provider_config_key: providerConfigKey,
+        syncs: [syncName],
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.NANGO_SECRET_KEY!}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+  } catch (err: any) {
+    // Si el sync ya está iniciado, Nango devuelve 400/409; lo ignoramos
+    const status = err?.response?.status;
+    if (status && (status === 400 || status === 409)) {
+      console.warn("[Nango] Sync ya iniciado o duplicado", err.response?.data);
+    } else {
+      console.error("[Nango] startSync error", err.response?.data || err);
+      throw err;
+    }
+  }
+  return { syncName };
 };

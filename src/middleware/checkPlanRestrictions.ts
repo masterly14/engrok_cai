@@ -2,12 +2,14 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { checkUserSubscription, checkFeatureAccess, checkResourceLimit, PlanRestrictions } from "@/utils/checkSubscription";
 import { onBoardUser } from "@/actions/user";
+import { CreditService } from "@/services/credit-service";
 
 export async function checkPlanRestrictions(
   request: NextRequest,
   requiredFeature?: string,
   resourceType?: keyof PlanRestrictions,
-  currentCount?: number
+  currentCount?: number,
+  expectedCredits?: number
 ) {
   const user = await onBoardUser();
   
@@ -47,6 +49,15 @@ export async function checkPlanRestrictions(
         { error: "Resource limit reached for your plan" },
         { status: 403 }
       );
+    }
+  }
+
+  // Verificar saldo de créditos si se indica expectedCredits
+  if (expectedCredits && expectedCredits > 0) {
+    try {
+      await CreditService.ensureBalance(user.data.id, expectedCredits);
+    } catch {
+      return NextResponse.json({ error: "Not enough credits" }, { status: 403 });
     }
   }
 

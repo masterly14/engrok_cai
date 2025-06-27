@@ -33,7 +33,17 @@ export function NavUser({ user }: { user: any }) {
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
               <Avatar className="h-8 w-8 rounded-lg">
-                <UserButton />
+                <UserButton>
+                  <UserButton.MenuItems>
+                    <UserButton.Action
+                      label="Pagos y Creditos"
+                      labelIcon={<CreditCard className="w-4 h-4" />}
+                      onClick={() => {
+                        window.open("/application/credits", "_blank");
+                      }}
+                    />
+                  </UserButton.MenuItems>
+                </UserButton>
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-semibold">{user.name}</span>

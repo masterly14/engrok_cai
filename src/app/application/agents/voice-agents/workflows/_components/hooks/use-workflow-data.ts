@@ -2,6 +2,13 @@ import { useState, useEffect } from 'react';
 import { Node, Edge } from 'reactflow';
 import { updateWorkflow, getWorkflow } from '@/actions/workflow';
 import { toast } from 'sonner';
+import {
+  WorkflowNode,
+  ConversationNodeData,
+  IntegrationNodeData,
+  TransferCallNodeData,
+  Variable,
+} from '@/app/application/agents/voice-agents/workflows/types';
 
 interface UseWorkflowDataProps {
   workflowId: string;
@@ -16,6 +23,159 @@ interface WorkflowData {
     edges: any[];
   };
 }
+
+// Función para transformar el estado del builder al formato de VAPI
+const transformToVapiPayload = (
+  nodes: WorkflowNode[],
+  edges: Edge[],
+  workflowName: string
+) => {
+  const vapiNodes = nodes.map((node) => {
+    const { data } = node;
+    const baseVapiNode = { name: data.name };
+
+    if (data.type === "conversation") {
+      const convData = data as ConversationNodeData;
+      // Transformar nuestro array de variables al schema de VAPI
+      const schemaProperties = (convData.variables || []).reduce((acc: Record<string, { type: string; description: string }>, variable: Variable) => {
+        acc[variable.name] = {
+          type: "string", // Simplificamos a string por ahora
+          description: variable.description,
+        };
+        return acc;
+      }, {} as Record<string, { type: string; description: string }>);
+
+      return {
+        ...baseVapiNode,
+        type: "conversation",
+        model: convData.model,
+        voice: convData.voice,
+        transcriber: convData.transcriber,
+        prompt: convData.prompt,
+        variableExtractionPlan: {
+          schema: {
+            type: "object",
+            properties: schemaProperties,
+          },
+        },
+      };
+    }
+
+    if (data.type === "transferCall") {
+      const transferData = data as any;
+      return {
+        ...baseVapiNode,
+        type: "tool",
+        tool: {
+          type: "transferCall",
+          destinations: transferData.tool?.destinations || [],
+        },
+      };
+    }
+
+    if (data.type === "endCall") {
+      return {
+        ...baseVapiNode,
+        type: "endCall",
+      };
+    }
+    
+    if (data.type === "integration") {
+        const intData = data as IntegrationNodeData;
+        let tool = {};
+        
+        // Aquí construimos el objeto 'tool' basado en la configuración guardada
+        if (intData.integrationType === 'google-sheet') {
+            tool = {
+                type: "apiRequest",
+                url: `/api/integrations/sheets?action=appendData`, // El userId se inyectará en el backend
+                method: 'POST',
+                body: {
+                    type: "object",
+                    properties: {
+                        spreadsheetId: intData.spreadsheetId,
+                        sheetName: intData.sheetName,
+                        column: intData.column,
+                        value: intData.value,
+                    }
+                }
+            }
+        }
+        
+        if (intData.integrationType === 'google-calendar') {
+            if (intData.calendarAction === 'availability') {
+                tool = {
+                    type: 'apiRequest',
+                    url: `/api/integrations/calendar?action=availability`,
+                    method: 'GET',
+                    query: {
+                      calendarId: intData.calendarId,
+                      rangeDays: intData.rangeDays || 15,
+                    }
+                }
+            } else {
+                tool = {
+                    type: 'apiRequest',
+                    url: `/api/integrations/calendar?action=createEvent`,
+                    method: 'POST',
+                    body: {
+                      type: 'object',
+                      properties: {
+                        calendarId: intData.calendarId,
+                        summary: intData.eventSummary,
+                        description: intData.eventDescription,
+                        startDate: intData.eventStartDate,
+                        startTime: intData.eventStartTime,
+                        duration: intData.eventDuration,
+                      }
+                    }
+                }
+            }
+        }
+
+        return {
+            ...baseVapiNode,
+            type: 'tool',
+            tool
+        }
+    }
+
+    if (data.type === "apiRequest") {
+        const apiData = data as any;
+        return {
+          ...baseVapiNode,
+          type: 'tool',
+          tool: {
+            type: 'apiRequest',
+            url: apiData.url,
+            method: apiData.method,
+            headers: apiData.headers || {},
+            body: apiData.body || {},
+          }
+        };
+    }
+
+    // Añadir lógica para otros tipos de nodos (endCall, etc.)
+
+    return null; // Omitir nodos no reconocidos
+  }).filter(Boolean); // Filtrar nulos
+
+  const vapiEdges = edges.map((edge) => {
+    const sourceNode = nodes.find(n => n.id === edge.source);
+    const targetNode = nodes.find(n => n.id === edge.target);
+    return {
+      from: sourceNode?.data.name,
+      to: targetNode?.data.name,
+      condition: edge.data?.condition,
+    };
+  });
+
+  return {
+    name: workflowName,
+    nodes: vapiNodes,
+    edges: vapiEdges,
+  };
+};
 
 export function useWorkflowData({ workflowId, setNodes, setEdges }: UseWorkflowDataProps) {
   const [workflowName, setWorkflowName] = useState("");
@@ -33,7 +193,7 @@ export function useWorkflowData({ workflowId, setNodes, setEdges }: UseWorkflowD
         if (response.status === 200 && response.workflow) {
           const workflow = response.workflow;
           setWorkflowName(workflow.name || "");
-
+          
           // Load nodes and edges from workflowJson if available
           if (workflow.workflowJson) {
             try {
@@ -41,11 +201,6 @@ export function useWorkflowData({ workflowId, setNodes, setEdges }: UseWorkflowD
               if (typeof workflowData === "string") {
                 workflowData = JSON.parse(workflowData);
               }
-
-              /**
-               * If the stored workflow follows the new minimal Vapi format (nodes without React-Flow metadata),
-               * we need to transform it back to the internal React-Flow representation so the editor can work.
-               */
               const isMinimalFormat =
                 Array.isArray(workflowData.nodes) &&
                 workflowData.nodes.length > 0 &&
@@ -80,48 +235,51 @@ export function useWorkflowData({ workflowId, setNodes, setEdges }: UseWorkflowD
     loadWorkflow();
   }, [workflowId, setNodes, setEdges]);
 
-  const saveWorkflow = async (nodes: Node[], edges: Edge[]): Promise<boolean> => {
-    if (!workflowName.trim()) {
-      toast.error("Por favor proporciona un nombre para el workflow");
-      return false;
+  const saveWorkflow = async (nodes: WorkflowNode[], edges: Edge[]) => {
+    if (!workflowName) {
+        toast.error("Por favor, asigna un nombre al workflow antes de guardar.");
+        return false;
     }
-
     setIsSaving(true);
     try {
-      // Convert internal representation to minimal API format before saving
-      const minimalNodes = nodes.map((n) => transformNodeToMinimal(n));
-      const minimalEdges = edges.map((e) => transformEdgeToMinimal(e, nodes));
+      const vapiPayload = transformToVapiPayload(nodes, edges, workflowName);
 
-      const workflowData: WorkflowData = {
+      const localPayload = {
         name: workflowName,
-        workflowJson: { nodes: minimalNodes, edges: minimalEdges },
+        workflowJson: {
+            nodes,
+            edges,
+        },
+        tools: vapiPayload.nodes.filter((node: any) => node.type === 'tool'),
+        vapiPayload: vapiPayload // Incluir el payload de Vapi
       };
+      
+      const response = await updateWorkflow(localPayload, workflowId);
 
-      if (!workflowId) {
-        toast.error("Workflow ID is not provided");
-        return false;
+      if (response.status !== 200) {
+        throw new Error(response.message || "Error al guardar el workflow");
       }
-
-      const response = await updateWorkflow(workflowData, workflowId);
-
-      if (response.status === 200) {
-        if (response.workflow) {
-          toast.success("Workflow guardado exitosamente");
-          return true;
+      
+      // Mostrar resultado de Vapi si está disponible
+      if (response.vapiResult) {
+        if (response.vapiResult.success) {
+          toast.success("Workflow guardado y sincronizado con Vapi AI");
+        } else {
+          toast.warning("Workflow guardado localmente, pero hubo un problema con Vapi AI");
+          console.warn("Vapi API error:", response.vapiResult.error);
         }
       } else {
-        toast.error("Error al guardar el workflow");
-        console.log(response, "response");
-        return false;
+        toast.success("Workflow guardado con éxito");
       }
-    } catch (error) {
-      console.error("Error al guardar el workflow:", error);
-      toast.error("Error al guardar el workflow");
+      
+      return true;
+    } catch (error: any) {
+      console.error("Error guardando el workflow:", error);
+      toast.error(error.message || "Error al guardar el workflow");
       return false;
     } finally {
       setIsSaving(false);
     }
-    return false;
   };
 
   return {
@@ -171,6 +329,22 @@ function transformNodeToMinimal(node: Node): any {
       position: node.position,
       tool: d.tool || {
         type: "apiRequest",
+      },
+    };
+  }
+
+  // API Request node -------------------------------------------------------
+  if (node.type === "apiRequest") {
+    return {
+      type: "tool",
+      name: node.id,
+      position: node.position,
+      tool: {
+        type: "apiRequest",
+        url: d.url,
+        method: d.method,
+        headers: d.headers || {},
+        body: d.body || {},
       },
     };
   }

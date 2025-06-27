@@ -11,89 +11,43 @@ import {
 import { getGoogleCalendarCalendarsList } from "@/actions/nango";
 import { Label } from "../ui/label";
 import { toast } from "sonner";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "../ui/card";
-import {
-  Calendar,
-  CheckCircle,
-  Clock,
-  Plus,
-  Trash2,
-  Edit,
-  CalendarRange,
-  ChevronDown,
-} from "lucide-react";
-import { Badge } from "../ui/badge";
-import { Separator } from "../ui/separator";
-import { Button } from "../ui/button";
+import { ChevronDown } from "lucide-react";
 import { useReactFlow } from "reactflow";
+import { Switch } from "../ui/switch";
+import { IntegrationNodeData } from "@/app/application/agents/voice-agents/workflows/types";
+import { Input } from "../ui/input";
 
 type Props = {
-  setJsonData: (data: any) => void;
+  data: IntegrationNodeData;
+  onDataChange: (data: Partial<IntegrationNodeData>) => void;
   userId: string | null;
-  connectionId: string | null;
-  nodeId: string;
-  updateNode: (nodeId: string, updates: any) => void;
-  selectedNode: any;
 };
 
-const GoogleActions = ({
-  setJsonData,
-  userId,
-  connectionId,
-  nodeId,
-  updateNode,
-  selectedNode,
-}: Props) => {
-  const [typeAction, setTypeAction] = useState<string>(
-    (selectedNode as any)?.metadataIntegration?.action || ""
-  );
-  const [calendarId, setCalendarId] = useState<string>(
-    (selectedNode as any)?.metadataIntegration?.calendarId || ""
-  );
+const GoogleActions = ({ data, onDataChange, userId }: Props) => {
   const [calendars, setCalendars] = useState<any[]>([]);
-  const [rangeDays, setRangeDays] = useState<number>(
-    Number((selectedNode as any)?.metadataIntegration?.rangeDays || 15)
+  const [rangeDays, setRangeDays] = useState<number>(data.rangeDays ?? 15);
+  const [availability, setAvailability] = useState<
+    { start: string; end: string }[]
+  >([]);
+  const [isFetchingAvailability, setIsFetchingAvailability] =
+    useState<boolean>(false);
+  const [action, setAction] = useState<"availability" | "createEvent" | null>(
+    (data.calendarAction as "availability" | "createEvent") || null
   );
-  
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const actualDate = new Date().toISOString().split("T")[0];
 
-  // Estados específicos para eventos
-  const [eventSummary, setEventSummary] = useState<string>("");
-  const [eventDescription, setEventDescription] = useState<string>("");
-  const [eventStartDate, setEventStartDate] = useState<string>(actualDate);
-  const [eventStartTime, setEventStartTime] = useState<string>("09:00");
-  const [eventEndDate, setEventEndDate] = useState<string>(actualDate);
-  const [eventEndTime, setEventEndTime] = useState<string>("10:00");
-  const [eventId, setEventId] = useState<string>("");
-
-  // Rango para getEvents
-  const [eventsStartDate, setEventsStartDate] = useState<string>(actualDate);
-  const [eventsEndDate, setEventsEndDate] = useState<string>(actualDate);
-
-  /* -------------------------------- Variables globales -------------------------------- */
   const reactFlowInstance = useReactFlow();
   const variablesList = useMemo(() => {
     const vars: string[] = [];
-    reactFlowInstance.getNodes().forEach((n) => {
-      if (n.type === "conversation") {
-        const outputs = (n.data as any)?.variableExtractionPlan?.output ?? [];
-        outputs.forEach((v: any) => {
-          const varName = v?.title || v?.name;
-          if (varName && !vars.includes(varName)) vars.push(varName);
+    reactFlowInstance.getNodes().forEach((n: any) => {
+      if (n.data.type === "conversation") {
+        (n.data.variables || []).forEach((v: any) => {
+          if (v.name && !vars.includes(v.name)) vars.push(v.name);
         });
       }
     });
     return vars;
   }, [reactFlowInstance]);
 
-  /* -------------------------------- Componente Helper -------------------------------- */
   const VariableSelect = ({ onSelect }: { onSelect: (v: string) => void }) => {
     if (variablesList.length === 0) return null;
     return (
@@ -112,394 +66,266 @@ const GoogleActions = ({
     );
   };
 
-  const convertDateToUTC = (dateString: string) => {
-    const localDate = new Date(`${dateString}T00:00:00-05:00`);
-    // Obtener componentes de la fecha en UTC
-    const year = localDate.getUTCFullYear();
-    const month = String(localDate.getUTCMonth() + 1).padStart(2, "0");
-    const day = String(localDate.getUTCDate()).padStart(2, "0");
-    const hours = String(localDate.getUTCHours()).padStart(2, "0");
-    const minutes = String(localDate.getUTCMinutes()).padStart(2, "0");
-    const seconds = String(localDate.getUTCSeconds()).padStart(2, "0");
-    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-  };
-
   useEffect(() => {
     const fetchCalendars = async () => {
+      if (!userId) return;
       try {
-        setIsLoading(true);
-        if (!userId) {
-          toast.error("No se encontró el ID de usuario");
-          return;
-        }
         const calendars = await getGoogleCalendarCalendarsList(userId);
         setCalendars(calendars || []);
       } catch (error) {
-        console.error("Error fetching calendars:", error);
         toast.error("Error al obtener los calendarios");
-      } finally {
-        setIsLoading(false);
       }
     };
     fetchCalendars();
   }, [userId]);
 
-  const getActionIcon = (action: string) => {
-    switch (action) {
-      case "checkAvailability":
-        return <CalendarRange className="h-4 w-4 text-blue-500" />;
-      case "createEvent":
-        return <Plus className="h-4 w-4 text-green-500" />;
-      default:
-        return null;
+  /**
+   * Fetch free / busy information from backend and calculate available slots
+   */
+  const handleFetchAvailability = async () => {
+    if (!userId) {
+      toast.error("Usuario no definido");
+      return;
+    }
+    if (!data.calendarId) {
+      toast.error("Selecciona un calendario");
+      return;
+    }
+    try {
+      setIsFetchingAvailability(true);
+      const res = await fetch(
+        `/api/integrations/calendar?userId=${userId}&calendarId=${data.calendarId}&rangeDays=${rangeDays}`
+      );
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const calendarsJson = await res.json();
+      const cal = calendarsJson[data.calendarId] || calendarsJson.primary;
+      const avail = cal?.available || [];
+      setAvailability(avail);
+      if (avail.length === 0)
+        toast.info("No se encontraron espacios disponibles");
+    } catch (err) {
+      console.error(err);
+      toast.error("Error obteniendo disponibilidad");
+    } finally {
+      setIsFetchingAvailability(false);
     }
   };
-
-  const getActionColor = (action: string) => {
-    switch (action) {
-      case "checkAvailability":
-        return "border-blue-200 bg-blue-50";
-      case "createEvent":
-        return "border-green-200 bg-green-50";
-      default:
-        return "";
-    }
-  };
-
-  const getActionTitle = (action: string) => {
-    switch (action) {
-      case "checkAvailability":
-        return "Verificar Disponibilidad";
-      case "createEvent":
-        return "Crear Evento";
-      default:
-        return "";
-    }
-  };
-
-  const updateNodeData = () => {
-    setIsLoading(true);
-
-    let method: "GET" | "POST" = "GET";
-    let url = `${process.env.NEXT_PUBLIC_BASE_URL}/api/integrations/calendar?connectionId=${connectionId}&calendarId=${calendarId}`;
-    let bodyProps: Record<string, any> | undefined = undefined;
-
-    switch (typeAction) {
-      case "checkAvailability": {
-        url += `&action=checkAvailability&rangeDays=${rangeDays}`;
-        method = "GET";
-        break;
-      }
-      case "getEvents": {
-        url += `&action=getEvents&start=${eventsStartDate}&end=${eventsEndDate}`;
-        method = "GET";
-        break;
-      }
-      case "createEvent": {
-        url += `&action=createEvent`;
-        method = "POST";
-        bodyProps = {
-          summary: eventSummary,
-          description: eventDescription,
-          start: `${eventStartDate}T${eventStartTime}:00`,
-          end: `${eventEndDate}T${eventEndTime}:00`,
-        };
-        break;
-      }
-      default:
-        break;
-    }
-
-    const updatedMetadata: any = {
-      providerConfigKey: "google-calendar",
-      action: typeAction,
-      calendarId,
-    };
-
-    if (typeAction === "checkAvailability") {
-      updatedMetadata.rangeDays = rangeDays;
-    }
-
-    if (typeAction === "getEvents") {
-      updatedMetadata.start = eventsStartDate;
-      updatedMetadata.end = eventsEndDate;
-    }
-
-    if (["createEvent", "updateEvent"].includes(typeAction)) {
-      updatedMetadata.eventData = bodyProps;
-    }
-
-    updateNode(nodeId, {
-      ...selectedNode,
-      metadataIntegration: updatedMetadata,
-      data: {
-        ...selectedNode.data,
-        tool: {
-          ...((selectedNode.data as any)?.tool ?? {}),
-          url,
-          method,
-          ...(method === "POST" && {
-            body: {
-              type: "object",
-              properties: bodyProps || {},
-            },
-          }),
-        },
-      },
-    });
-
-    setIsLoading(false);
-  };
-
-  useEffect(() => {
-    const meta = (selectedNode as any)?.metadataIntegration;
-    if (!meta) return;
-
-    if (meta.action && typeof meta.action === "string") {
-      setTypeAction(meta.action);
-    }
-
-    if (meta.calendarId && typeof meta.calendarId === "string") {
-      setCalendarId(meta.calendarId);
-    }
-
-    if (meta.rangeDays && !isNaN(Number(meta.rangeDays))) {
-      setRangeDays(Number(meta.rangeDays));
-    }
-    
-  }, [selectedNode]);
 
   return (
-    <Card className="w-full max-w-md mx-auto mt-4">
-      <CardHeader>
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-            <Calendar className="h-5 w-5 text-blue-600" />
-          </div>
-          <div>
-            <CardTitle className="text-gray-900">
-              Acciones de Google Calendar
-            </CardTitle>
-            <CardDescription className="text-gray-600">
-              Gestiona eventos y verifica disponibilidad
-            </CardDescription>
-          </div>
-        </div>
-      </CardHeader>
+    <div className="space-y-6">
+      <div className="space-y-2 mt-7">
+        <Label className="font-medium">Selecciona la acción que realizara el agente.</Label>
+      <Select
+        value={action || ""}
+        onValueChange={(value) => {
+          setAction(value as "availability" | "createEvent");
+          onDataChange({ calendarAction: value as any });
+        }}
+      >
+        <SelectTrigger>
+          <SelectValue placeholder="Selecciona una acción" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="availability">Ver disponibilidad</SelectItem>
+            <SelectItem value="createEvent">Crear evento</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      {/* Selector de Calendario */}
+      <div className="space-y-2">
+        <Label className="font-medium">Calendario</Label>
+        <Select
+          value={data.calendarId || ""}
+          onValueChange={(value) => onDataChange({ calendarId: value })}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Selecciona un calendario" />
+          </SelectTrigger>
+          <SelectContent>
+            {calendars.map((cal) => (
+              <SelectItem key={cal.id} value={cal.id}>
+                {cal.summary}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
-      <CardContent className="space-y-6">
-        {/* Calendar Selection */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-            <Label className="text-sm font-medium text-gray-700">
-              Calendario
-            </Label>
-          </div>
-
-          {isLoading ? (
-            <div className="flex items-center justify-center py-4">
-              <Clock className="h-5 w-5 text-blue-500 animate-pulse mr-2" />
-              <span className="text-sm text-gray-600">
-                Cargando calendarios...
-              </span>
-            </div>
-          ) : calendars.length === 0 ? (
-            <div className="text-center py-4 bg-gray-50 border border-gray-200 rounded-lg">
-              <p className="text-sm text-gray-600">
-                No se encontraron calendarios
-              </p>
-            </div>
-          ) : (
-            <Select
-              onValueChange={(value) => setCalendarId(value)}
-              value={calendarId}
-            >
-              <SelectTrigger className="w-full border-blue-200 focus:ring-blue-500">
-                <SelectValue placeholder="Selecciona un calendario" />
-              </SelectTrigger>
-              <SelectContent>
-                {calendars.map((calendar) => (
-                  <SelectItem key={calendar.id} value={calendar.id}>
-                    <div className="flex items-center gap-2">
-                      <div
-                        className="w-3 h-3 rounded-full"
-                        style={{
-                          backgroundColor:
-                            calendar.backgroundColor || "#4285F4",
-                        }}
-                      ></div>
-                      {calendar.summary}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        </div>
-
-        {/* Action Selection */}
-        {calendarId !== "" && (
-          <>
-            <Separator />
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                <Label className="text-sm font-medium text-gray-700">
-                  Acción
-                </Label>
+      {data.calendarId && action && (
+        <>
+          {/* -- Ver Disponibilidad -- */}
+          {action === "availability" && (
+            <div className="space-y-4 pt-4 border-t">
+              <h3 className="text-md font-semibold text-gray-800">
+                Ver disponibilidad
+              </h3>
+              <div className="flex items-center gap-3">
+                <Label className="text-sm">Próximos</Label>
+                <Input
+                  type="number"
+                  value={rangeDays}
+                  onChange={(e) => {
+                    const v = Number(e.target.value);
+                    setRangeDays(v);
+                    onDataChange({ rangeDays: v });
+                  }}
+                  className="w-20"
+                  min={1}
+                />
+                <span className="text-sm">días</span>
               </div>
-
-              <Select
-                onValueChange={(value) => setTypeAction(value)}
-                value={typeAction}
+              <button
+                type="button"
+                onClick={handleFetchAvailability}
+                disabled={isFetchingAvailability}
+                className="ml-auto px-3 py-1.5 text-sm rounded bg-emerald-600 text-white disabled:opacity-60"
               >
-                <SelectTrigger className="w-full border-purple-200 focus:ring-purple-500">
-                  <SelectValue placeholder="Selecciona una acción" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="checkAvailability">
-                    <div className="flex items-center gap-2">
-                      <CalendarRange className="h-4 w-4 text-blue-500" />
-                      Ver disponibilidad
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="createEvent">
-                    <div className="flex items-center gap-2">
-                      <Plus className="h-4 w-4 text-green-500" />
-                      Crear evento
-                    </div>
-                  </SelectItem>
-
-                </SelectContent>
-              </Select>
+                {isFetchingAvailability ? "Cargando..." : "Obtener"}
+              </button>
             </div>
-          </>
-        )}
-
-        {/* Action Configuration */}
-        {typeAction && (
-          <>
-            <Separator />
-            <div
-              className={`rounded-lg border p-4 ${getActionColor(typeAction)}`}
-            >
-              <div className="flex items-center gap-2 mb-3">
-                {getActionIcon(typeAction)}
-                <h3 className="font-medium">{getActionTitle(typeAction)}</h3>
+          )}
+          {/* -- Crear Evento -- */}
+          {action === "createEvent" && (
+            <div className="space-y-4 pt-4 border-t">
+              <h3 className="text-md font-semibold text-gray-800">
+                Crear Evento
+              </h3>
+              {/* Resumen del Evento */}
+              <div className="space-y-2">
+                <Label>Título del Evento</Label>
+                <Input
+                  value={data.eventSummary || ""}
+                  onChange={(e) =>
+                    onDataChange({ eventSummary: e.target.value })
+                  }
+                  placeholder="Ej. Cita con el cliente"
+                />
+              </div>
+              {/* Descripción del Evento */}
+              <div className="space-y-2">
+                <Label>Descripción del Evento (Opcional)</Label>
+                <Input
+                  value={data.eventDescription || ""}
+                  onChange={(e) =>
+                    onDataChange({ eventDescription: e.target.value })
+                  }
+                  placeholder="Ej. Discutir la propuesta..."
+                />
               </div>
 
-              {typeAction === "checkAvailability" && (
-                <div className="space-y-4">
-                <div className="flex items-start gap-2">
-                  <CheckCircle className="h-4 w-4 text-blue-600 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium text-gray-700">
-                      Configuración de rango en días
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Se buscará disponibilidad desde hoy hasta los próximos días que indiques.
-                    </p>
+              {/* Fecha de Inicio */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label>Fecha de Inicio</Label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-600">Usar variable</span>
+                    <Switch
+                      checked={data.isDynamicStartDate || false}
+                      onCheckedChange={(checked) =>
+                        onDataChange({ isDynamicStartDate: checked })
+                      }
+                    />
                   </div>
                 </div>
-              
-                <div className="flex items-center gap-3">
-                  <Label className="text-sm">Días:</Label>
-                  <input
-                    type="number"
-                    min={1}
-                    value={rangeDays}
-                    onChange={(e) => setRangeDays(parseInt(e.target.value))}
-                    className="w-20 border border-blue-200 rounded px-2 py-1 text-sm focus:outline-none focus:ring focus:ring-blue-300"
+                {data.isDynamicStartDate ? (
+                  <div className="flex items-center">
+                    <Input
+                      value={data.eventStartDate || ""}
+                      onChange={(e) =>
+                        onDataChange({ eventStartDate: e.target.value })
+                      }
+                      placeholder="{{variable_fecha}}"
+                    />
+                    <VariableSelect
+                      onSelect={(v) =>
+                        onDataChange({ eventStartDate: `{{${v}}}` })
+                      }
+                    />
+                  </div>
+                ) : (
+                  <Input
+                    type="date"
+                    value={
+                      data.eventStartDate ||
+                      new Date().toISOString().split("T")[0]
+                    }
+                    onChange={(e) =>
+                      onDataChange({ eventStartDate: e.target.value })
+                    }
                   />
-                </div>
-              
-                <Button onClick={updateNodeData} disabled={isLoading}>
-                  {isLoading ? "Guardando..." : "Guardar"}
-                </Button>
+                )}
               </div>
-              
-              )}
 
-              {/* CREATE EVENT FORM */}
-              {typeAction === "createEvent" && (
-                <div className="space-y-4">
-                  <div className="flex flex-col gap-2">
-                    <Label className="text-sm">Título del evento</Label>
-                    <div className="flex items-center">
-                      <input
-                        value={eventSummary}
-                        onChange={(e) => setEventSummary(e.target.value)}
-                        className="border rounded px-2 py-1 text-sm flex-1"
-                      />
-                      <VariableSelect onSelect={(v)=>setEventSummary(`{{${v}}}`)} />
-                    </div>
+              {/* Hora de Inicio */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label>Hora de Inicio</Label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-600">Usar variable</span>
+                    <Switch
+                      checked={data.isDynamicStartTime || false}
+                      onCheckedChange={(checked) =>
+                        onDataChange({ isDynamicStartTime: checked })
+                      }
+                    />
                   </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label className="text-sm">Fecha inicio</Label>
-                      <input
-                        type="date"
-                        value={eventStartDate}
-                        onChange={(e) => setEventStartDate(e.target.value)}
-                        className="border rounded px-2 py-1 text-sm w-full"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-sm">Hora inicio</Label>
-                      <input
-                        type="time"
-                        value={eventStartTime}
-                        onChange={(e) => setEventStartTime(e.target.value)}
-                        className="border rounded px-2 py-1 text-sm w-full"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label className="text-sm">Fecha fin</Label>
-                      <input
-                        type="date"
-                        value={eventEndDate}
-                        onChange={(e) => setEventEndDate(e.target.value)}
-                        className="border rounded px-2 py-1 text-sm w-full"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-sm">Hora fin</Label>
-                      <input
-                        type="time"
-                        value={eventEndTime}
-                        onChange={(e) => setEventEndTime(e.target.value)}
-                        className="border rounded px-2 py-1 text-sm w-full"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col gap-2">
-                    <Label className="text-sm">Descripción</Label>
-                    <div className="flex items-start gap-2">
-                      <textarea
-                        value={eventDescription}
-                        onChange={(e) => setEventDescription(e.target.value)}
-                        className="border rounded px-2 py-1 text-sm flex-1"
-                      />
-                      <VariableSelect onSelect={(v)=>setEventDescription(`{{${v}}}`)} />
-                    </div>
-                  </div>
-
-                  <Button onClick={updateNodeData} disabled={isLoading}>
-                    {isLoading ? "Guardando..." : "Guardar"}
-                  </Button>
                 </div>
-              )}
+                {data.isDynamicStartTime ? (
+                  <div className="flex items-center">
+                    <Input
+                      value={data.eventStartTime || ""}
+                      onChange={(e) =>
+                        onDataChange({ eventStartTime: e.target.value })
+                      }
+                      placeholder="{{variable_hora}}"
+                    />
+                    <VariableSelect
+                      onSelect={(v) =>
+                        onDataChange({ eventStartTime: `{{${v}}}` })
+                      }
+                    />
+                  </div>
+                ) : (
+                  <Input
+                    type="time"
+                    value={data.eventStartTime || "09:00"}
+                    onChange={(e) =>
+                      onDataChange({ eventStartTime: e.target.value })
+                    }
+                  />
+                )}
+              </div>
+
+              {/* Duración */}
+              <div className="space-y-2">
+                <Label>Duración (en minutos)</Label>
+                <Input
+                  type="number"
+                  value={data.eventDuration || 30}
+                  onChange={(e) =>
+                    onDataChange({
+                      eventDuration:
+                        e.target.value === "" ? "" : Number(e.target.value),
+                    })
+                  }
+                  placeholder="Ej. 30"
+                />
+              </div>
             </div>
-          </>
-        )}
-      </CardContent>
-    </Card>
+          )}
+
+          {availability.length > 0 && (
+            <ul className="mt-3 max-h-40 overflow-y-auto space-y-1 text-sm">
+              {availability.map((slot, idx) => (
+                <li key={idx} className="border rounded p-2 bg-emerald-50">
+                  {new Date(slot.start).toLocaleString()} - {new Date(slot.end).toLocaleString()}
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
+      )}
+    </div>
   );
 };
 

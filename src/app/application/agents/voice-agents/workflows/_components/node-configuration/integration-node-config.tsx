@@ -3,9 +3,9 @@
 import Image from "next/image"
 import type { NodeConfigurationProps } from "./types"
 import { Button } from "@/components/ui/button"
-import { useState, useEffect } from "react"
 import IntegrationComponent from "@/components/nango/integrationComponent"    
 import NativeCrmIntegrationComponent from "@/components/integrations/nativeCrmIntegrationComponent"
+import { IntegrationNodeData } from "../../types"
 
 const integrations = [
   {
@@ -21,6 +21,8 @@ const integrations = [
     logo: "/integrations-logos-providers/google-calendar.png",
     color: "bg-blue-50 hover:bg-blue-100 border-blue-200 hover:border-blue-300",
     textColor: "text-blue-700",
+    providerConfigKey: 'google-calendar',
+    authMode: 'oauth2'
   },
   {
     id: "google-sheets",
@@ -28,6 +30,8 @@ const integrations = [
     logo: "/integrations-logos-providers/google-sheets.webp",
     color: "bg-emerald-50 hover:bg-emerald-100 border-emerald-200 hover:border-emerald-300",
     textColor: "text-emerald-700",
+    providerConfigKey: 'google-sheet',
+    authMode: 'oauth2'
   },
   {
     id: "cal-com",
@@ -35,6 +39,7 @@ const integrations = [
     logo: "/integrations-logos-providers/cal-logo.jpg",
     color: "bg-purple-50 hover:bg-purple-100 border-purple-200 hover:border-purple-300",
     textColor: "text-purple-700",
+
   },
   {
     id: "hubspot",
@@ -42,6 +47,8 @@ const integrations = [
     logo: "/integrations-logos-providers/hubspot.webp",
     color: "bg-orange-50 hover:bg-orange-100 border-orange-200 hover:border-orange-300",
     textColor: "text-orange-700",
+    providerConfigKey: 'hubspot',
+    authMode: 'oauth2'
   },
   {
     id: "airtable",
@@ -49,6 +56,8 @@ const integrations = [
     logo: "/integrations-logos-providers/airtable.png",
     color: "bg-red-50 hover:bg-red-100 border-red-200 hover:border-red-300",
     textColor: "text-red-700",
+    providerConfigKey: 'airtable',
+    authMode: 'oauth2'
   },
   {
     id: "engrok",
@@ -60,64 +69,42 @@ const integrations = [
 ]
 
 export function IntegrationNodeConfig({ selectedNode, updateNode }: NodeConfigurationProps) {
-  // Pre-cargamos la integración seleccionada (si la hubiera) al abrir el sheet
-  const initialIntegration = (selectedNode as any)?.metadataIntegration?.providerConfigKey ?? null
-  const [selectedIntegration, setSelectedIntegration] = useState<string | null>(initialIntegration)
-  const [integrationConnection, setIntegrationConnection] = useState<boolean>(false);   
+  const nodeData = selectedNode.data as IntegrationNodeData;
 
-  // Mantener sincronización si el usuario cambia de nodo sin recargar la página
-  useEffect(() => {
-    const newIntegration = (selectedNode as any)?.metadataIntegration?.providerConfigKey ?? null
-    setSelectedIntegration(newIntegration)
-  }, [selectedNode])
-
-
-  const handleIntegrationSelect = (integrationId: string) => {
-    setSelectedIntegration(integrationId)
-
-    /* Guardamos la selección en el nodo para que persista */
-    updateNode(selectedNode.id, {
-      metadataIntegration: {
-        ...((selectedNode as any)?.metadataIntegration ?? {}),
-        providerConfigKey: integrationId,
-      },
-      data: {
-        ...selectedNode.data,
-        metadataIntegration: {
-          ...((selectedNode as any)?.metadataIntegration ?? {}),
-          providerConfigKey: integrationId,
-        },
-      },
-    })
-  }
+  const handleIntegrationSelect = (integrationType: IntegrationNodeData["integrationType"]) => {
+    const baseData = {
+        label: nodeData.label,
+        name: nodeData.name,
+        type: nodeData.type,
+    }
+    updateNode(selectedNode.id, { ...baseData, integrationType: integrationType });
+  };
+  
+  const selectedIntegrationConfig = integrations.find(int => int.id === nodeData.integrationType);
 
   return (
     <div className="flex flex-col gap-6 p-6 bg-gray-50/50 rounded-lg">
       <div className="space-y-2">
-        <h3 className="text-lg font-semibold text-gray-900">Configuración de Integración</h3>
+        <h3 className="text-lg font-semibold text-gray-900">
+          Configuración de Integración
+        </h3>
         <p className="text-sm text-gray-600 leading-relaxed">
-          Selecciona la integración que deseas usar para este nodo
+          Selecciona y configura la integración para este nodo.
         </p>
       </div>
 
-      <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-          <h4 className="text-sm font-medium text-gray-700">Integraciones Disponibles</h4>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          {integrations.map((integration) => (
+      <div className="grid grid-cols-2 gap-3">
+        {integrations.map((integration) => (
             <Button
               key={integration.id}
               variant="outline"
-              onClick={() => handleIntegrationSelect(integration.id)}
+              onClick={() => handleIntegrationSelect(integration.id as IntegrationNodeData["integrationType"])}
               className={`
                 relative flex flex-col items-center justify-center p-4 h-24 
                 transition-all duration-200 ease-in-out
                 ${integration.color}
                 ${
-                  selectedIntegration === integration.id
+                  nodeData.integrationType === integration.id
                     ? "ring-2 ring-blue-500 ring-offset-2 shadow-md"
                     : "hover:shadow-sm"
                 }
@@ -141,45 +128,23 @@ export function IntegrationNodeConfig({ selectedNode, updateNode }: NodeConfigur
                   {integration.name}
                 </span>
               </div>
-
-              {selectedIntegration === integration.id && (
-                <div className="absolute top-1 right-1 w-2 h-2 bg-blue-500 rounded-full"></div>
-              )}
             </Button>
           ))}
-        </div>
       </div>
-
-      {
-        selectedIntegration === "google-calendar" && (
-          <IntegrationComponent setIntegrationConnection={setIntegrationConnection} visibleName="Google Calendar" providerConfigKey="google-calendar" authMode="oauth2" nodeId={selectedNode.id} updateNode={updateNode} selectedNode={selectedNode} />
-        )
-      }
-      {
-        selectedIntegration === "google-sheets" && (
-          <IntegrationComponent setIntegrationConnection={setIntegrationConnection} visibleName="Google Sheets" providerConfigKey="google-sheet" authMode="oauth2" nodeId={selectedNode.id} updateNode={updateNode} selectedNode={selectedNode} />
-        )
-      },
-      {
-        selectedIntegration === "cal-com" && (
-          <IntegrationComponent setIntegrationConnection={setIntegrationConnection} visibleName="Cal.com" providerConfigKey="cal-com-v2" authMode="api-key" nodeId={selectedNode.id} updateNode={updateNode} selectedNode={selectedNode} />
-        )
-      }
-      {
-        selectedIntegration === "hubspot" && (
-          <IntegrationComponent setIntegrationConnection={setIntegrationConnection} visibleName="Hubspot" providerConfigKey="hubspot" authMode="oauth2" nodeId={selectedNode.id} updateNode={updateNode} selectedNode={selectedNode} />
-        )
-      }
-      {
-        selectedIntegration === "airtable" && (
-          <IntegrationComponent setIntegrationConnection={setIntegrationConnection} visibleName="Airtable" providerConfigKey="airtable" authMode="oauth2" nodeId={selectedNode.id} updateNode={updateNode} selectedNode={selectedNode} />
-        )
-      }
-      {
-        selectedIntegration === "engrok" && (
-          <NativeCrmIntegrationComponent setIntegrationConnection={setIntegrationConnection}/>
-        )
-      }
+      
+      {selectedIntegrationConfig?.providerConfigKey && selectedIntegrationConfig?.authMode && (
+        <div className="mt-4 border-t pt-4">
+          <IntegrationComponent
+            visibleName={selectedIntegrationConfig.name}
+            providerConfigKey={selectedIntegrationConfig.providerConfigKey}
+            authMode={selectedIntegrationConfig.authMode}
+            nodeId={selectedNode.id}
+            updateNode={updateNode}
+            selectedNode={selectedNode}
+            setIntegrationConnection={() => {}}
+          />
+        </div>
+      )}
     </div>
   )
 }

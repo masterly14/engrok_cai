@@ -1,6 +1,7 @@
 "use server";
 
 import { db } from "@/utils";
+import { checkUserSubscription } from "@/utils/checkSubscription";
 import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 
@@ -8,7 +9,7 @@ export const onCurrentUser = async () => {
   const user = await currentUser();
   if (!user) {
     console.log("No hay user");
-    return redirect("/sign-in");
+    throw new Error("User not authenticated on server.");
   }
   
   // Devolver solo los datos serializables necesarios
@@ -19,7 +20,7 @@ export const onCurrentUser = async () => {
   };
 };
 
-export const onBoardUser = async () => {
+export const onBoardUser = async (variantId?: string) => {
   const user = await onCurrentUser();
 
   try {
@@ -33,13 +34,26 @@ export const onBoardUser = async () => {
     });
 
     if (foundUser) {
-      console.log(user.id)
+      // Si el usuario existe pero aún no tiene temporalVariantId y nos llega uno
+      // (por ejemplo, acaba de completar el registro con intención de compra),
+      // persistimos ese valor para que el flujo de /validate pueda continuar.
+      if (variantId && !foundUser.temporalVariantId) {
+        await db.user.update({
+          where: { id: foundUser.id },
+          data: { temporalVariantId: variantId },
+        });
+
+        // Actualizamos el objeto en memoria para devolver la información correcta
+        foundUser.temporalVariantId = variantId;
+      }
+
       return {
         status: 200,
         data: {
           id: foundUser.id,
           name: foundUser.name,
           email: foundUser.email,
+          temporalVariantId: foundUser.temporalVariantId,
         },
         initialCredits: foundUser.initialAmountCredits,
         credits: foundUser.amountCredits,
@@ -52,6 +66,7 @@ export const onBoardUser = async () => {
           clerkId: user.id,
           email: user.email,
           name: user.name,
+          temporalVariantId: variantId,
           transactions: {
             create: {
               amount: 0,
@@ -59,7 +74,8 @@ export const onBoardUser = async () => {
               type: "INITIAL_RECHARGE",
             },
           },
-          amountCredits: 1000,
+          amountCredits: 0,
+          initialAmountCredits: 0,
         },
       });
   
@@ -116,6 +132,16 @@ export const onBoardUser = async () => {
       };
     }
   } catch (error: any) {
-    console.log(error.message);
+    console.error("Error during database operation in onBoardUser:", error.message);
+    throw error;
   }
 };
+
+
+export async function getUserSubscription() {
+  const user = await onBoardUser();
+  if (!user) {
+    throw new Error("User not found");
+  }
+  return await checkUserSubscription(user.data.id);
+}

@@ -1,19 +1,15 @@
 import { motion } from "framer-motion";
 import { Server } from "lucide-react";
 import { Handle, Position } from "reactflow";
-import { NodeData } from "../flow-builder";
+import type { ApiRequestNodeData } from "../../types";
 
 interface ApiRequestNodeProps {
-  data: NodeData;
+  data: ApiRequestNodeData;
   isConnectable: boolean;
-  selected: boolean;
+  selected?: boolean;
 }
 
-export function ApiRequestNode({
-  data,
-  isConnectable,
-  selected,
-}: ApiRequestNodeProps) {
+export function ApiRequestNode({ data, isConnectable, selected }: ApiRequestNodeProps) {
   return (
     <motion.div
       initial={{ scale: 0.8, opacity: 0 }}

@@ -3,10 +3,8 @@
 import { Handle, Position } from "reactflow"
 import { Wrench } from "lucide-react"
 import { motion } from "framer-motion"
-import { useEffect } from "react"
-import { useReactFlow } from "reactflow"
-import type { NodeData } from "../flow-builder"
 import Image from "next/image"
+import { IntegrationNodeData } from "../../types"
 
 // Mapeo de providerConfigKey a información de la integración
 const integrationInfo: Record<string, { name: string; logo: string; color: string }> = {
@@ -25,75 +23,42 @@ const integrationInfo: Record<string, { name: string; logo: string; color: strin
     logo: "/integrations-logos-providers/cal-logo.jpg",
     color: "from-purple-500 to-purple-600",
   },
-  "hubspot": {
+  hubspot: {
     name: "Hubspot",
     logo: "/integrations-logos-providers/hubspot.webp",
     color: "from-orange-500 to-orange-600",
   },
-  "airtable": {
+  airtable: {
     name: "Airtable",
     logo: "/integrations-logos-providers/airtable.png",
     color: "from-red-500 to-red-600",
   },
-  "whatsapp": {
+  whatsapp: {
     name: "WhatsApp",
     logo: "/integrations-logos-providers/whatsapp.webp",
     color: "from-green-500 to-green-600",
   },
-  "engrok": {
+  engrok: {
     name: "Engrok Local CRM",
     logo: "/engrok-icon-theme-white.png",
     color: "from-yellow-500 to-yellow-600",
   },
-};
-
-// Mapeo de tipos de acción a nombres legibles
-const actionNames: Record<string, string> = {
-  "checkAvailability": "Verificar Disponibilidad",
-  "createEvent": "Crear Evento",
-  "deleteEvent": "Eliminar Evento",
-  "updateEvent": "Actualizar Evento",
+  "custom-api": {
+    name: "API Request",
+    logo: "/file.svg", // Placeholder
+    color: "from-purple-500 to-violet-600",
+  },
 };
 
 interface IntegrationNodeProps {
-  data: NodeData
+  data: IntegrationNodeData
   isConnectable: boolean
   selected?: boolean
 }
 
 export function IntegrationNode({ data, isConnectable, selected }: IntegrationNodeProps) {
-  const reactFlowInstance = useReactFlow();
-  // Obtener información de la integración desde metadataIntegration
-  const integration = (data as any)?.metadataIntegration;
-  const providerKey = integration?.providerConfigKey;
-  const action = integration?.action;
-  const calendarId = integration?.calendarId;
-  const rangeDays = integration?.rangeDays;
+  const integrationDetails = integrationInfo[data.integrationType] || integrationInfo['custom-api'];
 
-  // Obtener información de la integración seleccionada
-  const integrationDetails = providerKey ? integrationInfo[providerKey] : null;
-
-  // Forzar actualización del nodo cuando cambia la integración
-  useEffect(() => {
-    if (integration?.providerConfigKey) {
-      reactFlowInstance.setNodes((nodes) =>
-        nodes.map((node) => {
-          if (node.id === (data as any).id) {
-            return {
-              ...node,
-              data: {
-                ...node.data,
-                label: integrationDetails?.name || "Integración",
-              },
-            };
-          }
-          return node;
-        })
-      );
-    }
-  }, [integration?.providerConfigKey, integrationDetails?.name, reactFlowInstance, data]);
-
-  console.log(integrationDetails);
   return (
     <motion.div
       initial={{ scale: 0.8, opacity: 0 }}
@@ -102,57 +67,63 @@ export function IntegrationNode({ data, isConnectable, selected }: IntegrationNo
       className={`rounded-lg overflow-hidden shadow-lg transition-shadow ${selected ? "ring-2 ring-amber-500 ring-offset-2" : ""}`}
       style={{ minWidth: 220 }}
     >
-      <div className={`bg-gradient-to-r ${integrationDetails?.color || "from-orange-500 to-amber-600"} px-4 py-2 flex items-center justify-between`}>
+      <div className={`bg-gradient-to-r ${integrationDetails.color} px-4 py-2 flex items-center justify-between`}>
         <div className="flex items-center gap-2">
-          {integrationDetails ? (
-            <div className="bg-white/20 p-1.5 rounded-md">
-              <Image
-                src={integrationDetails.logo}
-                alt={integrationDetails.name}
-                width={20}
-                height={20}
-                className="object-contain"
-              />
-            </div>
-          ) : (
-            <div className="bg-white/20 p-1.5 rounded-md">
-              <Wrench className="h-5 w-5 text-white" />
-            </div>
-          )}
-          <span className="font-medium text-white">
-            {integrationDetails?.name || data.label}
-          </span>
+          <div className="bg-white/20 p-1.5 rounded-md">
+            <Image
+              src={integrationDetails.logo}
+              alt={integrationDetails.name}
+              width={20}
+              height={20}
+              className="object-contain"
+            />
+          </div>
+          <span className="font-medium text-white">{data.label}</span>
         </div>
       </div>
       <div className="bg-white border-x border-b border-gray-200 p-3 rounded-b-lg space-y-2">
-        {integration?.action && (
-          <div className="text-sm font-medium text-gray-700">
-            {actionNames[action] || action}
-          </div>
+        <div className="text-sm font-medium text-gray-700">
+          {integrationDetails.name}
+        </div>
+
+        {data.integrationType === "google-sheet" && (
+          <>
+            {data.sheetName && (
+              <div className="text-xs text-gray-600">
+                Pestaña: {data.sheetName}
+              </div>
+            )}
+            {data.column && (
+              <div className="text-xs text-gray-600">
+                Columna: {data.column}
+              </div>
+            )}
+          </>
         )}
-        {calendarId && (
-          <div className="text-xs text-gray-600">
-            Calendario: {calendarId}
-          </div>
+        
+        {data.integrationType === "google-calendar" && (
+          <>
+            {data.calendarId && <div className="text-xs text-gray-600">Calendario: {data.calendarId}</div>}
+            {data.eventSummary && <div className="text-xs text-gray-600 truncate">Evento: {data.eventSummary}</div>}
+          </>
         )}
-        {rangeDays && (
-          <div className="text-xs text-gray-600">
-            Rango de días: {rangeDays}
-          </div>
+
+        {data.integrationType === 'custom-api' && data.url && (
+          <div className="text-xs text-gray-600 font-mono truncate" title={data.url}>{data.method} {data.url}</div>
         )}
-          <div className="text-sm text-gray-600">{integrationDetails ? "Conectado a servicio externo de " + integrationDetails.name : "Conecta a un servicio externo."}</div>
+
       </div>
       <Handle
         type="target"
         position={Position.Top}
         isConnectable={isConnectable}
-        className={`w-3 h-3 ${integrationDetails?.color ? "bg-blue-600" : "bg-orange-600"} border-2 border-white top-0`}
+        className={`w-3 h-3 ${integrationDetails.color ? "bg-blue-600" : "bg-orange-600"} border-2 border-white top-0`}
       />
       <Handle
         type="source"
         position={Position.Bottom}
         isConnectable={isConnectable}
-        className={`w-3 h-3 ${integrationDetails?.color ? "bg-blue-600" : "bg-orange-600"} border-2 border-white bottom-0`}
+        className={`w-3 h-3 ${integrationDetails.color ? "bg-blue-600" : "bg-orange-600"} border-2 border-white bottom-0`}
       />
     </motion.div>
   )

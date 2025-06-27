@@ -9,75 +9,42 @@ import {
 } from "@/components/ui/select";
 import { useAllAgents } from "@/hooks/use-all-agents";
 import { VariableManagement } from "./variable-management";
-import { NodeConfigurationProps, Variable } from "./types";
+import { NodeConfigurationProps } from "./types";
+import { ConversationNodeData, Variable } from "../../types";
+import { v4 as uuidv4 } from 'uuid';
+import { Input } from "@/components/ui/input";
 
 export function ConversationNodeConfig({
   selectedNode,
   updateNode,
 }: NodeConfigurationProps) {
   const { agentsData } = useAllAgents();
+  const nodeData = selectedNode.data as ConversationNodeData;
 
-  const handlePromptChange = (value: string) => {
-    updateNode(selectedNode.id, {
-      data: { ...selectedNode.data, prompt: value },
-    });
+  const handleDataChange = (updates: Partial<ConversationNodeData>) => {
+    updateNode(selectedNode.id, updates);
   };
 
-  const handleAgentChange = (agentId: string) => {
-    // You might want to handle agent selection logic here
-    console.log("Selected agent:", agentId);
-  };
-
-  // Variable management functions
   const addVariable = () => {
     const newVariable: Variable = {
-      id: `var_${Date.now()}`,
-      title: "",
+      id: uuidv4(),
+      name: `var_${(nodeData.variables?.length || 0) + 1}`,
       description: "",
-      type: "string",
-      enum: [],
-      isEditing: true,
     };
-
-    updateNode(selectedNode.id, {
-      data: {
-        ...selectedNode.data,
-        variableExtractionPlan: {
-          output: [
-            ...(selectedNode.data.variableExtractionPlan?.output || []),
-            newVariable,
-          ],
-        },
-      },
-    });
+    handleDataChange({ variables: [...(nodeData.variables || []), newVariable] });
   };
 
   const updateVariable = (variableId: string, updates: Partial<Variable>) => {
-    updateNode(selectedNode.id, {
-      data: {
-        ...selectedNode.data,
-        variableExtractionPlan: {
-          output: (selectedNode.data.variableExtractionPlan?.output || []).map(
-            (variable: Variable) =>
-              variable.id === variableId
-                ? { ...variable, ...updates }
-                : variable
-          ),
-        },
-      },
+    handleDataChange({
+      variables: (nodeData.variables || []).map((v) =>
+        v.id === variableId ? { ...v, ...updates } : v
+      ),
     });
   };
 
   const deleteVariable = (variableId: string) => {
-    updateNode(selectedNode.id, {
-      data: {
-        ...selectedNode.data,
-        variableExtractionPlan: {
-          output: (selectedNode.data.variableExtractionPlan?.output || []).filter(
-            (variable: Variable) => variable.id !== variableId
-          ),
-        },
-      },
+    handleDataChange({
+      variables: (nodeData.variables || []).filter((v) => v.id !== variableId),
     });
   };
 
@@ -86,33 +53,25 @@ export function ConversationNodeConfig({
       <div>
         <Label className="text-sm font-medium">Prompt</Label>
         <Textarea
-          value={selectedNode.data.prompt || ""}
-          onChange={(e) => handlePromptChange(e.target.value)}
+          value={nodeData.prompt || ""}
+          onChange={(e) => handleDataChange({ prompt: e.target.value })}
           className="h-40 mt-1"
           placeholder="Ingresa el prompt para este nodo de conversación..."
         />
       </div>
 
       <div>
-        <Label className="text-sm font-medium">Agentes</Label>
-        <Select onValueChange={handleAgentChange}>
-          <SelectTrigger className="mt-1">
-            <SelectValue placeholder="Selecciona un agente" />
-          </SelectTrigger>
-          <SelectContent>
-            {Array.isArray(agentsData) &&
-              agentsData.map((agent) => (
-                <SelectItem key={agent.id} value={agent.id}>
-                  {agent.name}
-                </SelectItem>
-              ))}
-          </SelectContent>
-        </Select>
+        <Label className="text-sm font-medium">Voz (ElevenLabs)</Label>
+        <Input
+            value={nodeData.voice?.voiceId || ""}
+            onChange={(e) => handleDataChange({ voice: { ...nodeData.voice, voiceId: e.target.value } })}
+            placeholder="ID de la voz de ElevenLabs"
+            className="mt-1"
+        />
       </div>
 
       <VariableManagement
-        selectedNode={selectedNode}
-        variables={selectedNode.data.variableExtractionPlan?.output || []}
+        variables={nodeData.variables || []}
         onAddVariable={addVariable}
         onUpdateVariable={updateVariable}
         onDeleteVariable={deleteVariable}

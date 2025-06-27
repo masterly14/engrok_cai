@@ -1,22 +1,49 @@
 import { getAccessToken } from "@/actions/nango";
 import axios from "axios";
 import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/utils";
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const connectionId = searchParams.get("connectionId");
+    let connectionId = searchParams.get("connectionId");
+    const userIdParam = searchParams.get("userId");
     let rangeDays = Number(searchParams.get("rangeDays"));
     const calendarId = searchParams.get("calendarId") || "primary";
 
     console.log("Parámetros recibidos:", { connectionId, rangeDays, calendarId });
 
-    // Validar parámetros
+    // Validar parámetros, permitir userId como alternativa
     if (!connectionId) {
-      return NextResponse.json(
-        { error: "Connection ID is required" },
-        { status: 400 }
-      );
+      if (userIdParam) {
+        try {
+          // Buscar la conexión en la base de datos
+          const conn = await db.connection.findFirst({
+            where: {
+              userId: userIdParam,
+              providerConfigKey: "google-calendar",
+            },
+          });
+          if (!conn) {
+            return NextResponse.json(
+              { error: "No se encontró una conexión para el usuario proporcionado" },
+              { status: 404 }
+            );
+          }
+          connectionId = conn.connectionId;
+        } catch (e) {
+          console.error("Error al buscar la conexión:", e);
+          return NextResponse.json(
+            { error: "Error interno buscando la conexión" },
+            { status: 500 }
+          );
+        }
+      } else {
+        return NextResponse.json(
+          { error: "Connection ID or userId is required" },
+          { status: 400 }
+        );
+      }
     }
     
     if (!rangeDays) {
@@ -31,7 +58,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const accessToken = await getAccessToken(connectionId);
+    const accessToken = await getAccessToken(connectionId!);
     console.log("Access Token:", accessToken);
 
     const freeBusyRequest = {
@@ -57,6 +84,59 @@ export async function GET(request: NextRequest) {
     console.log("Respuesta de FreeBusy:", response.data);
     const calendars = response.data.calendars;
 
+    // -------------------------------------------------------------
+    // Calcular períodos de disponibilidad a partir de la respuesta
+    // -------------------------------------------------------------
+    // Helper para transformar los períodos ocupados en períodos libres entre
+    // `timeMin` y `timeMax` (que usamos para la petición freeBusy)
+    const calculateAvailability = (
+      busy: { start: string; end: string }[],
+      timeMin: string,
+      timeMax: string
+    ) => {
+      // Ordenar los períodos ocupados por fecha de inicio
+      const sortedBusy = [...busy].sort(
+        (a, b) => new Date(a.start).getTime() - new Date(b.start).getTime()
+      );
+
+      const free: { start: string; end: string }[] = [];
+      let cursor = new Date(timeMin);
+      const endBound = new Date(timeMax);
+
+      for (const period of sortedBusy) {
+        const busyStart = new Date(period.start);
+        const busyEnd = new Date(period.end);
+
+        // Si hay hueco entre el cursor y el inicio del período ocupado, añadimos como libre
+        if (busyStart.getTime() > cursor.getTime()) {
+          free.push({ start: cursor.toISOString(), end: busyStart.toISOString() });
+        }
+
+        // Avanzar el cursor al final del período ocupado si estamos detrás
+        if (busyEnd.getTime() > cursor.getTime()) {
+          cursor = busyEnd;
+        }
+      }
+
+      // Si al final queda tiempo libre entre el cursor y el límite superior, añadirlo
+      if (cursor.getTime() < endBound.getTime()) {
+        free.push({ start: cursor.toISOString(), end: endBound.toISOString() });
+      }
+
+      return free;
+    };
+
+    // Añadimos la clave "available" a cada calendario con sus huecos libres
+    Object.keys(calendars).forEach((id) => {
+      const busyPeriods = calendars[id].busy || [];
+      calendars[id].available = calculateAvailability(
+        busyPeriods,
+        freeBusyRequest.timeMin,
+        freeBusyRequest.timeMax
+      );
+    });
+
+    // Devolverá tanto los períodos ocupados como los libres
     return NextResponse.json(calendars);
   } catch (error: any) {
     console.error("Error al obtener los períodos disponibles:", error.response?.data || error);
@@ -86,22 +166,54 @@ export async function POST(request: NextRequest) {
 
     // Obtener el cuerpo de la petición
     const eventData = await request.json();
+    const { summary, description, start, duration } = eventData;
 
     // Validar datos del evento
-    if (!eventData.summary || !eventData.start || !eventData.end) {
+    if (!summary || !start || duration === undefined) {
       return NextResponse.json(
-        { error: "Event summary, start and end times are required" },
+        {
+          error: "Event summary, start time and duration are required",
+        },
         { status: 400 }
       );
     }
 
-    const accessToken = await getAccessToken(connectionId);
+    const startDate = new Date(start);
+    if (isNaN(startDate.getTime())) {
+      return NextResponse.json(
+        { error: "Invalid start date format" },
+        { status: 400 }
+      );
+    }
+
+    const durationInMs = Number(duration) * 60 * 1000;
+    if (isNaN(durationInMs)) {
+      return NextResponse.json(
+        { error: "Invalid duration format. Must be a number of minutes." },
+        { status: 400 }
+      );
+    }
+
+    const endDate = new Date(startDate.getTime() + durationInMs);
+
+    const accessToken = await getAccessToken(connectionId!);
     console.log("Access Token:", accessToken);
+
+    const finalEventData = {
+      summary,
+      description,
+      start: {
+        dateTime: startDate.toISOString(),
+      },
+      end: {
+        dateTime: endDate.toISOString(),
+      },
+    };
 
     // Crear el evento en Google Calendar
     const response = await axios.post(
       `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events`,
-      eventData,
+      finalEventData,
       {
         headers: {
           Authorization: `Bearer ${accessToken}`,
