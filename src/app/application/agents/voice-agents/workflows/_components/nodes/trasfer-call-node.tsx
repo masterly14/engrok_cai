@@ -3,10 +3,10 @@
 import { Handle, Position } from "reactflow"
 import { PhoneForwarded } from "lucide-react"
 import { motion } from "framer-motion"
-import type { NodeData } from "../flow-builder"
+import type { TransferCallNodeData } from "../../types"
 
 interface TransferCallNodeProps {
-  data: NodeData
+  data: TransferCallNodeData
   isConnectable: boolean
   selected?: boolean
 }
