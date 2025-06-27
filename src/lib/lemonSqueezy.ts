@@ -13,12 +13,30 @@ function assertEnv(name: string, value?: string): asserts value is string {
     throw new Error(`Missing env var ${name}`);
   }
   console.debug(`[LS] Env var ${name} is available`);
+  // Log el valor (ocultando parte por seguridad)
+  if (name === "LEMON_SQUEEZY_API_KEY") {
+    const maskedValue = value.length > 8 ? `${value.substring(0, 4)}...${value.substring(value.length - 4)}` : "***";
+    console.debug(`[LS] API Key value: ${maskedValue} (length: ${value.length})`);
+    
+    // Detectar si es test o live mode
+    if (value.startsWith('test_')) {
+      console.debug(`[LS] API Key is in TEST mode`);
+    } else if (value.startsWith('live_')) {
+      console.debug(`[LS] API Key is in LIVE mode`);
+    } else {
+      console.warn(`[LS] API Key format not recognized - should start with 'test_' or 'live_'`);
+    }
+  }
+  
+  if (name === "LEMON_SQUEEZY_STORE_ID") {
+    console.debug(`[LS] Store ID: ${value}`);
+  }
 }
 
 assertEnv("LEMON_SQUEEZY_API_KEY", process.env.LEMON_SQUEEZY_API_KEY);
 assertEnv("LEMON_SQUEEZY_STORE_ID", process.env.LEMON_SQUEEZY_STORE_ID);
 
-const API_KEY = process.env.LEMON_SQUEEZY_API_KEY!;
+const API_KEY = process.env.LEMON_SQUEEZY_API_KEY!.trim();
 const STORE_ID = process.env.LEMON_SQUEEZY_STORE_ID!;
 
 async function lsFetch<T>(endpoint: string, init: RequestInit = {}): Promise<T> {
@@ -31,6 +49,11 @@ async function lsFetch<T>(endpoint: string, init: RequestInit = {}): Promise<T> 
     // Verificar que la API key esté disponible
     if (!API_KEY) {
       console.error("[LS] API_KEY is not available");
+    } else {
+      // Log el header Authorization (ocultando parte por seguridad)
+      const authHeader = `Bearer ${API_KEY}`;
+      const maskedAuth = authHeader.length > 20 ? `${authHeader.substring(0, 15)}...${authHeader.substring(authHeader.length - 5)}` : "***";
+      console.debug(`[LS] Authorization header: ${maskedAuth} (length: ${authHeader.length})`);
     }
   } catch {
     // ignore log errors
@@ -40,14 +63,27 @@ async function lsFetch<T>(endpoint: string, init: RequestInit = {}): Promise<T> 
     ...init,
     method: init.method || "GET",
     headers: {
+      ...init.headers,
       Accept: "application/vnd.api+json",
       "Content-Type": "application/vnd.api+json",
       Authorization: `Bearer ${API_KEY}`,
-      ...init.headers,
     },
     // Always revalidate: we don't want to cache admin calls.
     cache: "no-store",
   });
+
+  // Log los headers finales para debug
+  try {
+    const finalHeaders = {
+      ...init.headers,
+      Accept: "application/vnd.api+json",
+      "Content-Type": "application/vnd.api+json",
+      Authorization: `Bearer ${API_KEY}`,
+    };
+    console.debug("[LS] Final headers:", Object.keys(finalHeaders));
+  } catch {
+    // ignore log errors
+  }
 
   if (!res.ok) {
     const text = await res.text();
@@ -147,6 +183,12 @@ export async function createCheckout(params: CreateCheckoutParams) {
   if (process.env.NODE_ENV !== "production") {
     console.debug("[LS] createCheckout payload", JSON.stringify(payload, null, 2));
   }
+
+  // Verificar modo y compatibilidad
+  const isTestMode = API_KEY.startsWith('test_');
+  const isLiveMode = API_KEY.startsWith('live_');
+  console.debug(`[LS] Creating checkout in ${isTestMode ? 'TEST' : isLiveMode ? 'LIVE' : 'UNKNOWN'} mode`);
+  console.debug(`[LS] Store ID: ${STORE_ID}, Variant ID: ${params.variantId}`);
 
   try {
     const result = await lsFetch<{ data: { attributes: { url: string } } }>(
