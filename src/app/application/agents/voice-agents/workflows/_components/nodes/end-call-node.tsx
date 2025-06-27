@@ -3,10 +3,10 @@
 import { Handle, Position } from "reactflow"
 import { PhoneOff } from "lucide-react"
 import { motion } from "framer-motion"
-import type { NodeData } from "../flow-builder"
+import type { EndCallNodeData } from "../../types"
 
 interface EndCallNodeProps {
-  data: NodeData
+  data: EndCallNodeData
   isConnectable: boolean
   selected?: boolean
 }
