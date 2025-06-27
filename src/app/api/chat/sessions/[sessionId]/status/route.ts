@@ -13,7 +13,7 @@ const pusher = new Pusher({
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { sessionId: string } }
+  { params }: { params: Promise<{ sessionId: string }> }
 ) {
   const user = await onBoardUser()
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 })
@@ -24,7 +24,7 @@ export async function PATCH(
     return NextResponse.json({ error: "invalid status" }, { status: 400 })
   }
 
-  const { sessionId } = params
+  const { sessionId } = await params
 
   const session = await db.chatSession.findUnique({
     where: { id: sessionId },
