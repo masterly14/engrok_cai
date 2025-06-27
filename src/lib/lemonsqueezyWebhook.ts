@@ -9,8 +9,16 @@ export function verifyLemonSqueezySignature(
   signatureHeader: string | null,
   secret: string = process.env.LEMON_SQUEEZY_WEBHOOK_SECRET || "",
 ): boolean {
-  if (!secret) throw new Error("Missing LEMON_SQUEEZY_WEBHOOK_SECRET env variable");
-  if (!signatureHeader) return false;
+  console.log("Verifying Lemon Squeezy webhook signature...");
+
+  if (!secret) {
+    console.error("LEMON_SQUEEZY_WEBHOOK_SECRET env variable is not set.");
+    throw new Error("Missing LEMON_SQUEEZY_WEBHOOK_SECRET env variable");
+  }
+  if (!signatureHeader) {
+    console.warn("Signature header is missing from webhook request.");
+    return false;
+  }
 
   const expected = crypto
     .createHmac("sha256", secret)
@@ -18,5 +26,16 @@ export function verifyLemonSqueezySignature(
     .digest("hex");
 
   // Use constant-time comparison.
-  return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signatureHeader));
+  const isValid = crypto.timingSafeEqual(
+    Buffer.from(expected),
+    Buffer.from(signatureHeader),
+  );
+
+  if (!isValid) {
+    console.warn("Invalid Lemon Squeezy signature.");
+    return false;
+  }
+
+  console.log("Successfully verified Lemon Squeezy webhook signature.");
+  return true;
 } 

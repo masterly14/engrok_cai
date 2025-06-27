@@ -39,9 +39,17 @@ assertEnv("LEMON_SQUEEZY_STORE_ID", process.env.LEMON_SQUEEZY_STORE_ID);
 const API_KEY = process.env.LEMON_SQUEEZY_API_KEY!.trim();
 const STORE_ID = process.env.LEMON_SQUEEZY_STORE_ID!;
 
+// Detección del modo de la API key
+const API_KEY_FORMAT = API_KEY.startsWith('test_')
+  ? 'TEST'
+  : API_KEY.startsWith('live_')
+    ? 'LIVE'
+    : 'JWT'; // nueva generación de claves JWT
+
 async function lsFetch<T>(endpoint: string, init: RequestInit = {}): Promise<T> {
   // Log básico de la petición
   try {
+    console.debug(`[LS] Mode detected: ${API_KEY_FORMAT}`);
     console.debug("[LS] Request", endpoint, init.method ?? "GET");
     if (init.body) {
       console.debug("[LS] Body", init.body);
