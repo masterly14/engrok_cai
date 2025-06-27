@@ -29,7 +29,7 @@ export const sendMediaMessage = async (
   }
 
   // Obtenemos el contacto
-  const contact = await db.contact.findFirst({ where: { id: contactId } });
+  const contact = await db.chatContact.findFirst({ where: { id: contactId } });
   if (!contact) {
     return { status: 404 as const, message: "Contact not found" };
   }
@@ -37,14 +37,14 @@ export const sendMediaMessage = async (
   const message = await db.message.create({
     data: {
       waId: `${Date.now()}`,
-      from: chatAgent.phoneNumber ?? "",
-      to: contact.phoneNumber,
+      from: chatAgent.whatsappPhoneNumber ?? "",
+      to: contact.phone,
       timestamp: new Date(),
       type: mediaType,
       textBody: mediaUrl, // guardamos la URL como cuerpo del mensaje
       metadata: { mediaUrl },
-      contactId: contact.id,
       chatAgentId: chatAgent.id,
+      chatContactId: contact.id,
     },
   });
 
