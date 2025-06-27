@@ -37,14 +37,14 @@ export class ContactService {
 
   private async getChatAgent(phoneNumber: string) {
     return await db.chatAgent.findFirst({
-      where: { phoneNumber }
+      where: { whatsappPhoneNumber: phoneNumber }
     });
   }
 
   private async findExistingContact(phoneNumber: string, chatAgentId: string) {
-    return await db.contact.findFirst({
+    return await db.chatContact.findFirst({
       where: {
-        phoneNumber,
+        phone: phoneNumber,
         chatAgentId
       }
     });
@@ -53,13 +53,11 @@ export class ContactService {
   private async createNewContact(phoneNumber: string, chatAgentId: string, messageData?: any) {
     console.log(`[ContactService] Creating new contact for ${phoneNumber}`);
     
-    return await db.contact.create({
+    return await db.chatContact.create({
       data: {
-        waId: phoneNumber,
-        phoneNumber,
+        phone: phoneNumber,
         chatAgentId,
         name: messageData?.profile?.name ?? null,
-        email: null,
       }
     });
   }
