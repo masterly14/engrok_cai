@@ -8,7 +8,11 @@ import "server-only"
 const BASE_URL = "https://api.lemonsqueezy.com/v1";
 
 function assertEnv(name: string, value?: string): asserts value is string {
-  if (!value) throw new Error(`Missing env var ${name}`);
+  if (!value) {
+    console.error(`[LS] Missing env var ${name}`);
+    throw new Error(`Missing env var ${name}`);
+  }
+  console.debug(`[LS] Env var ${name} is available`);
 }
 
 assertEnv("LEMON_SQUEEZY_API_KEY", process.env.LEMON_SQUEEZY_API_KEY);
@@ -20,31 +24,34 @@ const STORE_ID = process.env.LEMON_SQUEEZY_STORE_ID!;
 async function lsFetch<T>(endpoint: string, init: RequestInit = {}): Promise<T> {
   // Log básico de la petición
   try {
-    if (process.env.NODE_ENV !== "production") {
-      console.debug("[LS] Request", endpoint, init.method ?? "GET");
-      if (init.body) {
-        console.debug("[LS] Body", init.body);
-      }
+    console.debug("[LS] Request", endpoint, init.method ?? "GET");
+    if (init.body) {
+      console.debug("[LS] Body", init.body);
+    }
+    // Verificar que la API key esté disponible
+    if (!API_KEY) {
+      console.error("[LS] API_KEY is not available");
     }
   } catch {
     // ignore log errors
   }
 
   const res = await fetch(`${BASE_URL}${endpoint}`, {
-    method: "GET",
+    ...init,
+    method: init.method || "GET",
     headers: {
       Accept: "application/vnd.api+json",
       "Content-Type": "application/vnd.api+json",
       Authorization: `Bearer ${API_KEY}`,
       ...init.headers,
     },
-    ...init,
     // Always revalidate: we don't want to cache admin calls.
     cache: "no-store",
   });
 
   if (!res.ok) {
     const text = await res.text();
+    console.error("[LS] API Error Response:", text);
     throw new Error(`Lemon Squeezy API error (${res.status}): ${text}`);
   }
 
