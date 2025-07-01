@@ -48,13 +48,6 @@ const nodeCategories: NodeCategory[] = [
     color: "from-emerald-500 to-teal-500",
     description: "Flow control and decision making",
   },
-  {
-    id: "integration",
-    name: "Integrations",
-    icon: <Zap className="w-4 h-4" />,
-    color: "from-violet-500 to-purple-500",
-    description: "External services and APIs",
-  },
 ]
 
 const nodeOptions: NodeOption[] = [

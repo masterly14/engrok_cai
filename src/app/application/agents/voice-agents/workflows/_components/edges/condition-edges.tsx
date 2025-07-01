@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { motion } from "framer-motion";
 import { Check, Edit2, Pencil, PercentCircle, X } from "lucide-react";
 import { useState } from "react";
-import { BaseEdge, EdgeLabelRenderer, EdgeProps } from "reactflow";
+import { BaseEdge, EdgeLabelRenderer, EdgeProps, useReactFlow } from "reactflow";
 
 function getStraightEdgePath(
   sourceX: number,
@@ -34,6 +34,7 @@ export function conditionEdges({
   data,
   selected,
 }: EdgeProps) {
+  const { setEdges } = useReactFlow();
   const [isEditing, setIsEditing] = useState(false);
   const [condition, setCondition] = useState(data?.condition?.prompt || "Condition");
   const [tempCondition, setTempCondition] = useState(condition);
@@ -48,6 +49,22 @@ export function conditionEdges({
   const handleSave = () => {
     setIsEditing(false);
     setCondition(tempCondition);
+
+    // Actualizar los datos del edge en el estado de React Flow
+    setEdges((edges) =>
+      edges.map((edge) => {
+        if (edge.id === id) {
+          return {
+            ...edge,
+            data: {
+              ...edge.data,
+              condition: { ...edge.data?.condition, prompt: tempCondition },
+            },
+          };
+        }
+        return edge;
+      })
+    );
   };
 
   const handleCancel = () => {
@@ -95,7 +112,7 @@ export function conditionEdges({
                   <div className="flex gap-1">
                     <Button
                       size="sm"
-                      className="h-7 px-3 bg-amber-500 hover:bg-amber-600"
+                      className="h-7 px-3 bg-red-500 text-white hover:bg-red-600"
                       onClick={handleCancel}
                     >
                       {" "}
@@ -103,7 +120,7 @@ export function conditionEdges({
                     </Button>
                     <Button
                       size="sm"
-                      className="h-7 px-3 border-amber-200 text-amber-700 hover:bg-amber-50"
+                      className="h-7 px-3 bg-green-500 text-white hover:bg-green-600"
                       onClick={handleSave}
                     >
                       {" "}

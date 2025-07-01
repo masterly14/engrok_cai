@@ -14,6 +14,7 @@ import { useState } from "react";
 import InboundSettingsCard from "./InboundSettingsCard";
 import NumberConfigurationCard from "./NumberConfigurationCard";
 import CreateCall from "./create-call";
+import { useAllWorkflows } from "@/hooks/use-all-workflows";
 
 const NumberAgentsClient = () => {
   const {
@@ -29,6 +30,7 @@ const NumberAgentsClient = () => {
   const createPhoneNumberMutation = useCreatePhoneNumber();
   const updatePhoneNumberMutation = useUpdatePhoneNumber();
   const { agentsData, agentsLoading, agentsError } = useAllAgents();
+  const { workflowsData, workflowsLoading, workflowsError } = useAllWorkflows();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
@@ -254,6 +256,7 @@ const NumberAgentsClient = () => {
                   setSelectedAgent={setSelectedAgent}
                   selectedWorkflow={selectedWorkflow}
                   setSelectedWorkflow={setSelectedWorkflow}
+                  workflowsData={Array.isArray(workflowsData) ? workflowsData : []}
                 />
               </div>
             )}

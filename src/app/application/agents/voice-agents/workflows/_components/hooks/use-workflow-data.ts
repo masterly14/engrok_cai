@@ -34,37 +34,31 @@ const transformToVapiPayload = (
     return { name: workflowName, nodes: [], edges: [] };
   }
 
-  // 1. Encontrar el ID del nodo de inicio (el que no tiene flechas de entrada)
+  // 1. Find the ID of the start node (the one with no incoming edges)
   const targetNodeIds = new Set(edges.map((edge) => edge.target));
   let startNode = nodes.find((node) => !targetNodeIds.has(node.id));
-
-  // Si no se encuentra (p.ej. un solo nodo con un loop), tomar el primero
-  if (!startNode) {
-    startNode = nodes[0];
+  if (!startNode && nodes.length > 0) {
+    startNode = nodes[0]; // Fallback for single node or looped flows
   }
-  const startNodeId = startNode.id;
+  const startNodeId = startNode?.id;
 
-
-  // 2. Crear un mapa de IDs de nodo a nombres para VAPI, nombrando al de inicio "start"
+  // 2. Create a unique name for each node.
   const idToNameMap = new Map<string, string>();
-  nodes.forEach((node) => {
-    if (node.id === startNodeId) {
-      idToNameMap.set(node.id, "start");
-    } else {
-      // Usar el nombre del nodo si existe y no es "start", si no, usar el ID único
-      const candidateName = node.data.name || node.id;
-      idToNameMap.set(
-        node.id,
-        candidateName === "start" ? node.id : candidateName
-      );
-    }
+  const usedNames = new Set<string>();
+  nodes.forEach(node => {
+      let candidateName = node.data.name || node.id;
+      // Ensure name is unique and not a reserved word like 'start'
+      if (usedNames.has(candidateName) || candidateName === 'start') {
+          candidateName = node.id; // fallback to unique id
+      }
+      usedNames.add(candidateName);
+      idToNameMap.set(node.id, candidateName);
   });
 
-  // 3. Transformar los nodos al formato de VAPI usando los nuevos nombres
+  // 3. Transform all user-defined nodes to the Vapi format.
   const vapiNodes = nodes.map((node) => {
     const { data } = node;
     const vapiName = idToNameMap.get(node.id)!;
-    const isStartNode = node.id === startNodeId;
     const baseVapiNode = { name: vapiName };
 
     if (data.type === "conversation") {
@@ -80,9 +74,9 @@ const transformToVapiPayload = (
         {} as Record<string, { type: string; description: string }>
       );
 
-      return {
+      const vapiNodeData: any = {
         ...baseVapiNode,
-        type: isStartNode ? "start" : "conversation",
+        type: "conversation",
         model: convData.model,
         voice: convData.voice,
         transcriber: convData.transcriber,
@@ -94,6 +88,12 @@ const transformToVapiPayload = (
           },
         },
       };
+
+      if (node.id === startNodeId) {
+        vapiNodeData.isStart = true;
+      }
+
+      return vapiNodeData;
     }
 
     if (data.type === "transferCall") {
@@ -116,75 +116,95 @@ const transformToVapiPayload = (
     }
 
     if (data.type === "integration") {
-      const intData = data as IntegrationNodeData;
-      let tool = {};
+        const intData = data as IntegrationNodeData;
+        let tool = {};
       if (intData.integrationType === "google-sheet") {
-        tool = {
-          type: "apiRequest",
+            tool = {
+                type: "apiRequest",
           url: `/api/integrations/sheets?action=appendData`,
           method: "POST",
-          body: {
-            type: "object",
-            properties: {
-              spreadsheetId: intData.spreadsheetId,
-              sheetName: intData.sheetName,
-              column: intData.column,
-              value: intData.value,
+                body: {
+                    type: "object",
+                    properties: {
+                        spreadsheetId: intData.spreadsheetId,
+                        sheetName: intData.sheetName,
+                        column: intData.column,
+                        value: intData.value,
             },
           },
         };
-      }
+        }
       if (intData.integrationType === "google-calendar") {
         if (intData.calendarAction === "availability") {
-          tool = {
+                tool = {
             type: "apiRequest",
-            url: `/api/integrations/calendar?action=availability`,
+                    url: `/api/integrations/calendar?action=availability`,
             method: "GET",
-            query: {
-              calendarId: intData.calendarId,
-              rangeDays: intData.rangeDays || 15,
+                    query: {
+                      calendarId: intData.calendarId,
+                      rangeDays: intData.rangeDays || 15,
             },
           };
-        } else {
-          tool = {
+            } else {
+                tool = {
             type: "apiRequest",
-            url: `/api/integrations/calendar?action=createEvent`,
+                    url: `/api/integrations/calendar?action=createEvent`,
             method: "POST",
-            body: {
+                    body: {
               type: "object",
-              properties: {
-                calendarId: intData.calendarId,
-                summary: intData.eventSummary,
-                description: intData.eventDescription,
-                startDate: intData.eventStartDate,
-                startTime: intData.eventStartTime,
-                duration: intData.eventDuration,
+                      properties: {
+                        calendarId: intData.calendarId,
+                        summary: intData.eventSummary,
+                        description: intData.eventDescription,
+                        startDate: intData.eventStartDate,
+                        startTime: intData.eventStartTime,
+                        duration: intData.eventDuration,
               },
             },
           };
+            }
         }
-      }
       return { ...baseVapiNode, type: "tool", tool };
     }
 
     if (data.type === "apiRequest") {
-      const apiData = data as any;
-      return {
-        ...baseVapiNode,
-        type: "tool",
-        tool: {
+        const apiData = data as any;
+
+        // Clone headers to avoid mutating the original data object.
+        const headers = apiData.headers ? { ...apiData.headers } : {};
+
+        // The Vapi API error indicates that 'Content-Type' should not be set manually.
+        // We remove it if it exists.
+        if ('Content-Type' in headers) {
+          delete headers['Content-Type'];
+        }
+        
+        const tool: any = {
           type: "apiRequest",
-          url: apiData.url,
-          method: apiData.method,
-          headers: apiData.headers || {},
-          body: apiData.body || {},
-        },
-      };
+            url: apiData.url,
+            method: apiData.method,
+        };
+
+        // Only include the headers object if it's not empty after filtering.
+        if (Object.keys(headers).length > 0) {
+            tool.headers = headers;
+        }
+
+        // Only include body if it is not empty
+        if (apiData.body && Object.keys(apiData.body).length > 0) {
+            tool.body = apiData.body;
+        }
+
+        return {
+          ...baseVapiNode,
+          type: "tool",
+          tool: tool,
+        };
     }
     return null;
   }).filter(Boolean);
 
-  // 4. Transformar las conexiones usando los nuevos nombres de VAPI
+  // 4. Transform user-defined edges.
   const vapiEdges = edges.map((edge) => ({
     from: idToNameMap.get(edge.source),
     to: idToNameMap.get(edge.target),

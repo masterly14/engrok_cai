@@ -84,14 +84,6 @@ const nodeOptions: NodeOption[] = [
     shortcut: "Ctrl + Shift + A",
     category: "integration",
   },
-  {
-    type: "integration",
-    label: "Integración",
-    icon: <Wrench className="w-4 h-4" />,
-    description: "Conecta a un servicio externo.",
-    shortcut: "Ctrl + Shift + I",
-    category: "integration",
-  },
 ];
 
 const getNodeColor = (type: string) => {
@@ -103,9 +95,7 @@ const getNodeColor = (type: string) => {
     case "endCall":
       return "from-red-500 to-rose-600";
     case "apiRequest":
-      return "from-purple-500 to-violet-600";
-    case "integration":
-      return "from-orange-500 to-amber-600";
+        return "from-purple-500 to-violet-600";
     default:
       return "from-gray-500 to-gray-600";
   }

@@ -73,7 +73,7 @@ const getVapiWorkflow = async (vapiWorkflowId: string) => {
 export const getAllWorkflows = async () => {
     const user = await onBoardUser();
     if (!user?.data.id) {
-        throw new Error("Not user")
+        throw new Error("Not user");
     }
 
     const workflows = await db.workflow.findMany({
@@ -226,7 +226,7 @@ export const updateWorkflow = async (data: any, id: string) => {
     }
 }
 
-export const deleteWorkflow = async (id: string) => {
+export const deleteWorkflow = async (workflowId: string) => {
     const user = await onBoardUser();
     if (!user?.data.id) {
         throw new Error("Not user")
@@ -235,7 +235,7 @@ export const deleteWorkflow = async (id: string) => {
     const workflow = await db.workflow.delete({
         where: {
             userId: user.data.id,
-            id: id
+            id: workflowId
         },
     })
     

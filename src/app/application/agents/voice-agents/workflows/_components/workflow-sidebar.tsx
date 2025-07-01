@@ -30,14 +30,6 @@ const nodeTypes = [
     category: "core",
   },
   {
-    id: "integration",
-    label: "Integración",
-    description: "Conectar con APIs externas",
-    icon: Zap,
-    color: "bg-purple-500",
-    category: "advanced",
-  },
-  {
     id: "apiRequest",
     label: "API Request",
     description: "Realiza una petición HTTP externa",

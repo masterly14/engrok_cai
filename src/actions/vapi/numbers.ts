@@ -3,8 +3,6 @@
 import { VapiClient } from "@vapi-ai/server-sdk";
 import { onBoardUser } from "../user";
 import { db } from "@/utils";
-import { v4 } from "uuid";
-
 
 const vapi = new VapiClient({
   token: process.env.VAPI_API_KEY!,
@@ -145,74 +143,77 @@ export const getAllPhoneNumbers = async () => {
 };
 
 
-export const updatePhoneNumber = async (params: CreatePhoneNumberParams) => {
-  const user = await onBoardUser();
+export const updatePhoneNumber = async (params: any) => {
+  try {
+    const user = await onBoardUser();
+    if (!user || !user.data.id) {
+      throw new Error("User not authenticated");
+    }
 
-  console.log("Información que llega: ", params)
+    const { number, assistantId, workflowId, name } = params;
 
+    const phoneNumber = await db.phoneNumber.findFirst({
+      where: { number: number, userId: user.data.id },
+    });
 
+    if (!phoneNumber || !phoneNumber.vapiId) {
+      throw new Error("Phone number not found or not registered with Vapi.");
+    }
 
-  if (!user) {
-    throw new Error("User not found");
-  }
+    const vapiPayload: { assistantId?: string; workflowId?: string, name?: string } = {
+      name: name
+    };
+    let localPayload: { assistantId?: string | null; workflowId?: string | null; name?: string } = {
+      name: name
+    };
 
-  const phoneNumber = await db.phoneNumber.findFirst({
-    where: {
-      number: params.number,
-      userId: user.data.id,
-    },
-  });
+    if (workflowId) {
+      const workflow = await db.workflow.findUnique({
+        where: { id: workflowId, userId: user.data.id },
+      });
+      if (!workflow || !workflow.vapiWorkflowId) {
+        throw new Error("Workflow not found or has no Vapi ID.");
+      }
+      vapiPayload.workflowId = workflow.vapiWorkflowId;
+      localPayload.workflowId = workflow.id;
+      localPayload.assistantId = null;
+    } else if (assistantId) {
+      const agent = await db.agent.findUnique({
+        where: { id: assistantId, userId: user.data.id },
+      });
+      if (!agent || !agent.vapiId) {
+        throw new Error("Agent not found or has no Vapi ID.");
+      }
+      vapiPayload.assistantId = agent.vapiId;
+      localPayload.assistantId = agent.id;
+      localPayload.workflowId = null;
+    }
 
-  if (!phoneNumber) {
-    throw new Error("Phone number not found");
-  }
+    const response = await fetch(`https://api.vapi.ai/phone-number/${phoneNumber.vapiId}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.VAPI_API_KEY}`,
+      },
+      body: JSON.stringify(vapiPayload),
+    });
 
-  if (params.assistantId != null && params.assistantId !== "") {
-    console.log("Actualizando assistantId, previamente era: ", params.assistantId)
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error("Vapi API error:", errorData);
+      throw new Error(errorData.message || "Failed to update phone number in Vapi.");
+    }
 
-    await vapi.phoneNumbers.update(phoneNumber.vapiId!, {
-      assistantId: params.assistantId,
-      workflowId: undefined,
-    })
+    const updatedPhoneNumberInVapi = await response.json();
 
     const updatedPhoneNumber = await db.phoneNumber.update({
-      where: {
-        id: phoneNumber.id,
-      },
-      data: {
-        assistantId: params.assistantId,
-        workflowId: null,
-      }
-    })
-    console.log("updatedPhoneNumber", updatedPhoneNumber)
-  } else if (params.workflowId != null && params.workflowId !== "") {
-    await vapi.phoneNumbers.update(phoneNumber.vapiId!, {
-      workflowId: params.workflowId,
-      assistantId: undefined,
-    })
-    await db.phoneNumber.update({
-      where: {
-        id: phoneNumber.id,
-      },
-      data: {
-        workflowId: params.workflowId,
-        assistantId: null,
-      },
-    })
-  } else {
-    console.log("Actualizando a null")
-    await vapi.phoneNumbers.update(phoneNumber.vapiId!, {
-      assistantId: undefined,
-      workflowId: undefined,
-    })
-    await db.phoneNumber.update({
-      where: {
-        id: phoneNumber.id,
-      },
-      data: {
-        assistantId: null,
-        workflowId: null,
-      },
-    })
+      where: { id: phoneNumber.id },
+      data: localPayload,
+    });
+
+    return updatedPhoneNumber;
+  } catch (error: any) {
+    console.error("Error updating phone number:", error);
+    throw new Error(error.message || "An unknown error occurred.");
   }
-}
+};
