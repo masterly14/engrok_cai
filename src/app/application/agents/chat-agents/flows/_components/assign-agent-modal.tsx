@@ -42,6 +42,8 @@ export const AssignAgentModal = ({ open, onOpenChange, workflowId, onAgentAssign
       whatsappPhoneNumber: agent.whatsappPhoneNumber || "",
       whatsappPhoneNumberId: agent.whatsappPhoneNumberId || "",
       workflowId,
+      isTestNumber: agent.isTestNumber,
+      hasSeenTestWarning: agent.hasSeenTestWarning,
     };
 
     updateAgent.mutate(

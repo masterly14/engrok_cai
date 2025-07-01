@@ -34,7 +34,7 @@ const transformToVapiPayload = (
     return { name: workflowName, nodes: [], edges: [] };
   }
 
-  // 1. Encontrar el nodo de inicio (el que no tiene flechas de entrada)
+  // 1. Encontrar el ID del nodo de inicio (el que no tiene flechas de entrada)
   const targetNodeIds = new Set(edges.map((edge) => edge.target));
   let startNode = nodes.find((node) => !targetNodeIds.has(node.id));
 
@@ -42,11 +42,13 @@ const transformToVapiPayload = (
   if (!startNode) {
     startNode = nodes[0];
   }
+  const startNodeId = startNode.id;
+
 
   // 2. Crear un mapa de IDs de nodo a nombres para VAPI, nombrando al de inicio "start"
   const idToNameMap = new Map<string, string>();
   nodes.forEach((node) => {
-    if (node.id === startNode!.id) {
+    if (node.id === startNodeId) {
       idToNameMap.set(node.id, "start");
     } else {
       // Usar el nombre del nodo si existe y no es "start", si no, usar el ID único
@@ -62,6 +64,7 @@ const transformToVapiPayload = (
   const vapiNodes = nodes.map((node) => {
     const { data } = node;
     const vapiName = idToNameMap.get(node.id)!;
+    const isStartNode = node.id === startNodeId;
     const baseVapiNode = { name: vapiName };
 
     if (data.type === "conversation") {
@@ -79,7 +82,7 @@ const transformToVapiPayload = (
 
       return {
         ...baseVapiNode,
-        type: "conversation",
+        type: isStartNode ? "start" : "conversation",
         model: convData.model,
         voice: convData.voice,
         transcriber: convData.transcriber,
@@ -94,13 +97,13 @@ const transformToVapiPayload = (
     }
 
     if (data.type === "transferCall") {
-      const transferData = data as any;
+      const transferData = data as TransferCallNodeData;
       return {
         ...baseVapiNode,
-        type: "tool",
-        tool: {
-          type: "transferCall",
-          destinations: transferData.tool?.destinations || [],
+        type: "transfer",
+        destination: {
+          type: "phoneNumber",
+          number: transferData.number,
         },
       };
     }
@@ -108,7 +111,7 @@ const transformToVapiPayload = (
     if (data.type === "endCall") {
       return {
         ...baseVapiNode,
-        type: "endCall",
+        type: "end",
       };
     }
 
