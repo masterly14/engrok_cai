@@ -103,6 +103,8 @@ model ChatAgent {
   whatsappPhoneNumber       String
   whatsappPhoneNumberId     String         @unique
   user                      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isTestNumber              Boolean        @default(false)
+  hasSeenTestWarning        Boolean        @default(false)
   chatContacts              ChatContact[]
   chatSessions              ChatSession[]
   workflows                 ChatWorkflow[]
@@ -171,7 +173,7 @@ model ElevenLabsWidget {
   avatarImageUrl   String?
   dynamicVariables Json?
   ownerId          String   @db.Uuid
-  owner            User     @relation(fields: [ownerId], references: [id])
+  owner            User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 }

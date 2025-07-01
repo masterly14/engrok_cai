@@ -15,7 +15,7 @@ export const onCurrentUser = async () => {
   // Devolver solo los datos serializables necesarios
   return {
     id: user.id,
-    email: user.emailAddresses[0]?.emailAddress,
+    email: user.emailAddresses[0]?.emailAddress || "",
     name: `${user.firstName} ${user.lastName}`.trim(),
   };
 };

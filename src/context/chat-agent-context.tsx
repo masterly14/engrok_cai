@@ -12,6 +12,8 @@ export type ChatAgentFormData = {
   whatsappPhoneNumber: string
   whatsappPhoneNumberId: string
   workflowId?: string | null
+  isTestNumber: boolean
+  hasSeenTestWarning: boolean
 }
 
 // Define the shape of the context
@@ -37,6 +39,8 @@ const initialFormDataState: ChatAgentFormData = {
   whatsappPhoneNumber: "",
   whatsappPhoneNumberId: "",
   workflowId: null,
+  isTestNumber: false,
+  hasSeenTestWarning: false,
 }
 
 export const ChatAgentProvider = ({ children }: { children: React.ReactNode }) => {
@@ -54,7 +58,9 @@ export const ChatAgentProvider = ({ children }: { children: React.ReactNode }) =
         whatsappBusinessAccountId: selectedChatAgent.whatsappBusinessAccountId || "",
         whatsappPhoneNumber: selectedChatAgent.whatsappPhoneNumber || "",
         whatsappPhoneNumberId: selectedChatAgent.whatsappPhoneNumberId || "",
-        workflowId: selectedChatAgent.workflows.find(w => w.agentId === selectedChatAgent.id)?.id || null
+        workflowId: selectedChatAgent.workflows.find(w => w.agentId === selectedChatAgent.id)?.id || null,
+        isTestNumber: selectedChatAgent.isTestNumber,
+        hasSeenTestWarning: selectedChatAgent.hasSeenTestWarning,
       }
       setFormData(agentData)
       setInitialFormData(agentData)

@@ -8,16 +8,77 @@ import { Save, RotateCcw, Trash2, MessageSquare } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useChatAgent } from "@/context/chat-agent-context"
 import type { ChatAgent, ChatWorkflow } from "@prisma/client"
-import { useUpdateChatAgent, useDeleteChatAgent } from "@/hooks/use-create-chat-agent"
+import { useUpdateChatAgent, useDeleteChatAgent, useCreateChatAgent } from "@/hooks/use-create-chat-agent"
 import { Switch } from "@/components/ui/switch"
 import Link from "next/link"
 import { getAvailableWorkflows } from "@/actions/chat-agents"
 import WhatsAppConnectButton from "@/components/application/whatsapp-connect-button"
 import { toast } from "sonner"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Plus } from "lucide-react"
+import { Plus, ExternalLink } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useCreateChatAgent } from "@/hooks/use-create-chat-agent"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+
+// Definición del Modal dentro del mismo archivo para evitar problemas de creación de ficheros
+interface TestNumberWarningModalProps {
+  isOpen: boolean
+  onConfirm: () => void
+}
+
+function TestNumberWarningModal({ isOpen, onConfirm }: TestNumberWarningModalProps) {
+  if (!isOpen) return null
+
+  return (
+    <AlertDialog open={isOpen} onOpenChange={onConfirm}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>¡Atención! Has conectado un número de prueba</AlertDialogTitle>
+          <AlertDialogDescription>
+            Los números de prueba de WhatsApp tienen limitaciones y un propósito específico para desarrolladores.
+            Esto es lo que necesitas saber para poder testearlo correctamente:
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <div className="text-sm space-y-4 text-muted-foreground pr-6 max-h-[400px] overflow-y-auto">
+            <p>
+                <strong>1. No es un número real:</strong> No puedes buscar este número en WhatsApp ni agregarlo como contacto. Solo funciona a través de la API.
+            </p>
+            <p>
+                <strong>2. Necesitas un destinatario de prueba:</strong> Para enviar un mensaje, debes agregar tu número de WhatsApp personal (o el de un miembro de tu equipo) a una lista de permitidos en el panel de Meta.
+            </p>
+            <h4 className="font-bold text-foreground pt-2">Pasos para agregar tu número de destino:</h4>
+            <ol className="list-decimal list-inside space-y-2">
+                <li>
+                    Ve al{" "}
+                    <Link href="https://developers.facebook.com/apps" target="_blank" className="text-blue-500 hover:underline inline-flex items-center">
+                        Panel de Aplicaciones de Meta <ExternalLink className="h-3 w-3 ml-1" />
+                    </Link>
+                    .
+                </li>
+                <li>Selecciona la aplicación que has conectado a nuestra plataforma.</li>
+                <li>En el menú de la izquierda, navega a <strong>WhatsApp &gt; API Setup</strong>.</li>
+                <li>
+                    Busca la sección <strong>"Send and receive messages"</strong>. Verás un campo "To" para añadir un número de teléfono.
+                </li>
+                <li>Haz clic en "Add phone number", introduce tu número de WhatsApp personal y verifica el código que recibirás.</li>
+                <li>¡Listo! Una vez añadido, ya puedes usar nuestra plataforma para enviar mensajes de prueba desde tu número de API a tu número personal.</li>
+            </ol>
+        </div>
+        <AlertDialogFooter>
+          <AlertDialogAction onClick={onConfirm}>Entendido, continuar</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  )
+}
+
 
 const ChatAgentsClient = ({ agents }: { agents: (ChatAgent & { workflows: ChatWorkflow[] })[] }) => {
   const { 
@@ -37,6 +98,7 @@ const ChatAgentsClient = ({ agents }: { agents: (ChatAgent & { workflows: ChatWo
   const router = useRouter();
 
   const [availableWorkflows, setAvailableWorkflows] = useState<ChatWorkflow[]>([])
+  const [isTestWarningModalOpen, setIsTestWarningModalOpen] = useState(false);
 
   useEffect(() => {
     getAvailableWorkflows(selectedChatAgent?.id).then(setAvailableWorkflows)
@@ -47,6 +109,34 @@ const ChatAgentsClient = ({ agents }: { agents: (ChatAgent & { workflows: ChatWo
       setSelectedChatAgent(agents[0])
     }
   }, [agents, selectedChatAgent, isCreatingNew, setSelectedChatAgent])
+
+  // Muestra el modal si el agente seleccionado es de prueba y no se ha mostrado antes
+  useEffect(() => {
+    if (selectedChatAgent?.isTestNumber && !selectedChatAgent?.hasSeenTestWarning) {
+      setIsTestWarningModalOpen(true);
+    }
+  }, [selectedChatAgent])
+
+  const handleConfirmTestWarning = async () => {
+    if (!selectedChatAgent) return;
+    
+    await updateAgentMutation.mutateAsync({ 
+        agentId: selectedChatAgent.id, 
+        data: { 
+            ...selectedChatAgent,
+            hasSeenTestWarning: true 
+        } 
+    }, {
+        onSuccess: (updatedAgent) => {
+            setSelectedChatAgent(updatedAgent);
+            setIsTestWarningModalOpen(false);
+        },
+        onError: () => {
+            toast.error("No se pudo guardar la confirmación. Por favor, inténtalo de nuevo.");
+            setIsTestWarningModalOpen(false);
+        }
+    });
+  }
 
   const handleInputChange = (field: keyof typeof formData, value: string | boolean | null) => {
     setFormData({
@@ -97,6 +187,10 @@ const ChatAgentsClient = ({ agents }: { agents: (ChatAgent & { workflows: ChatWo
 
   return (
     <div className="flex-1 p-6 overflow-auto overflow-x-hidden">
+      <TestNumberWarningModal 
+        isOpen={isTestWarningModalOpen}
+        onConfirm={handleConfirmTestWarning}
+      />
       {!selectedChatAgent && !isCreatingNew ? (
         <div className="max-w-4xl mx-auto">
           <Card className="mt-20">
