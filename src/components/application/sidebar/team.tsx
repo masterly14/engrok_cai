@@ -30,11 +30,11 @@ export function Team() {
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
               <div className="flex aspect-square size-8 items-center justify-center rounded-lg">
-                <Image src={`${theme === "light" ? "/engrok-icon-theme-white.png" : "/engrok-icon-theme-black.png"}`} alt="engrok-icon" width={45} height={45} className="rounded-md"/>
+                <Image src={"/logo-karolai.jpg"} alt="engrok-icon" width={45} height={45} className="rounded-md"/>
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-semibold">
-                  Engrok Conversational AI
+                  KarolAI
                 </span>
                 <span className="truncate text-xs">Host</span>
               </div>
