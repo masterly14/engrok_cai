@@ -6,6 +6,10 @@ import { onBoardUser } from "./user"
 // Función para enviar workflow a la API de Vapi
 const sendToVapiAPI = async (vapiPayload: any) => {
     try {
+        console.log("-------------------- VAPI PAYLOAD --------------------");
+        console.log(JSON.stringify(vapiPayload, null, 2));
+        console.log("------------------------------------------------------");
+
         // Verificar que la API key esté configurada
         if (!process.env.VAPI_API_KEY) {
             throw new Error('VAPI_API_KEY no está configurada en las variables de entorno');

@@ -42,6 +42,10 @@ model User {
   usageEvents                  UsageEvent[]
   workflowTriggers             WorkflowTrigger[]
   notifications                Notification[]
+  prospects                    Prospect[]
+  elevenLabsWidgets            ElevenLabsWidget[]
+
+  @@map("users")
 }
 
 model UserAssets {
@@ -136,8 +140,41 @@ model Workflow {
   updatedAt    DateTime @updatedAt
   userId       String   @db.Uuid
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fields       Json?
+  active       Boolean @default(true)
 }
 
+model Prospect {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  email     String   @unique
+  title     String?
+  company   String?
+  source    String? // e.g., "Apollo.io"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  ownerId String @db.Uuid
+
+  @@index([ownerId])
+}
+
+model ElevenLabsWidget {
+  id               String   @id @default(uuid()) @db.Uuid
+  agentId          String   @unique
+  name             String
+  firstMessage     String?
+  systemPrompt     String
+  voiceId          String?
+  actionText       String?
+  avatarImageUrl   String?
+  dynamicVariables Json?
+  ownerId          String   @db.Uuid
+  owner            User     @relation(fields: [ownerId], references: [id])
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
 model ChatWorkflow {
   id        String        @id @default(uuid()) @db.Uuid
   name      String

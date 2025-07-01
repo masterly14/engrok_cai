@@ -1,7 +1,6 @@
 "use client";
 
 import type React from "react";
-import { useEffect, useState } from "react";
 import {
   Bot,
   ChevronRight,
@@ -10,11 +9,8 @@ import {
   Phone,
   Users,
   Workflow,
-  Wrench,
   PhoneCall,
-  BarChart3,
   MessageSquare,
-  Loader2,
 } from "lucide-react";
 
 import {
@@ -80,11 +76,6 @@ export function NavMain() {
         url: "/application/agents/chat-agents/templates",
         icon: MessageSquare,
       },
-      {
-        title: "Contactos",
-        url: "/application/agents/chat-agents/contacts",
-        icon: Users,
-      },
     ],
   };
 
@@ -105,14 +96,14 @@ export function NavMain() {
         icon: Phone,
       },
       {
-        title: "Tools",
-        url: "/application/agents/voice-agents/tools",
-        icon: Wrench,
-      },
-      {
         title: "Flujos",
         url: "/application/agents/voice-agents/workflows",
         icon: Workflow,
+      },
+      {
+        title: "Widgets",
+        url: "/application/agents/voice-agents/widgets",
+        icon: LucideBotMessageSquare,
       },
     ],
   };
@@ -138,11 +129,6 @@ export function NavMain() {
       title: "Crm",
       url: "/application/crm",
       icon: Users,
-    },
-    {
-      title: "Análisis",
-      url: "/application/analytics",
-      icon: BarChart3,
     },
     {
       title: "Historial de llamadas",

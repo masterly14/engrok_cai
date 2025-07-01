@@ -4,16 +4,20 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Save, Plus, RotateCcw, Trash2, MessageSquare } from "lucide-react"
+import { Save, RotateCcw, Trash2, MessageSquare } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useChatAgent } from "@/context/chat-agent-context"
-import { toast } from "sonner"
 import type { ChatAgent, ChatWorkflow } from "@prisma/client"
-import { useCreateChatAgent, useUpdateChatAgent, useDeleteChatAgent } from "@/hooks/use-create-chat-agent"
+import { useUpdateChatAgent, useDeleteChatAgent } from "@/hooks/use-create-chat-agent"
 import { Switch } from "@/components/ui/switch"
 import Link from "next/link"
 import { getAvailableWorkflows } from "@/actions/chat-agents"
+import WhatsAppConnectButton from "@/components/application/whatsapp-connect-button"
+import { toast } from "sonner"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Plus } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { useCreateChatAgent } from "@/hooks/use-create-chat-agent"
 
 const ChatAgentsClient = ({ agents }: { agents: (ChatAgent & { workflows: ChatWorkflow[] })[] }) => {
   const { 
@@ -27,11 +31,10 @@ const ChatAgentsClient = ({ agents }: { agents: (ChatAgent & { workflows: ChatWo
     setSelectedChatAgent 
   } = useChatAgent()
 
-
-  const router = useRouter();
-  const createAgentMutation = useCreateChatAgent();
   const updateAgentMutation = useUpdateChatAgent();
   const deleteAgentMutation = useDeleteChatAgent();
+  const createAgentMutation = useCreateChatAgent();
+  const router = useRouter();
 
   const [availableWorkflows, setAvailableWorkflows] = useState<ChatWorkflow[]>([])
 
@@ -138,12 +141,7 @@ const ChatAgentsClient = ({ agents }: { agents: (ChatAgent & { workflows: ChatWo
                 </Button>
               )}
 
-              {isCreatingNew ? (
-                <Button onClick={handleSave} disabled={createAgentMutation.isPending}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  {createAgentMutation.isPending ? "Creando..." : "Crear Agente"}
-                </Button>
-              ) : (
+              {!isCreatingNew && (
                 <Button onClick={handleUpdate} disabled={!hasChanges || updateAgentMutation.isPending}>
                   <Save className="h-4 w-4 mr-2" />
                   {updateAgentMutation.isPending ? "Guardando..." : "Guardar Cambios"}
@@ -152,6 +150,7 @@ const ChatAgentsClient = ({ agents }: { agents: (ChatAgent & { workflows: ChatWo
             </div>
           </div>
 
+          {/* General Agent Information Card (always visible when editing or creating) */}
           <Card>
             <CardHeader>
               <CardTitle>Información del Agente</CardTitle>
@@ -196,53 +195,103 @@ const ChatAgentsClient = ({ agents }: { agents: (ChatAgent & { workflows: ChatWo
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Configuración de WhatsApp</CardTitle>
-              <CardDescription>
-                Credenciales para conectar el agente a la API de WhatsApp.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="whatsappAccessToken">Access Token</Label>
-                <Input
-                  id="whatsappAccessToken"
-                  placeholder="Pega tu Access Token de la App de Meta"
-                  value={formData.whatsappAccessToken}
-                  onChange={(e) => handleInputChange("whatsappAccessToken", e.target.value)}
-                  type="password"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="whatsappBusinessAccountId">Business Account ID</Label>
-                <Input
-                  id="whatsappBusinessAccountId"
-                  placeholder="Pega tu Business Account ID"
-                  value={formData.whatsappBusinessAccountId}
-                  onChange={(e) => handleInputChange("whatsappBusinessAccountId", e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="whatsappPhoneNumber">Número de Teléfono</Label>
-                <Input
-                  id="whatsappPhoneNumber"
-                  placeholder="Ej: +15551234567"
-                  value={formData.whatsappPhoneNumber}
-                  onChange={(e) => handleInputChange("whatsappPhoneNumber", e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="whatsappPhoneNumberId">Phone Number ID</Label>
-                <Input
-                  id="whatsappPhoneNumberId"
-                  placeholder="Pega el Phone Number ID de WhatsApp"
-                  value={formData.whatsappPhoneNumberId}
-                  onChange={(e) => handleInputChange("whatsappPhoneNumberId", e.target.value)}
-                />
-              </div>
-            </CardContent>
-          </Card>
+          {/* WhatsApp Configuration (conditionally rendered based on isCreatingNew) */}
+          {isCreatingNew ? (
+            <Tabs defaultValue="oauth" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="oauth">Conexión Rápida (OAuth2)</TabsTrigger>
+                <TabsTrigger value="manual">Configuración Manual</TabsTrigger>
+              </TabsList>
+              <TabsContent value="oauth">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Conecta tu cuenta de WhatsApp</CardTitle>
+                    <CardDescription>Usa el siguiente botón para iniciar sesión con Meta y autorizar la línea de WhatsApp Business que quieras usar. Al finalizar, se creará el agente automáticamente.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="flex items-center">
+                    <WhatsAppConnectButton />
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              <TabsContent value="manual">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Configuración Manual de WhatsApp</CardTitle>
+                    <CardDescription>
+                      Introduce las credenciales de tu cuenta de WhatsApp Business para conectar el agente.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="whatsappAccessToken">Access Token</Label>
+                      <Input
+                        id="whatsappAccessToken"
+                        placeholder="Pega tu Access Token de la App de Meta"
+                        value={formData.whatsappAccessToken}
+                        onChange={(e) => handleInputChange("whatsappAccessToken", e.target.value)}
+                        type="password"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="whatsappBusinessAccountId">Business Account ID</Label>
+                      <Input
+                        id="whatsappBusinessAccountId"
+                        placeholder="Pega tu Business Account ID"
+                        value={formData.whatsappBusinessAccountId}
+                        onChange={(e) => handleInputChange("whatsappBusinessAccountId", e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="whatsappPhoneNumber">Número de Teléfono</Label>
+                      <Input
+                        id="whatsappPhoneNumber"
+                        placeholder="Ej: +15551234567"
+                        value={formData.whatsappPhoneNumber}
+                        onChange={(e) => handleInputChange("whatsappPhoneNumber", e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="whatsappPhoneNumberId">Phone Number ID</Label>
+                      <Input
+                        id="whatsappPhoneNumberId"
+                        placeholder="Pega el Phone Number ID de WhatsApp"
+                        value={formData.whatsappPhoneNumberId}
+                        onChange={(e) => handleInputChange("whatsappPhoneNumberId", e.target.value)}
+                      />
+                    </div>
+                    <Button onClick={handleSave} disabled={createAgentMutation.isPending}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      {createAgentMutation.isPending ? "Creando..." : "Crear Agente Manualmente"}
+                    </Button>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle>Cuenta de WhatsApp</CardTitle>
+                <CardDescription>
+                  Conecta o gestiona la línea de WhatsApp asociada a este agente.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {selectedChatAgent?.whatsappPhoneNumber ? (
+                  <div className="space-y-1 text-sm">
+                    <p>Número conectado: <strong>{selectedChatAgent.whatsappPhoneNumber}</strong></p>
+                    <p className="text-muted-foreground break-all">Business Account ID: {selectedChatAgent.whatsappBusinessAccountId}</p>
+                    <p className="text-muted-foreground break-all">Phone Number ID: {selectedChatAgent.whatsappPhoneNumberId}</p>
+                    <p className="text-xs text-muted-foreground mt-2">Para volver a conectar otra línea, elimínala primero o usa el botón de gestionar en Meta.</p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-start gap-4">
+                    <p className="text-sm text-muted-foreground">Aún no hay una línea asociada. Conecta tu cuenta para crear el agente automáticamente.</p>
+                    <WhatsAppConnectButton />
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {!isCreatingNew && selectedChatAgent && (
              <Card className="border-red-500/50">

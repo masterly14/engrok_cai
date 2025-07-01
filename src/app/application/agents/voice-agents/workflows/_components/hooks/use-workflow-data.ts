@@ -30,20 +30,52 @@ const transformToVapiPayload = (
   edges: Edge[],
   workflowName: string
 ) => {
+  if (nodes.length === 0) {
+    return { name: workflowName, nodes: [], edges: [] };
+  }
+
+  // 1. Encontrar el nodo de inicio (el que no tiene flechas de entrada)
+  const targetNodeIds = new Set(edges.map((edge) => edge.target));
+  let startNode = nodes.find((node) => !targetNodeIds.has(node.id));
+
+  // Si no se encuentra (p.ej. un solo nodo con un loop), tomar el primero
+  if (!startNode) {
+    startNode = nodes[0];
+  }
+
+  // 2. Crear un mapa de IDs de nodo a nombres para VAPI, nombrando al de inicio "start"
+  const idToNameMap = new Map<string, string>();
+  nodes.forEach((node) => {
+    if (node.id === startNode!.id) {
+      idToNameMap.set(node.id, "start");
+    } else {
+      // Usar el nombre del nodo si existe y no es "start", si no, usar el ID único
+      const candidateName = node.data.name || node.id;
+      idToNameMap.set(
+        node.id,
+        candidateName === "start" ? node.id : candidateName
+      );
+    }
+  });
+
+  // 3. Transformar los nodos al formato de VAPI usando los nuevos nombres
   const vapiNodes = nodes.map((node) => {
     const { data } = node;
-    const baseVapiNode = { name: data.name };
+    const vapiName = idToNameMap.get(node.id)!;
+    const baseVapiNode = { name: vapiName };
 
     if (data.type === "conversation") {
       const convData = data as ConversationNodeData;
-      // Transformar nuestro array de variables al schema de VAPI
-      const schemaProperties = (convData.variables || []).reduce((acc: Record<string, { type: string; description: string }>, variable: Variable) => {
-        acc[variable.name] = {
-          type: "string", // Simplificamos a string por ahora
-          description: variable.description,
-        };
-        return acc;
-      }, {} as Record<string, { type: string; description: string }>);
+      const schemaProperties = (convData.variables || []).reduce(
+        (acc: Record<string, { type: string; description: string }>, variable: Variable) => {
+          acc[variable.name] = {
+            type: "string",
+            description: variable.description,
+          };
+          return acc;
+        },
+        {} as Record<string, { type: string; description: string }>
+      );
 
       return {
         ...baseVapiNode,
@@ -79,101 +111,87 @@ const transformToVapiPayload = (
         type: "endCall",
       };
     }
-    
-    if (data.type === "integration") {
-        const intData = data as IntegrationNodeData;
-        let tool = {};
-        
-        // Aquí construimos el objeto 'tool' basado en la configuración guardada
-        if (intData.integrationType === 'google-sheet') {
-            tool = {
-                type: "apiRequest",
-                url: `/api/integrations/sheets?action=appendData`, // El userId se inyectará en el backend
-                method: 'POST',
-                body: {
-                    type: "object",
-                    properties: {
-                        spreadsheetId: intData.spreadsheetId,
-                        sheetName: intData.sheetName,
-                        column: intData.column,
-                        value: intData.value,
-                    }
-                }
-            }
-        }
-        
-        if (intData.integrationType === 'google-calendar') {
-            if (intData.calendarAction === 'availability') {
-                tool = {
-                    type: 'apiRequest',
-                    url: `/api/integrations/calendar?action=availability`,
-                    method: 'GET',
-                    query: {
-                      calendarId: intData.calendarId,
-                      rangeDays: intData.rangeDays || 15,
-                    }
-                }
-            } else {
-                tool = {
-                    type: 'apiRequest',
-                    url: `/api/integrations/calendar?action=createEvent`,
-                    method: 'POST',
-                    body: {
-                      type: 'object',
-                      properties: {
-                        calendarId: intData.calendarId,
-                        summary: intData.eventSummary,
-                        description: intData.eventDescription,
-                        startDate: intData.eventStartDate,
-                        startTime: intData.eventStartTime,
-                        duration: intData.eventDuration,
-                      }
-                    }
-                }
-            }
-        }
 
-        return {
-            ...baseVapiNode,
-            type: 'tool',
-            tool
+    if (data.type === "integration") {
+      const intData = data as IntegrationNodeData;
+      let tool = {};
+      if (intData.integrationType === "google-sheet") {
+        tool = {
+          type: "apiRequest",
+          url: `/api/integrations/sheets?action=appendData`,
+          method: "POST",
+          body: {
+            type: "object",
+            properties: {
+              spreadsheetId: intData.spreadsheetId,
+              sheetName: intData.sheetName,
+              column: intData.column,
+              value: intData.value,
+            },
+          },
+        };
+      }
+      if (intData.integrationType === "google-calendar") {
+        if (intData.calendarAction === "availability") {
+          tool = {
+            type: "apiRequest",
+            url: `/api/integrations/calendar?action=availability`,
+            method: "GET",
+            query: {
+              calendarId: intData.calendarId,
+              rangeDays: intData.rangeDays || 15,
+            },
+          };
+        } else {
+          tool = {
+            type: "apiRequest",
+            url: `/api/integrations/calendar?action=createEvent`,
+            method: "POST",
+            body: {
+              type: "object",
+              properties: {
+                calendarId: intData.calendarId,
+                summary: intData.eventSummary,
+                description: intData.eventDescription,
+                startDate: intData.eventStartDate,
+                startTime: intData.eventStartTime,
+                duration: intData.eventDuration,
+              },
+            },
+          };
         }
+      }
+      return { ...baseVapiNode, type: "tool", tool };
     }
 
     if (data.type === "apiRequest") {
-        const apiData = data as any;
-        return {
-          ...baseVapiNode,
-          type: 'tool',
-          tool: {
-            type: 'apiRequest',
-            url: apiData.url,
-            method: apiData.method,
-            headers: apiData.headers || {},
-            body: apiData.body || {},
-          }
-        };
+      const apiData = data as any;
+      return {
+        ...baseVapiNode,
+        type: "tool",
+        tool: {
+          type: "apiRequest",
+          url: apiData.url,
+          method: apiData.method,
+          headers: apiData.headers || {},
+          body: apiData.body || {},
+        },
+      };
     }
+    return null;
+  }).filter(Boolean);
 
-    // Añadir lógica para otros tipos de nodos (endCall, etc.)
-
-    return null; // Omitir nodos no reconocidos
-  }).filter(Boolean); // Filtrar nulos
-
-  const vapiEdges = edges.map((edge) => {
-    const sourceNode = nodes.find(n => n.id === edge.source);
-    const targetNode = nodes.find(n => n.id === edge.target);
-    return {
-      from: sourceNode?.data.name,
-      to: targetNode?.data.name,
-      condition: edge.data?.condition,
-    };
-  });
+  // 4. Transformar las conexiones usando los nuevos nombres de VAPI
+  const vapiEdges = edges.map((edge) => ({
+    from: idToNameMap.get(edge.source),
+    to: idToNameMap.get(edge.target),
+    condition: edge.data?.condition,
+  }));
 
   return {
     name: workflowName,
-    nodes: vapiNodes,
-    edges: vapiEdges,
+    nodes: vapiNodes as any[],
+    edges: vapiEdges as any[],
   };
 };
 
