@@ -38,6 +38,7 @@ import {
   Copy,
   Calendar,
   WorkflowIcon,
+  FilePlus2,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
@@ -47,6 +48,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 
 // Temporal: reuse generic hook while chat actions are added
@@ -406,9 +408,34 @@ export function ChatWorkflowTable({
         name: template.name,
         workflowJson: template.getJson(),
       });
-      if (response.status !== 200 || !response.workflow) throw new Error();
+      if (response.status !== 200 || !response.workflow) {
+        toast.error("No se pudo crear el flujo de trabajo.");
+        throw new Error("Failed to create workflow from template");
+      }
       router.push(
-        `/application/agents/chat-agents/flows/${response.workflow.id}`
+        `/application/agents/chat-agents/flows/${response.workflow.id}`,
+      );
+    } catch (e) {
+      toast.error("Error creando el flujo desde la plantilla");
+    } finally {
+      setIsLoading(false);
+      setTemplateModalOpen(false);
+    }
+  };
+
+  const createBlankWorkflow = async () => {
+    setIsLoading(true);
+    try {
+      const response = await createChatWorkflow({
+        name: "Nuevo Flujo sin título",
+        workflowJson: { nodes: [], edges: [] },
+      });
+      if (response.status !== 200 || !response.workflow) {
+        toast.error("No se pudo crear el flujo de trabajo.");
+        throw new Error("Failed to create workflow");
+      }
+      router.push(
+        `/application/agents/chat-agents/flows/${response.workflow.id}`,
       );
     } catch (e) {
       toast.error("Error creando el flujo");
@@ -687,27 +714,49 @@ export function ChatWorkflowTable({
 
       {/* Template selector modal */}
       <Dialog open={templateModalOpen} onOpenChange={setTemplateModalOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Crear flujo a partir de una plantilla</DialogTitle>
+            <DialogTitle>Crear un nuevo flujo de chat</DialogTitle>
+            <DialogDescription>
+              Comienza desde cero o utiliza una de nuestras plantillas para
+              empezar rápidamente.
+            </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
+            <Card
+              className="cursor-pointer hover:border-primary transition-all"
+              onClick={() => !isLoading && createBlankWorkflow()}
+            >
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FilePlus2 className="h-5 w-5" /> Flujo en Blanco
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Empieza con un lienzo en blanco y construye tu flujo paso a
+                  paso.
+                </p>
+              </CardContent>
+            </Card>
+
             {TEMPLATES.map((tpl) => (
-              <Button
+              <Card
                 key={tpl.id}
-                variant="outline"
-                className="justify-between"
-                disabled={isLoading}
-                onClick={() => createWorkflowFromTemplate(tpl)}
+                className="cursor-pointer hover:border-primary transition-all"
+                onClick={() => !isLoading && createWorkflowFromTemplate(tpl)}
               >
-                <div className="text-left">
-                  <p className="font-medium">{tpl.name}</p>
-                  <p className="text-xs text-muted-foreground">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <WorkflowIcon className="h-5 w-5" /> {tpl.name}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">
                     {tpl.description}
                   </p>
-                </div>
-                <Plus className="h-4 w-4" />
-              </Button>
+                </CardContent>
+              </Card>
             ))}
           </div>
         </DialogContent>
