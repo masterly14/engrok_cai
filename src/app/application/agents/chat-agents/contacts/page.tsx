@@ -9,13 +9,161 @@ import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Input } from "@/components/ui/input"
 import { useState } from "react"
-import { Users, Phone, Calendar, UserPlus, Search, AlertCircle, MessageSquare, Filter, UploadCloud, CheckCircle, XCircle } from "lucide-react"
+import {
+  Users,
+  Phone,
+  Calendar,
+  UserPlus,
+  Search,
+  AlertCircle,
+  MessageSquare,
+  Filter,
+  UploadCloud,
+  CheckCircle,
+  XCircle,
+  MoreHorizontal,
+  Send,
+} from "lucide-react"
 import Papa from "papaparse"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useAllChatAgents } from "@/hooks/use-all-chat-agents"
 import { importContacts } from "@/actions/chat-contacts"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { useMessageTemplates } from "@/hooks/use-message-templates"
+import { sendTemplateMessage } from "@/actions/messages"
+
+type ChatContactWithAgent = NonNullable<Awaited<ReturnType<typeof useChatContacts>>["contacts"]>[0]
+
+function getTemplateVariables(template: any): string[] {
+  if (!template?.components?.components) return []
+
+  const vars = new Set<string>()
+  const components = template.components.components
+
+  const header = components.find((c: any) => c.type === "HEADER")
+  if (header?.text) {
+    const matches = header.text.matchAll(/\\{\\{(\\d+)\\}\\}/g)
+    for (const match of matches) {
+      vars.add(match[1])
+    }
+  }
+
+  const body = components.find((c: any) => c.type === "BODY")
+  if (body?.text) {
+    const matches = body.text.matchAll(/\\{\\{(\\d+)\\}\\}/g)
+    for (const match of matches) {
+      vars.add(match[1])
+    }
+  }
+
+  return Array.from(vars).sort((a, b) => parseInt(a, 10) - parseInt(b, 10))
+}
+
+const SendMessageModal = ({
+  contact,
+  isOpen,
+  onClose,
+}: {
+  contact: ChatContactWithAgent | null
+  isOpen: boolean
+  onClose: () => void
+}) => {
+  const { templatesData: messageTemplates, templatesLoading: isLoadingTemplates } = useMessageTemplates(contact?.chatAgentId)
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null)
+  const [variables, setVariables] = useState<Record<string, string>>({})
+
+  const queryClient = useQueryClient()
+  const mutation = useMutation({
+    mutationFn: (data: { contactId: string; templateId: string; variables: Record<string, string> }) =>
+      sendTemplateMessage(data.contactId, data.templateId, data.variables),
+    onSuccess: () => {
+      toast.success("Mensaje de plantilla enviado correctamente.")
+      onClose()
+      setSelectedTemplateId(null)
+      setVariables({})
+    },
+    onError: (error: any) => {
+      toast.error(`Error al enviar el mensaje: ${error.message}`)
+    },
+  })
+
+  const selectedTemplate = messageTemplates?.data?.find((t) => t.id === selectedTemplateId)
+  const templateVars = selectedTemplate ? getTemplateVariables(selectedTemplate) : []
+
+  const handleVariableChange = (index: string, value: string) => {
+    setVariables((prev) => ({ ...prev, [index]: value }))
+  }
+
+  const handleSend = () => {
+    if (!contact || !selectedTemplateId) return
+    mutation.mutate({
+      contactId: contact.id,
+      templateId: selectedTemplateId,
+      variables,
+    })
+  }
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Enviar Mensaje Plantilla a {contact?.name || contact?.phone}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Seleccionar Plantilla</label>
+            <Select
+              onValueChange={(id) => {
+                setSelectedTemplateId(id)
+                setVariables({})
+              }}
+              disabled={isLoadingTemplates}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={isLoadingTemplates ? "Cargando plantillas..." : "Elige una plantilla"} />
+              </SelectTrigger>
+              <SelectContent>
+                {messageTemplates?.data?.map((template) => (
+                  <SelectItem key={template.id} value={template.id}>
+                    {template.name} ({template.language})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {templateVars.length > 0 && (
+            <div className="space-y-2">
+              <h4 className="font-medium">Variables de la Plantilla</h4>
+              {templateVars.map((v) => (
+                <div key={v}>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Variable {"{{" + v + "}}"}</label>
+                  <Input
+                    value={variables[v] || ""}
+                    onChange={(e) => handleVariableChange(v, e.target.value)}
+                    placeholder={`Valor para la variable ${v}`}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="flex justify-end">
+          <Button onClick={handleSend} disabled={!selectedTemplateId || mutation.isPending}>
+            {mutation.isPending ? "Enviando..." : "Enviar Mensaje"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
 
 const AddContactForm = ({closeModal}: {closeModal: () => void}) => {
   const [step, setStep] = useState(1);
@@ -208,8 +356,15 @@ const AddContactForm = ({closeModal}: {closeModal: () => void}) => {
 
 const ContactsPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isSendMessageModalOpen, setIsSendMessageModalOpen] = useState(false)
+  const [selectedContact, setSelectedContact] = useState<ChatContactWithAgent | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const { contacts, isLoading, isError, error } = useChatContacts()
+
+  const handleOpenSendMessageModal = (contact: ChatContactWithAgent) => {
+    setSelectedContact(contact)
+    setIsSendMessageModalOpen(true)
+  }
 
   // Filter contacts based on search term
   const filteredContacts = contacts?.filter(
@@ -424,6 +579,7 @@ const ContactsPage = () => {
                         Creado
                       </div>
                     </TableHead>
+                    <TableHead className="font-semibold text-slate-700 text-right w-[100px]">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -465,11 +621,27 @@ const ContactsPage = () => {
                             })}
                           </div>
                         </TableCell>
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" className="h-8 w-8 p-0">
+                                <span className="sr-only">Abrir menú</span>
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleOpenSendMessageModal(contact)}>
+                                <Send className="mr-2 h-4 w-4" />
+                                <span>Enviar Mensaje Plantilla</span>
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
                       </TableRow>
                     ))
                   ) : searchTerm ? (
                     <TableRow>
-                      <TableCell colSpan={4} className="text-center py-12">
+                      <TableCell colSpan={5} className="text-center py-12">
                         <div className="flex flex-col items-center gap-3">
                           <Search className="h-12 w-12 text-slate-300" />
                           <div>
@@ -481,7 +653,7 @@ const ContactsPage = () => {
                     </TableRow>
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={4} className="text-center py-12">
+                      <TableCell colSpan={5} className="text-center py-12">
                         <div className="flex flex-col items-center gap-4">
                           <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center">
                             <Users className="h-8 w-8 text-slate-400" />
@@ -531,6 +703,11 @@ const ContactsPage = () => {
             )}
           </CardContent>
         </Card>
+        <SendMessageModal
+          contact={selectedContact}
+          isOpen={isSendMessageModalOpen}
+          onClose={() => setIsSendMessageModalOpen(false)}
+        />
       </div>
     </div>
   )
