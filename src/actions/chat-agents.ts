@@ -345,6 +345,20 @@ export const updateChatAgent = async (agentId: string, data: ChatAgentFormData) 
 
         const currentWorkflow = currentAgentState.workflows.find(w => w.agentId === agentId)
         
+        if (workflowId && currentWorkflow?.id !== workflowId) {
+            await prisma.chatSession.updateMany({
+                where: {
+                    chatAgentId: agentId,
+                    status: {
+                        in: ["ACTIVE", "NEEDS_ATTENTION"]
+                    }
+                },
+                data: {
+                    status: "COMPLETED"
+                }
+            })
+        }
+        
         if (currentWorkflow && currentWorkflow.id !== workflowId) {
             await prisma.chatWorkflow.update({
                 where: { id: currentWorkflow.id },

@@ -55,6 +55,7 @@ import { createChatWorkflow, updateChatWorkflow } from "@/actions/chat-agents";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { AssignAgentModal } from "./assign-agent-modal";
+import { onBoardUser } from "@/actions/user";
 
 // Initial nodes and edges
 const initialNodes: Node[] = [];
@@ -580,6 +581,7 @@ export function FlowBuilder({ workflowId }: { workflowId?: string }) {
   };
 
   const sendTestMessage = async (phone: string) => {
+    const user = await onBoardUser();
     setIsTesting(true);
     try {
       const res = await fetch("/api/test-whatsapp", {
@@ -589,6 +591,7 @@ export function FlowBuilder({ workflowId }: { workflowId?: string }) {
           text: "Mensaje de prueba",
           from: phone,
           phone_number_id: agentData?.whatsappPhoneNumberId || "test_phone_id",
+          userId: user?.data.id,
         }),
       });
       if (res.ok) {
