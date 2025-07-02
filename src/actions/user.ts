@@ -4,6 +4,7 @@ import { db } from "@/utils";
 import { checkUserSubscription } from "@/utils/checkSubscription";
 import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
+import { v4 as uuidv4 } from 'uuid';
 
 export const onCurrentUser = async () => {
   const user = await currentUser();
@@ -63,6 +64,7 @@ export const onBoardUser = async (variantId?: string) => {
       console.log('Creando usuario')
       const createdUser = await db.user.create({
         data: {
+          id: uuidv4(),
           clerkId: user.id,
           email: user.email,
           name: user.name,
@@ -76,6 +78,7 @@ export const onBoardUser = async (variantId?: string) => {
           },
           amountCredits: 0,
           initialAmountCredits: 0,
+
         },
       });
   

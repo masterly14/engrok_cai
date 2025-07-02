@@ -7,57 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id                           String           @id @default(uuid()) @db.Uuid
-  clerkId                      String           @unique
-  email                        String           @unique
-  name                         String?
-  createdAt                    DateTime         @default(now())
-  updatedAt                    DateTime         @default(now())
-  amountCredits                Int
-  totalConversations           Int              @default(0)
-  totalAverageDuration         Int              @default(0)
-  totalCost                    Int              @default(0)
-  initialAmountCredits         Int              @default(1000)
-  nangoConnectSessionExpiresAt DateTime?
-  nangoConnectSessionToken     String?
-  plan                         String?
-  temporalVariantId            String?
-  agents                       Agent[]
-  chatAgents                   ChatAgent[]
-  chatWorkflows                ChatWorkflow[]
-  connections                  Connection[]
-  integrations                 Integration[]
-  knowledgeBases               KnowledgeBase[]
-  leads                        Lead[]
-  lsSubscriptions              LsSubscription[]
-  phoneNumbers                 PhoneNumber[]
-  stages                       Stage[]
-  subscriptions                Subscription[]
-  tags                         Tag[]
-  transactions                 Transaction[]
-  workflows                    Workflow[]
-  accessTokens                 AccessToken[]
-  creditLedgers                CreditLedger[]
-  usageEvents                  UsageEvent[]
-  workflowTriggers             WorkflowTrigger[]
-  notifications                Notification[]
-  prospects                    Prospect[]
-  elevenLabsWidgets            ElevenLabsWidget[]
-
-  @@map("users")
-}
-
-model UserAssets {
-  id        String   @id @default(uuid()) @db.Uuid
-  userId    String   @db.Uuid
-  type      String
-  name      String
-  url       String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
 model Agent {
   id              String  @id @default(uuid()) @db.Uuid
   userId          String  @db.Uuid
@@ -92,132 +41,80 @@ model PhoneNumber {
 }
 
 model ChatAgent {
-  id                        String         @id @default(uuid()) @db.Uuid
+  id                        String            @id @default(uuid()) @db.Uuid
   name                      String
-  isActive                  Boolean        @default(false)
-  createdAt                 DateTime       @default(now())
-  updatedAt                 DateTime       @updatedAt
-  userId                    String         @db.Uuid
+  isActive                  Boolean           @default(false)
+  createdAt                 DateTime          @default(now())
+  updatedAt                 DateTime          @updatedAt
+  userId                    String            @db.Uuid
   whatsappAccessToken       String
   whatsappBusinessAccountId String
   whatsappPhoneNumber       String
-  whatsappPhoneNumberId     String         @unique
-  user                      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  isTestNumber              Boolean        @default(false)
-  hasSeenTestWarning        Boolean        @default(false)
+  whatsappPhoneNumberId     String            @unique
+  isTestNumber              Boolean           @default(false)
+  hasSeenTestWarning        Boolean           @default(false)
+  activeWorkflowId          String?           @db.Uuid
+  user                      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   chatContacts              ChatContact[]
   chatSessions              ChatSession[]
   workflows                 ChatWorkflow[]
   messages                  Message[]
-  messageTemplates          MessageTemplate[]
-}
-
-model MessageTemplate {
-  id                 String           @id @default(uuid()) @db.Uuid
-  name               String           /// nombre interno (único por agente + idioma)
-  language           String           /// en_US, es_ES, …
-  category           TemplateCategory
-  status             TemplateStatus    @default(PENDING)    /// enum ya existente
-  whatsappTemplateId String?          @unique               /// ID que devuelve la API
-  components         Json             /// payload normalizado que envías a la API
-  createdAt          DateTime         @default(now())
-  updatedAt          DateTime         @updatedAt
-
-  /// Relación: cada plantilla pertenece a un ChatAgent
-  agentId            String           @db.Uuid
-  agent              ChatAgent        @relation(fields: [agentId], references: [id], onDelete: Cascade)
-
-  @@unique([name, language, agentId])  /// evita duplicados por idioma/agente
+  MessageTemplate           MessageTemplate[]
 }
 
 model Workflow {
   id           String   @id @default(uuid()) @db.Uuid
   name         String
   vapiId       String?  @unique
-  vapiWorkflowId String? @unique // ID del workflow en Vapi
-  vapiWorkflowData Json? // Datos completos de la respuesta de Vapi
   tools        Json?
   workflowJson Json?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   userId       String   @db.Uuid
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  fields       Json?
-  active       Boolean @default(true)
 }
 
-model Prospect {
-  id        String   @id @default(uuid()) @db.Uuid
-  name      String
-  email     String   @unique
-  title     String?
-  company   String?
-  source    String? // e.g., "Apollo.io"
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  ownerId String @db.Uuid
-
-  @@index([ownerId])
-}
-
-model ElevenLabsWidget {
-  id               String   @id @default(uuid()) @db.Uuid
-  agentId          String   @unique
-  name             String
-  firstMessage     String?
-  systemPrompt     String
-  voiceId          String?
-  actionText       String?
-  avatarImageUrl   String?
-  dynamicVariables Json?
-  ownerId          String   @db.Uuid
-  owner            User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-}
 model ChatWorkflow {
-  id        String        @id @default(uuid()) @db.Uuid
-  name      String
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
-  agentId   String?       @db.Uuid
-  workflow  Json
-  userId    String?       @db.Uuid
-  sessions  ChatSession[]
-  agent     ChatAgent?    @relation(fields: [agentId], references: [id], onDelete: Cascade)
-  user      User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  triggers  WorkflowTrigger[]
+  id              String            @id @default(uuid()) @db.Uuid
+  name            String
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  agentId         String?           @db.Uuid
+  workflow        Json
+  userId          String?           @db.Uuid
+  sessions        ChatSession[]
+  agent           ChatAgent?        @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  user            User?             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  WorkflowTrigger WorkflowTrigger[]
 
   @@unique([name, agentId, userId])
 }
 
 model ChatContact {
+  id          String        @id @default(uuid()) @db.Uuid
   phone       String        @unique
   name        String?
   createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
   chatAgentId String        @db.Uuid
-  id          String        @id @default(uuid()) @db.Uuid
+  updatedAt   DateTime      @updatedAt
   chatAgent   ChatAgent     @relation(fields: [chatAgentId], references: [id], onDelete: Cascade)
   sessions    ChatSession[]
   messages    Message[]
 }
 
 model ChatSession {
-  id            String       @id @default(cuid())
-  workflowId    String       @db.Uuid
+  id            String        @id @default(cuid())
+  contactId     String        @db.Uuid
+  workflowId    String        @db.Uuid
   currentNodeId String
+  chatAgentId   String        @db.Uuid
+  variables     Json          @default("{}")
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
   status        SessionStatus @default(ACTIVE)
-  variables     Json         @default("{}")
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-  chatAgentId   String       @db.Uuid
-  contactId     String       @db.Uuid
-  chatAgent     ChatAgent    @relation(fields: [chatAgentId], references: [id], onDelete: Cascade)
-  contact       ChatContact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
-  workflow      ChatWorkflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  chatAgent     ChatAgent     @relation(fields: [chatAgentId], references: [id], onDelete: Cascade)
+  contact       ChatContact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  workflow      ChatWorkflow  @relation(fields: [workflowId], references: [id], onDelete: Cascade)
 
   @@index([contactId, status])
 }
@@ -345,58 +242,51 @@ model Call {
 }
 
 model Subscription {
-  id                 String  @id @default(uuid()) @db.Uuid
-  planId             String  @db.Uuid
+  id                 String    @id @default(uuid()) @db.Uuid
+  planId             String    @db.Uuid
   status             String
-  userId             String  @db.Uuid
-  lemonSqueezyId     String  @unique
+  userId             String    @db.Uuid
+  lemonSqueezyId     String    @unique
   email              String
   endsAt             String?
-  isPaused           Boolean @default(false)
-  isUsageBased       Boolean @default(false)
+  isPaused           Boolean   @default(false)
+  isUsageBased       Boolean   @default(false)
   name               String
   orderId            Int
   price              String
   renewsAt           String?
   statusFormatted    String
-  subscriptionItemId String? @default(uuid())
+  subscriptionItemId String?   @default(uuid())
   trialEndsAt        String?
-  /// Créditos disponibles en el ciclo actual
-  currentCredits     Int      @default(0)
-  /// Fin del ciclo actual (próxima reposición de créditos)
+  createdAt          DateTime  @default(now())
+  currentCredits     Int       @default(0)
   cycleEndAt         DateTime?
-  plan               Plan    @relation(fields: [planId], references: [id], onDelete: Cascade)
-  user               User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  updatedAt          DateTime
+  plan               Plan      @relation(fields: [planId], references: [id], onDelete: Cascade)
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Plan {
-  id                 String         @id @default(uuid()) @db.Uuid
-  name               String
-  price              String
-  interval           String?
-  description        String?
-  intervalCount      Int?
-  isUsageBased       Boolean        @default(false)
-  productId          Int
-  productName        String?
-  sort               Int?
-  trialInterval      String?
-  trialIntervalCount Int?
-  /// Créditos asignados automáticamente a cada ciclo de facturación
-  creditsPerCycle   Int            @default(0)
-  /// Créditos que se descuentan por cada minuto de llamada de voz
-  voiceCreditsPerMinute Int        @default(11)
-  /// Créditos que se descuentan por cada conversación de WhatsApp (a partir de la 1001)
-  chatCreditsPerConversation Int   @default(5)
-  /// Precio USD por minuto excedente fuera de plan
-  overageVoiceUsd   Float?         @default(0.17)
-  /// Precio USD por conversación excedente fuera de plan
-  overageChatUsd    Float?         @default(0.07)
-  variantId          Int            @unique
-  ui Json?
-  subscriptions      Subscription[]
+  id                         String         @id @default(uuid()) @db.Uuid
+  name                       String
+  price                      String
+  interval                   String?
+  description                String?
+  intervalCount              Int?
+  isUsageBased               Boolean        @default(false)
+  productId                  Int
+  productName                String?
+  sort                       Int?
+  trialInterval              String?
+  trialIntervalCount         Int?
+  variantId                  Int            @unique
+  chatCreditsPerConversation Int            @default(5)
+  creditsPerCycle            Int            @default(0)
+  overageChatUsd             Float?         @default(0.07)
+  overageVoiceUsd            Float?         @default(0.17)
+  ui                         Json?
+  voiceCreditsPerMinute      Int            @default(11)
+  subscriptions              Subscription[]
 }
 
 model Transaction {
@@ -427,23 +317,6 @@ model Integration {
   @@index([userId])
   @@index([provider])
   @@index([status])
-}
-
-/// ---------------------------------------------
-/// Access Tokens for internal integrations (e.g., CRM webhook auth)
-/// ---------------------------------------------
-
-model AccessToken {
-  id          String   @id @default(uuid()) @db.Uuid
-  userId      String   @db.Uuid
-  name        String   /// descriptive name, e.g. "crm-whatsapp-integration"
-  accessToken String   @unique
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, name])
 }
 
 /// ---------------------------------------------
@@ -487,6 +360,139 @@ model LsSubscription {
 model Credit {
   id     String @id @default(cuid())
   userId String
+}
+
+model User {
+  id                           String            @id @db.Uuid
+  clerkId                      String            @unique
+  email                        String            @unique
+  name                         String?
+  createdAt                    DateTime          @default(now())
+  updatedAt                    DateTime          @default(now())
+  amountCredits                Int
+  totalConversations           Int               @default(0)
+  totalAverageDuration         Int               @default(0)
+  totalCost                    Int               @default(0)
+  initialAmountCredits         Int               @default(1000)
+  nangoConnectSessionExpiresAt DateTime?
+  nangoConnectSessionToken     String?
+  plan                         String?
+  temporalVariantId            String?
+  AccessToken                  AccessToken[]
+  agents                       Agent[]
+  chatAgents                   ChatAgent[]
+  chatWorkflows                ChatWorkflow[]
+  connections                  Connection[]
+  CreditLedger                 CreditLedger[]
+  integrations                 Integration[]
+  knowledgeBases               KnowledgeBase[]
+  leads                        Lead[]
+  lsSubscriptions              LsSubscription[]
+  Notification                 Notification[]
+  phoneNumbers                 PhoneNumber[]
+  stages                       Stage[]
+  subscriptions                Subscription[]
+  tags                         Tag[]
+  transactions                 Transaction[]
+  UsageEvent                   UsageEvent[]
+  workflows                    Workflow[]
+  WorkflowTrigger              WorkflowTrigger[]
+}
+
+model AccessToken {
+  id          String   @id @db.Uuid
+  userId      String   @db.Uuid
+  name        String
+  accessToken String   @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime
+  User        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, name])
+}
+
+model CreditLedger {
+  id        String           @id @db.Uuid
+  userId    String           @db.Uuid
+  delta     Int
+  type      CreditLedgerType
+  meta      Json?
+  createdAt DateTime         @default(now())
+  User      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model MessageTemplate {
+  id                 String           @id @db.Uuid
+  name               String
+  language           String
+  category           TemplateCategory
+  status             TemplateStatus   @default(PENDING)
+  whatsappTemplateId String?          @unique
+  components         Json
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime
+  agentId            String           @db.Uuid
+  ChatAgent          ChatAgent        @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@unique([name, language, agentId])
+}
+
+model Notification {
+  id        String           @id
+  userId    String           @db.Uuid
+  type      NotificationType
+  read      Boolean          @default(false)
+  message   String
+  link      String?
+  createdAt DateTime         @default(now())
+  User      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model UsageEvent {
+  id             String    @id @db.Uuid
+  userId         String    @db.Uuid
+  kind           UsageKind
+  quantity       Int
+  creditsCharged Int
+  externalRef    String?
+  meta           Json?
+  createdAt      DateTime  @default(now())
+  User           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, kind])
+}
+
+model UserAssets {
+  id        String   @id @db.Uuid
+  userId    String   @db.Uuid
+  type      String
+  name      String
+  url       String
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+}
+
+model WorkflowTrigger {
+  id           String       @id @db.Uuid
+  token        String       @unique
+  userId       String       @db.Uuid
+  workflowId   String       @db.Uuid
+  connectionId String?      @db.Uuid
+  syncName     String?
+  provider     String
+  mapping      Json
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime
+  User         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ChatWorkflow ChatWorkflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@unique([workflowId, provider, connectionId])
+  @@index([connectionId])
+  @@index([provider])
 }
 
 enum IntegrationProvider {
@@ -535,12 +541,6 @@ enum OrderStatus {
   CANCELLED
 }
 
-enum SessionStatus {
-  ACTIVE
-  COMPLETED
-  NEEDS_ATTENTION
-}
-
 enum TemplateStatus {
   PENDING
   APPROVED
@@ -555,18 +555,11 @@ enum LsSubscriptionStatus {
   TRIALING
 }
 
-model Notification {
-  id        String           @id @default(uuid())
-  userId    String           @db.Uuid
-  type      NotificationType
-  read      Boolean          @default(false)
-  message   String
-  link      String?
-  createdAt DateTime         @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
+enum CreditLedgerType {
+  debit
+  credit
+  reset
+  rollover
 }
 
 enum NotificationType {
@@ -575,28 +568,10 @@ enum NotificationType {
   TEMPLATE_APPROVED
 }
 
-/// ---------------------------------------------
-/// Ledger de movimientos de créditos
-/// ---------------------------------------------
-
-model CreditLedger {
-  id        String   @id @default(uuid()) @db.Uuid
-  userId    String   @db.Uuid
-  delta     Int
-  type      CreditLedgerType
-  meta      Json?
-  createdAt DateTime @default(now())
-
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-}
-
-enum CreditLedgerType {
-  debit
-  credit
-  reset
-  rollover
+enum SessionStatus {
+  ACTIVE
+  COMPLETED
+  NEEDS_ATTENTION
 }
 
 enum TemplateCategory {
@@ -605,49 +580,7 @@ enum TemplateCategory {
   AUTHENTICATION
 }
 
-/// ---------------------------------------------
-/// Registro de uso granular (voz, chat, etc.)
-/// ---------------------------------------------
-
-model UsageEvent {
-  id             String    @id @default(uuid()) @db.Uuid
-  userId         String    @db.Uuid
-  kind           UsageKind
-  quantity       Int
-  creditsCharged Int
-  externalRef    String?
-  meta           Json?
-  createdAt      DateTime  @default(now())
-
-  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId, kind])
-}
-
 enum UsageKind {
   voice
   chat
-}
-
-/// ---------------------------------------------
-/// Triggers externos que enlazan integraciones (Sheets, HubSpot, etc.) con flujos de chat
-/// ---------------------------------------------
-model WorkflowTrigger {
-  id           String   @id @default(uuid()) @db.Uuid
-  token        String   @unique                           /// API token opcional para disparo manual
-  userId       String   @db.Uuid                          /// Dueño del flujo / trigger
-  workflowId   String   @db.Uuid                          /// Flujo que se disparará
-  connectionId String?  @db.Uuid                          /// ConnectionId de Nango (nullable para Generic Webhook)
-  syncName     String?                                    /// Nombre del sync en Nango (ej. "sheet-new-rows")
-  provider     String                                     /// google-sheet | airtable | hubspot | webhook | ...
-  mapping      Json                                       /// { phone:"phone", vars:{ name:"name" } }
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  workflow     ChatWorkflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
-  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([connectionId])
-  @@index([provider])
-  @@unique([workflowId, provider, connectionId])
 }
