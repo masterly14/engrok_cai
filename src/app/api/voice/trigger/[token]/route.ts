@@ -1,5 +1,5 @@
 import { db } from '@/utils'; // Ajusta la ruta a tu configuración de DB
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 // Helper para obtener de forma segura un valor anidado de un objeto.
 // Por ejemplo, para obtener 'user.profile.phone' del objeto { user: { profile: { phone: '123' } } }
@@ -8,10 +8,10 @@ const getNestedValue = (obj: any, path: string): any => {
 };
 
 export async function POST(
-  request: Request,
-  { params }: { params: { token: string } }
+  request: NextRequest,
+  { params }: { params: Promise<{ token: string }> }
 ) {
-  const { token } = params;
+  const { token } = await params;
   if (!token) {
     return NextResponse.json(
       { success: false, error: 'Token no proporcionado en la URL.' },
