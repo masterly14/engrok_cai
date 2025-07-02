@@ -52,9 +52,16 @@ interface WorkflowSidebarProps {
   onSelectTemplate: (template: WorkflowTemplate) => void
   hasNodes: boolean
   isOpen: boolean
+  onAddTrigger: () => void
 }
 
-export function WorkflowSidebar({ onAddNode, onSelectTemplate, hasNodes, isOpen }: WorkflowSidebarProps) {
+export function WorkflowSidebar({
+  onAddNode,
+  onSelectTemplate,
+  hasNodes,
+  isOpen,
+  onAddTrigger,
+}: WorkflowSidebarProps) {
   const coreNodes = nodeTypes.filter((node) => node.category === "core")
   const advancedNodes = nodeTypes.filter((node) => node.category === "advanced")
 
@@ -131,7 +138,13 @@ export function WorkflowSidebar({ onAddNode, onSelectTemplate, hasNodes, isOpen 
             {advancedNodes.map((nodeType) => (
               <button
                 key={nodeType.id}
-                onClick={() => onAddNode(nodeType.id)}
+                onClick={() => {
+                  if (nodeType.id === "trigger") {
+                    onAddTrigger()
+                  } else {
+                    onAddNode(nodeType.id)
+                  }
+                }}
                 className="group flex h-auto w-full items-start gap-3 rounded-lg border border-gray-200 bg-white p-3 text-left hover:border-gray-300 hover:bg-gray-50 hover:shadow-sm transition-all duration-200"
               >
                 <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md ${nodeType.color}`}>

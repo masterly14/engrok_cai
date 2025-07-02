@@ -234,6 +234,7 @@ export function FlowBuilder({ workflowId }: { workflowId: string }) {
           onSelectTemplate={handleTemplateSelect}
           hasNodes={nodes.length > 0}
           isOpen={sidebarOpen}
+          onAddTrigger={handleAddTrigger}
         />
       </div>
 
