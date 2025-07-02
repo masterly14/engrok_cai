@@ -888,7 +888,12 @@ async function executeNode(node: any, session: any, agent: any) {
             throw new Error("No se encontraron credenciales Wompi para el usuario.");
           }
 
-          const apiUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/api/payments/generated-payment-link`;
+          const baseUrl =
+            process.env.NEXT_PUBLIC_BASE_URL ||
+            process.env.BASE_URL ||
+            "http://localhost:3000";
+
+          const apiUrl = `${baseUrl}/api/payments/generated-payment-link`;
 
           const payload = {
             ...fields,
