@@ -30,7 +30,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const wompiUrl = "https://sandbox.wompi.co/v1/payment_links";
+    // Seleccionar entorno (sandbox vs producción) según prefijo de la llave
+    const isTestKey = typeof wompi_private_key === "string" && wompi_private_key.startsWith("prv_test_");
+    const wompiUrl = isTestKey
+      ? "https://sandbox.wompi.co/v1/payment_links"
+      : "https://production.wompi.co/v1/payment_links";
 
     const response = await fetch(wompiUrl, {
       method: "POST",
