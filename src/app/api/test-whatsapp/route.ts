@@ -1,98 +1,102 @@
+import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
-
-// Base de datos falsa para simular usuarios
-const mockUsers: Record<string, any> = {
-  "123": {
-    id: "123",
-    name: "Juan Pérez",
-    email: "juan.perez@example.com",
-    lastOrderId: "ORD-98765",
-    metadata: {
-      address: "Calle Falsa 123",
-    },
-    status: "active",
-    level: "gold",
-  },
-  "456": {
-    id: "456",
-    name: "Ana Gómez",
-    email: "ana.gomez@example.com",
-    lastOrderId: "ORD-12345",
-    status: "active",
-    level: "silver",
-  },
-  "789": {
-    id: "789",
-    name: "Carlos Sánchez",
-    email: "carlos.sanchez@example.com",
-    lastOrderId: null,
-    metadata: {
-      address: "Calle Falsa 123",
-    },
-    status: "inactive",
-    level: "bronze",
-  },
-};
+import { NextRequest } from "next/server";
 
 /**
- * Endpoint de prueba para el nodo ApiRequest.
- * Simula una API que devuelve datos de un usuario.
- *
- * USO:
- * - Envía un POST request a /api/test-whatsapp
- * - Body: { "userId": "123" }
- * - Para simular un error, usa userId: "error"
- * - Para simular un no encontrado, usa userId: "not-found"
+ * Endpoint para simular la llegada de un mensaje de WhatsApp y testear flujos.
+ * Recibe un número de teléfono y un texto, y llama al webhook de WhatsApp
+ * de la propia aplicación para iniciar el flujo de conversación.
  */
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
-    const { userId } = await req.json();
+    const { from, text, phone_number_id } = await req.json();
 
-    if (!userId) {
+    if (!from || !text) {
       return NextResponse.json(
-        { message: "El campo 'userId' es requerido en el body." },
+        { message: "Los campos 'from' y 'text' son requeridos." },
         { status: 400 }
       );
     }
 
-    // Simular un caso de error del servidor
-    if (userId === "error") {
+    // Construir un payload simulado de webhook de WhatsApp
+    const webhookPayload = {
+      object: "whatsapp_business_account",
+      entry: [
+        {
+          id: "WHATSAPP_BUSINESS_ACCOUNT_ID", // Puede ser un valor de prueba
+          changes: [
+            {
+              value: {
+                messaging_product: "whatsapp",
+                metadata: {
+                  display_phone_number: "DISPLAY_PHONE_NUMBER",
+                  phone_number_id: phone_number_id || "TEST_PHONE_ID",
+                },
+                contacts: [
+                  {
+                    profile: {
+                      name: "Test User",
+                    },
+                    wa_id: from,
+                  },
+                ],
+                messages: [
+                  {
+                    from: from,
+                    id: `wamid.test_${Date.now()}`,
+                    timestamp: Math.floor(Date.now() / 1000).toString(),
+                    text: {
+                      body: text,
+                    },
+                    type: "text",
+                  },
+                ],
+              },
+              field: "messages",
+            },
+          ],
+        },
+      ],
+    };
+
+    // Obtener la URL base de la aplicación para poder llamar al webhook interno
+    const baseUrl = req.nextUrl.origin;
+    const webhookUrl = `${baseUrl}/api/meta/whatsapp/webhook`;
+
+    // Llamar al propio webhook de la aplicación para simular el evento
+    const webhookResponse = await fetch(webhookUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        // Aquí podrías añadir alguna cabecera de seguridad si tu webhook la requiere
+        // Por ejemplo, un token secreto para verificar que la llamada es legítima.
+      },
+      body: JSON.stringify(webhookPayload),
+    });
+
+    if (!webhookResponse.ok) {
+      const errorBody = await webhookResponse.text();
+      console.error(
+        "[API /test-whatsapp] Error al llamar al webhook:",
+        webhookResponse.status,
+        errorBody
+      );
       return NextResponse.json(
         {
           success: false,
-          message: "Error simulado: No se pudo procesar la solicitud.",
-          errorCode: "E-5001",
+          message: `Error al procesar el webhook: ${webhookResponse.statusText}`,
+          details: errorBody,
         },
-        { status: 500 }
+        { status: webhookResponse.status }
       );
     }
 
-    // Simular un caso de usuario no encontrado
-    if (userId === "not-found") {
-      return NextResponse.json(
-        {
-          success: false,
-          message: `Usuario con ID '${userId}' no encontrado.`,
-          errorCode: "E-4004",
-        },
-        { status: 404 }
-      );
-    }
+    revalidatePath("/application/agents/chat-agents/conversations");
 
-    const user = mockUsers[userId];
-
-    if (!user) {
-      return NextResponse.json(
-        { message: `Usuario con ID '${userId}' no encontrado.` },
-        { status: 404 }
-      );
-    }
-
-    // Devolver los datos del usuario si se encuentra
     return NextResponse.json(
       {
         success: true,
-        data: user,
+        message: "Mensaje de prueba procesado y enviado al webhook.",
       },
       { status: 200 }
     );
