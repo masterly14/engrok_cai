@@ -37,6 +37,14 @@ const nodeTypes = [
     color: "bg-purple-500",
     category: "advanced",
   },
+  {
+    id: "trigger",
+    label: "Trigger (Webhook)",
+    description: "Inicia este workflow desde un evento externo, como un CRM.",
+    icon: Zap,
+    color: "bg-orange-500",
+    category: "advanced",
+  }
 ]
 
 interface WorkflowSidebarProps {
@@ -138,6 +146,10 @@ export function WorkflowSidebar({ onAddNode, onSelectTemplate, hasNodes, isOpen 
                 </div>
               </button>
             ))}
+          </div>
+          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-800">
+            <h4 className="font-semibold mb-1 flex items-center gap-1.5"><Zap className="h-3.5 w-3.5"/> ¿Cómo funcionan los Triggers?</h4>
+            <p>El nodo Trigger te permite generar una URL de webhook única. Cuando un servicio externo (como tu CRM) envía una petición a esa URL, este workflow se activará y realizará una llamada telefónica al número que venga en la petición, usando el número que hayas asociado a este workflow.</p>
           </div>
         </div>
       </div>

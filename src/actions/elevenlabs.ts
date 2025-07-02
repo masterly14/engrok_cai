@@ -4,15 +4,22 @@ import { ElevenLabsClient } from "elevenlabs";
 import { onBoardUser } from "./user";
 import { db } from "@/utils";
 import { NextResponse } from "next/server";
+import { unstable_cache } from "next/cache";
 
 const apiKey = process.env.ELEVENLABS_API_KEY;
 
-// Fetch the list of available TTS voices from ElevenLabs.
-export const getElevenLabsVoices = async () => {
-  const client = new ElevenLabsClient({ apiKey });
-  const voices = await client.voices.getAll();
-  return voices;
-};
+// Fetch the list of available TTS voices from ElevenLabs, with caching.
+export const getElevenLabsVoices = unstable_cache(
+  async () => {
+    const client = new ElevenLabsClient({ apiKey });
+    const voices = await client.voices.getAll();
+    return voices;
+  },
+  ["elevenlabs-voices"], // Clave de caché única
+  {
+    revalidate: 60 * 60, // Cachear por 1 hora
+  }
+);
 
 /**
  * Input parameters required to create an ElevenLabs agent in the Conversational-AI API

@@ -44,6 +44,7 @@ model User {
   notifications                Notification[]
   prospects                    Prospect[]
   elevenLabsWidgets            ElevenLabsWidget[]
+  voiceTriggers                VoiceWorkflowTrigger[]
 
   @@map("users")
 }
@@ -87,8 +88,9 @@ model PhoneNumber {
   vapiId          String?  @unique @db.Uuid
   credentialId    String?  @db.Uuid
   assistantId     String?  @db.Uuid
-  workflowId      String?  @db.Uuid
+  workflowId      String?  @db.Uuid @unique
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workflow        Workflow? @relation(fields: [workflowId], references: [id])
 }
 
 model ChatAgent {
@@ -143,6 +145,8 @@ model Workflow {
   user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   fields           Json?
   active           Boolean  @default(true)
+  triggers         VoiceWorkflowTrigger[]
+  phoneNumber      PhoneNumber?
 }
 
 model Prospect {
@@ -618,4 +622,20 @@ model WorkflowTrigger {
   @@unique([workflowId, provider, connectionId])
   @@index([connectionId])
   @@index([provider])
+}
+
+model VoiceWorkflowTrigger {
+  id         String   @id @default(uuid()) @db.Uuid
+  token      String   @unique /// Token de seguridad para la URL del webhook
+  provider   String /// Nombre descriptivo (ej. "webhook-hubspot-new-lead")
+  mapping    Json /// { "phone": "properties.phone", "vars": { "name": "properties.firstname" } }
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  workflowId String   @db.Uuid /// El Workflow de voz que se disparará
+  workflow   Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  userId     String   @db.Uuid /// Dueño del flujo / trigger
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([workflowId])
+  @@index([userId])
 }

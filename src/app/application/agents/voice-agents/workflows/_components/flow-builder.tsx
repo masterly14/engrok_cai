@@ -37,6 +37,7 @@ import type {
 } from "../types"
 import { WorkflowSidebar } from "./workflow-sidebar"
 import { WorkflowToolbar } from "./workflow-toolbar"
+import { CreateTriggerModal } from "./create-trigger-modal"
 
 // Initial nodes and edges
 const initialNodes: WorkflowNode[] = []
@@ -63,6 +64,7 @@ export function FlowBuilder({ workflowId }: { workflowId: string }) {
   const [reactFlowInstance, setReactFlowInstance] = useState<any>(null)
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [isTriggerModalOpen, setIsTriggerModalOpen] = useState(false)
 
   // Use workflow data hook
   const { workflowName, setWorkflowName, isSaving, isLoading, saveWorkflow } = useWorkflowData({
@@ -70,6 +72,10 @@ export function FlowBuilder({ workflowId }: { workflowId: string }) {
     setNodes,
     setEdges,
   })
+
+  const handleAddTrigger = () => {
+    setIsTriggerModalOpen(true)
+  }
 
   // Handle connections between nodes
   const onConnect = useCallback(
@@ -183,8 +189,8 @@ export function FlowBuilder({ workflowId }: { workflowId: string }) {
   // Handle template selection
   const handleTemplateSelect = useCallback(
     (template: WorkflowTemplate) => {
-      setNodes(template.nodes as Node[]);
-      setEdges(template.edges as Edge[]);
+      setNodes(template.nodes as Node[])
+      setEdges(template.edges as Edge[])
     },
     [setNodes, setEdges],
   )
@@ -284,6 +290,11 @@ export function FlowBuilder({ workflowId }: { workflowId: string }) {
           </ReactFlowProvider>
         </div>
       </div>
+      <CreateTriggerModal
+        isOpen={isTriggerModalOpen}
+        onClose={() => setIsTriggerModalOpen(false)}
+        workflowId={workflowId}
+      />
     </div>
   )
 }

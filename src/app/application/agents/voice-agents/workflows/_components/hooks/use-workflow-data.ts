@@ -65,11 +65,11 @@ const transformToVapiPayload = (
       const convData = data as ConversationNodeData;
       const schemaProperties = (convData.variables || []).reduce(
         (acc: Record<string, { type: string; description: string }>, variable: Variable) => {
-          acc[variable.name] = {
+        acc[variable.name] = {
             type: "string",
-            description: variable.description,
-          };
-          return acc;
+          description: variable.description,
+        };
+        return acc;
         },
         {} as Record<string, { type: string; description: string }>
       );
@@ -103,7 +103,7 @@ const transformToVapiPayload = (
         type: "transfer",
         destination: {
           type: "phoneNumber",
-          number: transferData.number,
+              number: transferData.number,
         },
       };
     }
@@ -114,7 +114,7 @@ const transformToVapiPayload = (
         type: "end",
       };
     }
-
+    
     if (data.type === "integration") {
         const intData = data as IntegrationNodeData;
         let tool = {};
@@ -208,7 +208,7 @@ const transformToVapiPayload = (
   const vapiEdges = edges.map((edge) => ({
     from: idToNameMap.get(edge.source),
     to: idToNameMap.get(edge.target),
-    condition: edge.data?.condition,
+      condition: edge.data?.condition,
   }));
 
   return {
@@ -310,7 +310,7 @@ export function useWorkflowData({ workflowId, setNodes, setEdges }: UseWorkflowD
           console.warn("Vapi API error:", response.vapiResult.error);
         }
       } else {
-        toast.success("Workflow guardado con éxito");
+      toast.success("Workflow guardado con éxito");
       }
       
       return true;
