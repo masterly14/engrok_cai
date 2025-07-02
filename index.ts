@@ -245,6 +245,19 @@ interface ExternalTriggerEvent {
   variables?: Record<string, any>;
 }
 
+// NEW: Tipo para eventos de envío por lotes
+interface BatchSendEvent {
+  kind: "batch_send";
+  agentId: string;
+  contactIds: string[];
+  nodeData: any;
+  /**
+   * Variables por contacto para personalizar el mensaje.
+   * La clave es el contactId y el valor un objeto con variables.
+   */
+  perContactVariables?: Record<string, Record<string, any>>;
+}
+
 async function handleIncomingMessage(whatsappPayload: any) {
   const whatsappMessage = whatsappPayload.messages[0];
   const userPhone = whatsappMessage.from;
@@ -358,6 +371,16 @@ async function handleIncomingMessage(whatsappPayload: any) {
     include: { workflow: true, contact: true },
   });
 
+  // If the agent's active workflow has changed, close the old session.
+  if (session && agent.activeWorkflowId && session.workflowId !== agent.activeWorkflowId) {
+    console.log(`[Handler] Active workflow changed for agent ${agent.id}. Closing session ${session.id}.`);
+    await db.chatSession.update({
+        where: { id: session.id },
+        data: { status: 'COMPLETED' }
+    });
+    session = null; // Forces creation of a new session with the new workflow
+  }
+
   // Si la sesión necesita un agente, no procesamos el flujo.
   // El mensaje ya fue guardado y Pusher ya lo envió a la UI.
   if (session && session.status === 'NEEDS_ATTENTION') {
@@ -371,37 +394,80 @@ async function handleIncomingMessage(whatsappPayload: any) {
     console.log(
       `[Handler] No active session for ${userPhone}. Starting new conversation.`
     );
-    const workflowToStart = await db.chatWorkflow.findFirst({
-      where: { agentId: agent.id },
-    });
-    if (!workflowToStart?.workflow) {
-      console.error(`[Handler] CRITICAL: Agent ${agent.name} has no workflow.`);
-      return;
+
+    /* ------------------------------------------------------------------
+     * 1. Buscar entre todos los workflows del agente un nodo aislado que
+     *    tenga data.userResponse igual al mensaje del usuario
+     * ------------------------------------------------------------------ */
+    const normalizedInput = typeof userInput === "string" ? userInput.trim().toLowerCase() : "";
+    let workflowToStart: any | null = null;
+    let startNode: any | null = null;
+
+    const agentWorkflows = await db.chatWorkflow.findMany({ where: { agentId: agent.id } });
+    for (const wf of agentWorkflows) {
+      if (!wf.workflow) continue;
+      const wfData = typeof wf.workflow === "string" ? JSON.parse(wf.workflow) : wf.workflow;
+      /* nodo.match: mismo userResponse y SIN edges entrantes (aislado) */
+      const isolatedNodes = wfData.nodes.filter((n: any) => !wfData.edges.some((e: any) => e.target === n.id));
+      const match = isolatedNodes.find(
+        (n: any) =>
+          n.type === "conversation" &&
+          typeof n.data?.userResponse === "string" &&
+          n.data.userResponse.trim().toLowerCase() === normalizedInput
+      );
+      if (match) {
+        workflowToStart = wf;
+        startNode = match;
+        break;
+      }
+    }
+
+    /* ------------------------------------------------------------------
+     * 2. Fallback al comportamiento anterior si no encontramos match
+     * ------------------------------------------------------------------ */
+    if (!workflowToStart) {
+      if (agent.activeWorkflowId) {
+        workflowToStart = await db.chatWorkflow.findUnique({
+          where: { id: agent.activeWorkflowId },
+        });
+        if (!workflowToStart) {
+          console.error(`[Handler] CRITICAL: Agent ${agent.name} has active workflow ${agent.activeWorkflowId}, but it was not found.`);
+          return;
+        }
+      } else {
+        // Fallback to old behavior if no active workflow is set
+        workflowToStart = await db.chatWorkflow.findFirst({ where: { agentId: agent.id } });
+      }
+
+      if (!workflowToStart?.workflow) {
+        console.error(`[Handler] CRITICAL: Agent ${agent.name} has no workflow configured or assigned.`);
+        return;
+      }
     }
 
     const workflowJson = workflowToStart.workflow;
-    // Parse the workflow JSON if it's stored as a string
-    const workflowData =
-      typeof workflowJson === "string"
-        ? JSON.parse(workflowJson)
-        : workflowJson;
+    const workflowData = typeof workflowJson === "string" ? JSON.parse(workflowJson) : workflowJson;
 
-    // Now you can safely access properties even without TypeScript types
-    // Example: workflowData.nodes, workflowData.edges, etc.
-    const initialNode = findInitialNode(workflowData.nodes, workflowData.edges);
-    if (!initialNode) {
-      console.error(
-        `[Handler] CRITICAL: Workflow ${workflowToStart.name} has no initial node.`
-      );
-      return;
+    // Si no había match, usamos el nodo inicial por defecto
+    if (!startNode) {
+      startNode = findInitialNode(workflowData.nodes, workflowData.edges);
+      if (!startNode) {
+        console.error(
+          `[Handler] CRITICAL: Workflow ${workflowToStart.name} has no initial node.`
+        );
+        return;
+      }
     }
 
+    /* ------------------------------------------------------------------
+     * 3. Crear la sesión partiendo del nodo seleccionado
+     * ------------------------------------------------------------------ */
     session = await db.chatSession.create({
       data: {
         id: uuidv4(),
         contactId: contact.id,
         workflowId: workflowToStart.id,
-        currentNodeId: initialNode.id,
+        currentNodeId: startNode.id,
         chatAgentId: agent.id,
         status: "ACTIVE",
         variables: {},
@@ -410,7 +476,8 @@ async function handleIncomingMessage(whatsappPayload: any) {
       },
       include: { workflow: true, contact: true },
     });
-    nodeToExecute = initialNode;
+
+    nodeToExecute = startNode;
   } else {
     console.log(
       `[Handler] Active session ${session.id} found for ${userPhone}.`
@@ -695,11 +762,11 @@ async function executeNode(node: any, session: any, agent: any) {
 
       await db.notification.create({
         data: {
-          id: uuidv4(),
           userId: agent.userId,
           type: "HANDOVER_REQUEST",
           message: notificationMessage,
           link: notificationLink,
+          id: uuidv4(),
         },
       });
 
@@ -756,7 +823,7 @@ async function executeNode(node: any, session: any, agent: any) {
         }
       }
 
-      // Sustituir variables dentro del body
+      // Sustituir variables dentro del body (manteniendo compatibilidad con placeholders)
       bodyContent = deepInterpolate(bodyContent, enrichedVariables);
 
       const headers = deepInterpolate(node.data.headers || { "Content-Type": "application/json" }, enrichedVariables);
@@ -982,6 +1049,8 @@ async function processMessages() {
 
           if (messageObject?.kind === "external") {
             await handleExternalTrigger(messageObject as ExternalTriggerEvent);
+          } else if (messageObject?.kind === "batch_send") {
+            await handleBatchSend(messageObject as BatchSendEvent);
           } else {
             await handleIncomingMessage(messageObject);
           }
@@ -1114,5 +1183,74 @@ async function handleExternalTrigger(event: ExternalTriggerEvent) {
     await executeNode(initialNode, session, agent);
   } catch (error: any) {
     console.error(`[Trigger] Failed handling external trigger:`, error);
+  }
+}  
+
+// ---------------------------------------------------------------------------
+// NUEVO: Manejar eventos de envío por lotes
+// ---------------------------------------------------------------------------
+async function handleBatchSend(event: BatchSendEvent) {
+  const { agentId, contactIds, nodeData, perContactVariables = {} } = event;
+  try {
+    // 1. Obtener agente
+    const agent = await db.chatAgent.findUnique({ where: { id: agentId } });
+    if (!agent) {
+      console.error(`[BatchSend] Agent ${agentId} not found.`);
+      return;
+    }
+
+    // 2. Obtener contactos (solo los que pertenecen al agente)
+    const contacts = await db.chatContact.findMany({
+      where: {
+        id: { in: contactIds },
+        chatAgentId: agent.id,
+      },
+    });
+
+    if (!contacts.length) {
+      console.warn(`[BatchSend] No contacts found for provided IDs.`);
+      return;
+    }
+
+    console.log(`[BatchSend] Sending batch message to ${contacts.length} contacts.`);
+
+    for (const contact of contacts) {
+      const individualVars = perContactVariables[contact.id] || {};
+
+      // Mezclar variables globales + específicas
+      let payloadData: any = JSON.parse(JSON.stringify(nodeData)); // deep clone
+      if (payloadData.responseType === "template") {
+        payloadData.templateVariableValues = {
+          ...(nodeData.templateVariableValues || {}),
+          ...individualVars,
+        };
+      }
+
+      // Variables disponibles para interpolación (texto/botones)
+      const mergedVars = {
+        ...(payloadData.templateVariableValues || {}),
+        contact: {
+          name: contact.name,
+          phone: contact.phone,
+        },
+        ...individualVars,
+      };
+      payloadData = populateNodeDataWithVariables(payloadData, mergedVars);
+
+      try {
+        await sendWhatsappMessage(
+          contact.phone,
+          agent.whatsappAccessToken,
+          payloadData,
+          agent,
+          contact
+        );
+      } catch (err: any) {
+        console.error(`[BatchSend] Failed to send to ${contact.phone}:`, err.message);
+      }
+      await new Promise((r) => setTimeout(r, 200));
+    }
+  } catch (error: any) {
+    console.error(`[BatchSend] Error processing batch send:`, error);
   }
 }  
