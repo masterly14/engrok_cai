@@ -695,6 +695,7 @@ async function executeNode(node: any, session: any, agent: any) {
 
       await db.notification.create({
         data: {
+          id: uuidv4(),
           userId: agent.userId,
           type: "HANDOVER_REQUEST",
           message: notificationMessage,

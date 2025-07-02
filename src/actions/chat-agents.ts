@@ -108,6 +108,8 @@ export const createChatWorkflow = async (data: any) => {
             connectionId: tData.connectionId || null,
             syncName: tData.syncName || null,
             mapping: tData.mapping || {},
+            updatedAt: new Date(),
+            createdAt: new Date(),
           },
         });
       }
@@ -185,6 +187,8 @@ export const updateChatWorkflow = async (workflowId: string, data: any) => {
               connectionId: tData.connectionId || null,
               syncName: tData.syncName || null,
               mapping: tData.mapping || {},
+              updatedAt: new Date(),
+              createdAt: new Date(),
             },
           });
         }
