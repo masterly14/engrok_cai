@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
       !wompi_private_key ||
       !name ||
       !description ||
-      !collect_shipping
+      collect_shipping === undefined
     ) {
       return NextResponse.json(
         { error: "Faltan campos requeridos." },
