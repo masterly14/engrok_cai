@@ -11,6 +11,8 @@ import {
   Workflow,
   PhoneCall,
   MessageSquare,
+  Contact,
+  Megaphone,
 } from "lucide-react";
 
 import {
@@ -65,6 +67,16 @@ export function NavMain() {
         title: "Agentes",
         url: "/application/agents/chat-agents/agents",
         icon: Bot,
+      },
+      {
+        title: "Contactos",
+        url: "/application/agents/chat-agents/contacts",
+        icon: Contact,
+      },
+      {
+        title: "Campañas",
+        url: "/application/agents/chat-agents/campaign",
+        icon: Megaphone,
       },
       {
         title: "Flujos",
