@@ -56,6 +56,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { AssignAgentModal } from "./assign-agent-modal";
 import { onBoardUser } from "@/actions/user";
+import integrationNode from "./nodes/integration-node";
 
 // Initial nodes and edges
 const initialNodes: Node[] = [];
@@ -72,6 +73,7 @@ const nodeTypes: NodeTypes = {
   urlButton: UrlButtonNode,
   trigger: TriggerNode,
   handoverToHuman: HandoverToHumanNode,
+  integration: integrationNode,
 };
 
 // Add validation function before the FlowBuilder component

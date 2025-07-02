@@ -44,6 +44,14 @@ const nodeTypes = [
     icon: Zap,
     color: "bg-orange-500",
     category: "advanced",
+  },
+  {
+    id: "integration",
+    label: "Integración",
+    description: "Integra con un servicio externo",
+    icon: Zap,
+    color: "bg-orange-500",
+    category: "advanced",
   }
 ]
 

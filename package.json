@@ -57,6 +57,7 @@
     "cloudinary": "^2.6.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
+    "composio-core": "^0.5.39",
     "date-fns": "^3.6.0",
     "elevenlabs": "^1.59.0",
     "framer-motion": "^12.7.3",

@@ -120,6 +120,15 @@ const nodeOptions: NodeOption[] = [
     tags: ["handover", "agente", "humano", "live"],
     isNew: true,
   },
+  {
+    type: "integration",
+    label: "Integración",
+    icon: <Globe className="w-4 h-4" />,
+    description: "Integración con un servicio externo",
+    category: "integration",
+    tags: ["api", "http", "external"],
+    isNew: true,
+  },
 ]
 
 export function NodeSelector({ onSelect, onClose }: NodeSelectorProps) {

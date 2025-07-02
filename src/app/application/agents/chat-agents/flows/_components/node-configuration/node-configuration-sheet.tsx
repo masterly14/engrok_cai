@@ -15,6 +15,7 @@ import { TriggerNodeConfig } from "./trigger-node-config"
 import React from "react"
 import { toast } from "sonner"
 import { HandoverToHumanNodeConfig } from "./handover-to-human-node-config"
+import IntegrationNodeConfig from "./integration-node-config"
 
 interface NodeConfigurationSheetProps {
   selectedNode: Node | null
@@ -52,15 +53,16 @@ export function NodeConfigurationSheet({ selectedNode, isOpen, onClose, updateNo
   }, [selectedNode?.id])
 
   const nodeTypeToNameMap: Record<string, string> = {
-    conversation: "Conversation",
-    crm: "CRM Action",
-    apiRequest: "API Request",
-    turnOffAgent: "End Conversation",
-    captureResponse: "Capture Response",
-    condition: "Condition",
-    urlButton: "URL Button",
+    conversation: "Conversación",
+    crm: "CRM",
+    apiRequest: "API",
+    turnOffAgent: "Finalizar Conversación",
+    captureResponse: "Capturar Respuesta",
+    condition: "Condición",
+    urlButton: "Botón URL",
     trigger: "Trigger",
-    handoverToHuman: "Handover to Agent",
+    handoverToHuman: "Transferencia a Agente",
+    integration: "Integration",
   }
 
   const nodeFriendlyName = nodeTypeToNameMap[selectedNode.type || ""] || selectedNode.type || "Node"
@@ -111,6 +113,8 @@ export function NodeConfigurationSheet({ selectedNode, isOpen, onClose, updateNo
             updateNode={wrappedUpdateNode}
           />
         )
+      case "integration":
+        return <IntegrationNodeConfig workflowId={workflowId} selectedNode={selectedNode} updateNode={wrappedUpdateNode} />
       default:
         return (
           <div className="p-6 text-center text-gray-500">

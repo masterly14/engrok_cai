@@ -45,7 +45,8 @@ model User {
   prospects                    Prospect[]
   elevenLabsWidgets            ElevenLabsWidget[]
   voiceTriggers                VoiceWorkflowTrigger[]
-
+  wompiIntegration             WompiIntegration?
+  
   @@map("users")
 }
 
@@ -409,7 +410,7 @@ model Integration {
   id             String              @id @default(uuid()) @db.Uuid
   userId         String              @db.Uuid
   provider       IntegrationProvider
-  status         IntegrationStatus   @default(ACTIVE)
+  status         String
   accessToken    String?
   refreshToken   String?
   tokenExpiresAt DateTime?
@@ -422,7 +423,18 @@ model Integration {
 
   @@index([userId])
   @@index([provider])
-  @@index([status])
+}
+
+model WompiIntegration {
+  id               String   @id @default(uuid()) @db.Uuid
+  userId           String   @unique @db.Uuid
+  wompiAccessToken String   @unique
+  publicKey        String   @unique
+  privateKey       String   @unique
+  eventsSecret     String   @unique
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model AccessToken {
@@ -485,13 +497,6 @@ enum IntegrationProvider {
   AIRTABLE
 }
 
-enum IntegrationStatus {
-  ACTIVE
-  INACTIVE
-  ERROR
-  PENDING
-  EXPIRED
-}
 
 enum MessageType {
   TEXT
