@@ -66,6 +66,69 @@ export const onBoardUser = async (variantId?: string) => {
     
     if (wasJustCreated && finalUser) {
       console.log('Creando datos iniciales para el nuevo usuario');
+
+      let planId = null;
+      let initialCredits = 1000; // Default credits for free plan
+
+      if (finalUser.temporalVariantId) {
+        const plan = await db.plan.findUnique({
+          where: { variantId: Number(finalUser.temporalVariantId) },
+        });
+
+        if (plan) {
+          planId = plan.id;
+          switch (plan.name) {
+            case 'Starter':
+              initialCredits = 3000;
+              break;
+            case 'Scale':
+              initialCredits = 30000;
+              break;
+            case 'Growth':
+              initialCredits = 10000;
+              break;
+            default:
+              initialCredits = 1000;
+              break;
+          }
+        }
+      }
+      
+      if (!planId) {
+        const freePlan = await db.plan.findFirst({ where: { name: 'Free' } });
+        if (freePlan) {
+            planId = freePlan.id;
+        } else {
+            // As a fallback, create a free plan if it doesn't exist.
+            const newFreePlan = await db.plan.create({
+                data: {
+                    name: 'Free',
+                    price: '0',
+                    variantId: 0, // Using 0 for free plan variantId, ensure this is unique and unused
+                    productId: 0,
+                    creditsPerCycle: 1000,
+                }
+            });
+            planId = newFreePlan.id;
+        }
+      }
+
+      await db.subscription.create({
+        data: {
+          userId: finalUser.id,
+          planId: planId,
+          status: 'ACTIVE',
+          currentCredits: initialCredits,
+          lemonSqueezyId: `onboarding-${finalUser.id}`,
+          email: finalUser.email,
+          name: 'Onboarding Plan',
+          orderId: 0,
+          price: '0',
+          statusFormatted: 'active',
+          cycleEndAt: new Date(new Date().setMonth(new Date().getMonth() + 1)), // 1 mes de prueba
+        },
+      });
+
       const initialTags = [
         { name: "Tecnología", color: "#3b82f6", userId: finalUser.id },
         { name: "Retail", color: "#10b981", userId: finalUser.id },
@@ -113,6 +176,12 @@ export const onBoardUser = async (variantId?: string) => {
       throw new Error("User not found after on-boarding process.");
     }
 
+    const subscription = await db.subscription.findFirst({
+      where: { userId: fullUser.id, status: "ACTIVE" },
+      orderBy: { createdAt: "desc" },
+      include: { plan: true }
+    });
+
     // Common logic for both new and existing users
     if (variantId && !fullUser.temporalVariantId) {
       fullUser = await db.user.update({
@@ -130,8 +199,8 @@ export const onBoardUser = async (variantId?: string) => {
         email: fullUser.email,
         temporalVariantId: fullUser.temporalVariantId,
       },
-      initialCredits: fullUser.initialAmountCredits,
-      credits: fullUser.amountCredits,
+      initialCredits: subscription?.plan.creditsPerCycle ?? 0,
+      credits: subscription?.currentCredits ?? 0,
       agents: fullUser.agents,
     };
   } catch (error: any) {

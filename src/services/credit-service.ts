@@ -32,11 +32,6 @@ export class CreditService {
         data: { currentCredits: { increment: delta } },
       });
 
-      await tx.user.update({
-        where: { id: userId },
-        data: { amountCredits: { increment: delta } },
-      });
-
       await tx.creditLedger.create({
         data: {
           userId,

@@ -63,8 +63,6 @@ export async function POST(request: NextRequest) {
     };
 
     let response = await makeRequest(wompiUrl);
-    console.log("[Wompi] ← Response status:", response.status);
-    console.log("[Wompi] ← Body:", JSON.stringify(response));
 
     // Si respuesta 401 y aún no hemos intentado con el otro entorno
     if (response.status === 401) {
