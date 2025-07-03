@@ -143,27 +143,38 @@ export async function getUserSubscription() {
 }
 
 export const getUserCredits = async () => {
-  const user = await onCurrentUser();
-  if (!user) {
+  const currentUserFromClerk = await onCurrentUser();
+  if (!currentUserFromClerk) {
     throw new Error("User not found");
   }
-  // You cannot use both `select` and `include` in the same Prisma query.
-  // If you want both the initialAmountCredits and subscriptions, use `select` and nest the relation.
-  const data = await db.user.findUnique({
-    where: { clerkId: user.id },
+
+  // Primero, obtenemos nuestro registro de usuario interno usando el clerkId
+  const internalUser = await db.user.findUnique({
+    where: { clerkId: currentUserFromClerk.id },
     select: {
+      id: true, // Este es el UUID que necesitamos
       initialAmountCredits: true,
     }
   });
 
+  if (!internalUser) {
+    // Esto no debería pasar si el usuario ha pasado por onBoardUser
+    return {
+      initialAmountCredits: 0,
+      amountCredits: 0
+    }
+  }
+
+  // Ahora, usamos el internalUser.id (UUID) para buscar la suscripción
   const subscription = await db.subscription.findFirst({
     where: {
-      userId: user.id,
+      userId: internalUser.id, // Usamos el ID de nuestra tabla, no el de Clerk
       status: "ACTIVE",
     }
   })
+
   return {
-    initialAmountCredits: data?.initialAmountCredits,
-    amountCredits: subscription?.currentCredits
+    initialAmountCredits: internalUser.initialAmountCredits,
+    amountCredits: subscription?.currentCredits ?? 0 // Devuelve 0 si no hay suscripción
   }
 }
