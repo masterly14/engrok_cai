@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Save, Plus, RotateCcw, Loader2, Play, Pause, Volume2, FileText, Trash, Trash2 } from "lucide-react"
+import { Save, Plus, RotateCcw, Loader2, Play, Pause, Volume2, FileText } from "lucide-react"
 import { useEffect, useState, useRef } from "react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Badge } from "@/components/ui/badge"
@@ -14,13 +14,10 @@ import { getElevenLabsVoices } from "@/actions/elevenlabs"
 import type { ElevenLabsVoice } from "@/types/agent"
 import { useAgent } from "@/context/agent-context"
 import { toast } from "sonner"
-import { useFiles } from "@/hooks/use-files"
 import { useCreateAgent, usePublishAgent } from "@/hooks/use-create-agent"
 import { TemplateDialog, type Template } from "./_components/template-dialog"
 import DeleteAgent from "./_components/delete-agent"
 import StartCall from "./_components/start-call"
-import { createKnowledgeBase } from "@/actions/vapi/knowledge-bases"
-import { saveFileInDatabase } from "@/actions/vapi/files"
 import { Agent } from "@prisma/client"
 
 const VoiceAgentsClient = ({ agents }: { agents: Agent[] }) => {
@@ -41,11 +38,6 @@ const VoiceAgentsClient = ({ agents }: { agents: Agent[] }) => {
     accent?: string
   }>({})
   const audioRef = useRef<HTMLAudioElement | null>(null)
-  const { filesData, filesLoading, filesFetching, filesError, refetchFiles } = useFiles(true)
-  // Estados para la creación de la base de conocimiento con Trieve
-  const [trieveApiKey, setTrieveApiKey] = useState<string>("")
-  const [trieveCredentialId, setTrieveCredentialId] = useState<string>("")
-  const [isCreatingKnowledgeBase, setIsCreatingKnowledgeBase] = useState<boolean>(false)
   const [showTemplateDialog, setShowTemplateDialog] = useState<boolean>(false)
   const [isPublishing, setIsPublishing] = useState<boolean>(false)
 
@@ -58,6 +50,7 @@ const VoiceAgentsClient = ({ agents }: { agents: Agent[] }) => {
         prompt: selectedAgent.prompt || "",
         backgroundSound: selectedAgent.backgroundSound || "off",
         voiceId: selectedAgent.voiceId || "",
+
       })
       // Only set fileId if knowledgeBaseId exists
       if ('knowledgeBaseId' in selectedAgent) {
@@ -77,6 +70,7 @@ const VoiceAgentsClient = ({ agents }: { agents: Agent[] }) => {
   const openTemplateDialog = () => {
     setShowTemplateDialog(true)
   }
+
 
   // Exponer la función para que el sidebar pueda usarla
   useEffect(() => {
@@ -288,49 +282,6 @@ const VoiceAgentsClient = ({ agents }: { agents: Agent[] }) => {
       }
     }
   }, [])
-
-  // Crear base de conocimiento en Vapi y guardarla en la BD local
-  const handleCreateKnowledgeBase = async () => {
-    if (!trieveApiKey.trim() || !trieveCredentialId.trim()) {
-      toast.error("Por favor ingresa el Trieve API Token y el Credential ID")
-      return
-    }
-
-    try {
-      setIsCreatingKnowledgeBase(true)
-
-      // Crear la base de conocimiento en Vapi (provider: trieve)
-      const kbResponse = await createKnowledgeBase({
-        name: formData.name || "Knowledge Base",
-        credentialId: trieveCredentialId,
-      })
-
-      if (!kbResponse?.id) {
-        throw new Error("No se pudo crear la base de conocimiento")
-      }
-
-      // Guardar la base de conocimiento en nuestra BD local
-      const saveResponse = await saveFileInDatabase({
-        id: (kbResponse as any).id,
-        name: (kbResponse as any).name ?? (formData.name || "Knowledge Base"),
-        trieveApiKey,
-        credentialId: trieveCredentialId,
-      })
-
-      if (saveResponse.status === 200 && saveResponse.data?.id) {
-        setFileId(saveResponse.data.id) // Guardamos el ID local
-        refetchFiles()
-        toast.success("Base de conocimiento creada correctamente")
-      } else {
-        throw new Error(saveResponse.message || "Error al guardar la base de conocimiento")
-      }
-    } catch (error: any) {
-      console.error("Error creando la base de conocimiento:", error)
-      toast.error(error.message || "Error creando la base de conocimiento")
-    } finally {
-      setIsCreatingKnowledgeBase(false)
-    }
-  }
 
   const handleDeleteSuccess = () => {
     toast.success("Agente eliminado correctamente")
@@ -650,93 +601,6 @@ const VoiceAgentsClient = ({ agents }: { agents: Agent[] }) => {
                     </SelectContent>
                   </Select>
                 </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Base de conocimiento (Trieve)</CardTitle>
-                <CardDescription>Conecta tu cuenta de Trieve para usarla como base de conocimiento del agente.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="trieveToken">Trieve API Token</Label>
-                  <Input
-                    id="trieveToken"
-                    placeholder="Ingresa tu Trieve API Token"
-                    value={trieveApiKey}
-                    onChange={(e) => setTrieveApiKey(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="trieveCredential">Trieve Credential ID</Label>
-                  <Input
-                    id="trieveCredential"
-                    placeholder="Ingresa tu Trieve Credential ID"
-                    value={trieveCredentialId}
-                    onChange={(e) => setTrieveCredentialId(e.target.value)}
-                  />
-                </div>
-                <Button onClick={handleCreateKnowledgeBase} disabled={isCreatingKnowledgeBase}>
-                  {isCreatingKnowledgeBase ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Creando...
-                    </>
-                  ) : (
-                    "Crear base de conocimiento"
-                  )}
-                </Button>
-
-                {/* Existing Knowledge Bases */}
-                {filesLoading ? (
-                  <div className="flex items-center justify-center h-20 border rounded-md">
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    <span className="text-sm text-muted-foreground">Cargando bases de conocimiento...</span>
-                  </div>
-                ) : filesError ? (
-                  <div className="flex items-center justify-center h-20 border rounded-md border-red-200 bg-red-50">
-                    <span className="text-sm text-red-600">Error al cargar bases de conocimiento</span>
-                  </div>
-                ) : filesData && filesData.length > 0 ? (
-                  <div className="grid gap-3 max-h-60 overflow-y-auto">
-                    {filesData.map((kb: any) => (
-                      <div
-                        key={kb.id}
-                        className={`p-3 border rounded-lg cursor-pointer transition-colors hover:bg-muted/50 ${
-                          fileId === kb.id ? "bg-muted border-primary" : ""
-                        }`}
-                        onClick={() => setFileId(kb.id)}
-                      >
-                        <div className="flex items-center justify-between">
-                          <h5 className="font-medium text-sm truncate">{kb.name}</h5>
-                          {fileId === kb.id && (
-                            <Badge variant="default" className="ml-2">
-                              Seleccionado
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          Creado: {new Date(kb.createdAt).toLocaleDateString()}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center h-20 border rounded-md border-dashed">
-                    <span className="text-sm text-muted-foreground">No hay bases de conocimiento disponibles</span>
-                  </div>
-                )}
-
-                {/* Selected KB */}
-                {fileId && filesData && (
-                  <div className="mt-3 p-3 border rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="default">Base seleccionada</Badge>
-                      <span className="text-sm font-medium">{filesData.find((f: any) => f.id === fileId)?.name}</span>
-                    </div>
-                  </div>
-                )}
               </CardContent>
             </Card>
           </div>
