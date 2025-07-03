@@ -43,13 +43,6 @@ export const onBoardUser = async (variantId?: string) => {
             email: user.email,
             name: user.name,
             temporalVariantId: variantId,
-            transactions: {
-              create: {
-                amount: 0,
-                status: 'ACCEPTED',
-                type: 'INITIAL_RECHARGE',
-              },
-            },
             amountCredits: 0,
             initialAmountCredits: 0,
           },
@@ -57,6 +50,7 @@ export const onBoardUser = async (variantId?: string) => {
         wasJustCreated = true;
       } catch (error: any) {
         if (error.code === 'P2002') {
+          console.log('Usuario ya existe');
           // Race condition: another request created the user. We can proceed as if it existed.
         } else {
           throw error;
@@ -66,36 +60,6 @@ export const onBoardUser = async (variantId?: string) => {
     
     if (wasJustCreated && finalUser) {
       console.log('Creando datos iniciales para el nuevo usuario');
-
-      let planId = null;
-      let initialCredits = 1000; // Default credits for free plan
-
-      if (finalUser.temporalVariantId) {
-        const plan = await db.plan.findUnique({
-          where: { variantId: Number(finalUser.temporalVariantId) },
-        });
-
-        if (plan) {
-          planId = plan.id;
-          switch (plan.name) {
-            case 'Starter':
-              initialCredits = 3000;
-              break;
-            case 'Scale':
-              initialCredits = 30000;
-              break;
-            case 'Growth':
-              initialCredits = 10000;
-              break;
-            default:
-              initialCredits = 1000;
-              break;
-          }
-        }
-      }
-      
-      // Ya no creamos ninguna suscripción aquí. Se registrará en el webhook
-      // cuando el usuario complete el pago en Lemon Squeezy.
 
       const initialTags = [
         { name: "Tecnología", color: "#3b82f6", userId: finalUser.id },
@@ -144,15 +108,6 @@ export const onBoardUser = async (variantId?: string) => {
       throw new Error("User not found after on-boarding process.");
     }
 
-    const subscription = await db.subscription.findFirst({
-      where: {
-        userId: fullUser.id,
-        status: { in: ["ACTIVE", "TRIALING"] },
-      },
-      orderBy: { createdAt: "desc" },
-      include: { plan: true },
-    });
-
     // Common logic for both new and existing users
     if (variantId && !fullUser.temporalVariantId) {
       fullUser = await db.user.update({
@@ -170,8 +125,6 @@ export const onBoardUser = async (variantId?: string) => {
         email: fullUser.email,
         temporalVariantId: fullUser.temporalVariantId,
       },
-      initialCredits: subscription?.plan?.creditsPerCycle ?? 0,
-      credits: subscription?.currentCredits ?? 0,
       agents: fullUser.agents,
     };
   } catch (error: any) {

@@ -190,8 +190,9 @@ async function upsertSubscription(payload: any) {
   console.log("subscription", subscription);
   // Sincronizaremos créditos en la fase `syncInternalPlanAndSubscription`, donde ya existe la suscripción interna.
   const user = await db.user.findUnique({ where: { id: userId } });
+  console.log('user', user);
   if (user && user.initialAmountCredits === 0) {
-    await db.user.update({ where: { id: userId }, data: { initialAmountCredits: plan.creditsPerCycle } });
+    await db.user.update({ where: { id: userId }, data: { initialAmountCredits: plan.creditsPerCycle, amountCredits: plan.creditsPerCycle } });
   }
 }
 
@@ -221,6 +222,7 @@ async function resolveUserId(payload: any): Promise<string | null> {
     const uid = custom?.userId ?? custom?.userid ?? custom?.user_id;
     if (uid && typeof uid === "string") {
       const userById = await db.user.findUnique({ where: { id: uid } });
+      console.log('userById', userById);
       if (userById) return userById.id;
     }
 
