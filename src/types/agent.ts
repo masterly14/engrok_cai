@@ -30,6 +30,7 @@ export interface Agent {
     prompt: string
     backgroundSound: string
     voiceId: string
+    language: string // ISO code like "es" | "en" | "fr" etc
   }
   
 

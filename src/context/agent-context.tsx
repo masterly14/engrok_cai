@@ -23,6 +23,7 @@ const defaultFormData: AgentFormData = {
   prompt: "",
   backgroundSound: "",
   voiceId: "",
+  language: "multi",
 }
 
 export function AgentProvider({ children }: { children: React.ReactNode }) {
@@ -43,6 +44,7 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
         prompt: selectedAgent.prompt,
         backgroundSound: selectedAgent.backgroundSound || "",
         voiceId: selectedAgent.voiceId || "",
+        language: "multi",
       }
       setFormData(agentFormData)
       setOriginalData(agentFormData)
@@ -62,6 +64,7 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
         prompt: selectedAgent.prompt,
         backgroundSound: selectedAgent.backgroundSound || "",
         voiceId: selectedAgent.voiceId || "",
+        language: "multi",
       }
       setFormData(agentFormData)
       setOriginalData(agentFormData)

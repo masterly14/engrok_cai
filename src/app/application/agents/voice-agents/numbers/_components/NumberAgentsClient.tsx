@@ -15,6 +15,7 @@ import InboundSettingsCard from "./InboundSettingsCard";
 import NumberConfigurationCard from "./NumberConfigurationCard";
 import CreateCall from "./create-call";
 import { useAllWorkflows } from "@/hooks/use-all-workflows";
+import CreateCampaign from "./create-campaign";
 
 const NumberAgentsClient = () => {
   const {
@@ -167,6 +168,11 @@ const NumberAgentsClient = () => {
                       phoneNumberId={selectedPhoneNumber.id}
                       phoneNumberVapiId={selectedPhoneNumber.vapiId!}
                       assistans={agentsData}
+                    />
+                    <CreateCampaign
+                      phoneNumberId={selectedPhoneNumber.id}
+                      phoneNumberVapiId={selectedPhoneNumber.vapiId!}
+                      workflows={workflowsData ?? []}
                     />
                   </div>
                 </div>

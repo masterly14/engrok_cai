@@ -46,7 +46,7 @@ model User {
   elevenLabsWidgets            ElevenLabsWidget[]
   voiceTriggers                VoiceWorkflowTrigger[]
   wompiIntegration             WompiIntegration?
-  
+  campaigns                    Campaign[]
   @@map("users")
 }
 
@@ -64,6 +64,7 @@ model Agent {
   id              String  @id @default(uuid()) @db.Uuid
   userId          String  @db.Uuid
   prompt          String
+  language        String @default("multi")
   name            String
   backgroundSound String?
   firstMessage    String
@@ -92,6 +93,7 @@ model PhoneNumber {
   workflowId      String?  @db.Uuid @unique
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   workflow        Workflow? @relation(fields: [workflowId], references: [id])
+  campaigns       Campaign[]
 }
 
 model ChatAgent {
@@ -163,6 +165,29 @@ model Prospect {
   ownerId   String   @db.Uuid
 
   @@index([ownerId])
+}
+
+// Añadir esto a tu schema.prisma
+
+model Campaign {
+  id              String    @id @default(uuid()) @db.Uuid
+  vapiCampaignId  String?   @unique // El ID que nos devuelve VAPI. Clave para futuras sincronizaciones.
+  name            String    // Nombre que el usuario le da a la campaña.
+  status          String    // Estado interno (ej: PENDING, RUNNING, PAUSED, COMPLETED, FAILED).
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  userId          String    @db.Uuid
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  phoneNumberId   String    @db.Uuid // El número desde el que se lanza la campaña.
+  phoneNumber     PhoneNumber @relation(fields: [phoneNumberId], references: [id])
+
+  assistantId     String?   @db.Uuid // El asistente o workflow por defecto.
+  
+  // Opcional pero recomendado: guardar los clientes de la campaña.
+  // Podría ser un JSON o una tabla relacionada si se necesita más detalle.
+  customers       Json
 }
 
 model ElevenLabsWidget {
