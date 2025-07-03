@@ -193,6 +193,7 @@ async function upsertSubscription(payload: any) {
   console.log('user', user);
   if (user && user.initialAmountCredits === 0) {
     await db.user.update({ where: { id: userId }, data: { initialAmountCredits: plan.creditsPerCycle, amountCredits: plan.creditsPerCycle } });
+    // Crear una transacción de recarga inicial
   }
 }
 
