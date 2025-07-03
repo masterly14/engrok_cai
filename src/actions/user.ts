@@ -94,23 +94,8 @@ export const onBoardUser = async (variantId?: string) => {
         }
       }
       
-      if (planId) {
-        await db.subscription.create({
-          data: {
-            userId: finalUser.id,
-            planId: planId,
-            status: 'ACTIVE',
-            currentCredits: initialCredits,
-            lemonSqueezyId: `onboarding-${finalUser.id}`,
-            email: finalUser.email,
-            name: 'Onboarding Plan',
-            orderId: 0,
-            price: '0',
-            statusFormatted: 'active',
-            cycleEndAt: new Date(new Date().setMonth(new Date().getMonth() + 1)), // 1 mes de prueba
-          },
-        });
-      }
+      // Ya no creamos ninguna suscripción aquí. Se registrará en el webhook
+      // cuando el usuario complete el pago en Lemon Squeezy.
 
       const initialTags = [
         { name: "Tecnología", color: "#3b82f6", userId: finalUser.id },
@@ -160,9 +145,12 @@ export const onBoardUser = async (variantId?: string) => {
     }
 
     const subscription = await db.subscription.findFirst({
-      where: { userId: fullUser.id, status: "ACTIVE" },
+      where: {
+        userId: fullUser.id,
+        status: { in: ["ACTIVE", "TRIALING"] },
+      },
       orderBy: { createdAt: "desc" },
-      include: { plan: true }
+      include: { plan: true },
     });
 
     // Common logic for both new and existing users

@@ -18,7 +18,11 @@ export class CreditService {
   ) {
     return db.$transaction(async (tx) => {
       const sub = await tx.subscription.findFirst({
-        where: { userId, isPaused: false, status: "ACTIVE" },
+        where: {
+          userId,
+          isPaused: false,
+          status: { in: ["ACTIVE", "TRIALING"] },
+        },
         orderBy: { createdAt: "desc" },
       });
       if (!sub) throw new Error("SUBSCRIPTION_NOT_FOUND");
@@ -53,7 +57,11 @@ export class CreditService {
 
   static async ensureBalance(userId: string, needed: number) {
     const sub = await db.subscription.findFirst({
-      where: { userId, isPaused: false, status: "ACTIVE" },
+      where: {
+        userId,
+        isPaused: false,
+        status: { in: ["ACTIVE", "TRIALING"] },
+      },
     });
     if (!sub || sub.currentCredits < needed) {
       throw new Error("NO_CREDITS");
