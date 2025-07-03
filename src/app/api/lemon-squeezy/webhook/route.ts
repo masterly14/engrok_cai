@@ -54,6 +54,8 @@ async function handleEvent(payload: any) {
       break;
     case "subscription_payment_success":
     case "invoice_payment_succeeded":
+      // Aseguramos existencia de Plan & Subscription interna antes de acreditar
+      await syncInternalPlanAndSubscription(payload);
       // Renueva créditos en cada pago exitoso
       await creditOnSuccessfulPayment(payload);
       break;
@@ -67,7 +69,7 @@ async function handleEvent(payload: any) {
 
 async function upsertSubscription(payload: any) {
   const sub = payload.data;
-  const userId = await resolveUserByEmail(sub.attributes.user_email);
+  const userId = await resolveUserId(payload);
   if (!userId) {
     console.warn("User not found for LS subscription", sub.id);
     return;
@@ -211,9 +213,27 @@ function mapStatus(statusFormatted: string) {
   }
 }
 
-async function resolveUserByEmail(email: string): Promise<string | null> {
-  const user = await db.user.findUnique({ where: { email } });
-  return user?.id ?? null;
+async function resolveUserId(payload: any): Promise<string | null> {
+  try {
+    // 1) Intentar por custom_data.userId (checkout > custom field)
+    const custom =
+      payload?.data?.attributes?.custom_data ?? payload?.meta?.custom_data ?? {};
+    const uid = custom?.userId ?? custom?.userid ?? custom?.user_id;
+    if (uid && typeof uid === "string") {
+      const userById = await db.user.findUnique({ where: { id: uid } });
+      if (userById) return userById.id;
+    }
+
+    // 2) Fallback: email
+    const email = payload?.data?.attributes?.user_email;
+    if (email) {
+      const userByEmail = await db.user.findUnique({ where: { email } });
+      return userByEmail?.id ?? null;
+    }
+  } catch (err) {
+    console.error("resolveUserId error", err);
+  }
+  return null;
 }
 
 /**
@@ -224,7 +244,7 @@ async function syncInternalPlanAndSubscription(payload: any, isNew: boolean = fa
   const sub = payload.data;
   const attributes = sub.attributes as any;
 
-  const userId = await resolveUserByEmail(attributes.user_email);
+  const userId = await resolveUserId(payload);
   if (!userId) return;
 
   // 1) Plan (mapeado por variantId)
@@ -393,7 +413,7 @@ async function processCreditPackOrder(payload: any) {
   if (!credits) return; // not a credit pack
 
   const email = attributes.user_email;
-  const userId = await resolveUserByEmail(email);
+  const userId = await resolveUserId(payload);
   if (!userId) return;
 
   await CreditService.credit(userId, credits, {
