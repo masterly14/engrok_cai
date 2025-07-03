@@ -1,5 +1,5 @@
+import { getAllWorkflows } from "@/actions/workflow";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getAllWorkflows } from "@/actions/vapi/workflows";
 import { toast } from "sonner";
 
 export function useWorkflows() {
