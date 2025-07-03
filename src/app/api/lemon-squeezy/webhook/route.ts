@@ -265,6 +265,21 @@ async function syncInternalPlanAndSubscription(payload: any, isNew: boolean = fa
 
   if (!plan) return; // safety
 
+  // --- Garantizar créditos por plan ---
+  if (plan.creditsPerCycle === 0) {
+    let mapped = 0;
+    const lname = plan.name.toLowerCase();
+    if (lname.includes("starter")) mapped = 3000;
+    else if (lname.includes("growth")) mapped = 10000;
+    else if (lname.includes("scale")) mapped = 30000;
+    else mapped = approxCredits;
+
+    if (mapped > 0) {
+      await db.plan.update({ where: { id: plan.id }, data: { creditsPerCycle: mapped } });
+      plan = { ...plan, creditsPerCycle: mapped } as typeof plan;
+    }
+  }
+
   // 2) Subscription (interna)
   const cycleEnd = attributes.renews_at ? new Date(attributes.renews_at) : null;
 
@@ -311,6 +326,14 @@ async function syncInternalPlanAndSubscription(payload: any, isNew: boolean = fa
         isPaused: attributes.is_paused,
       },
     });
+
+    // Si aún no tiene créditos, otorgar los incluidos en el plan
+    if (subscription.currentCredits === 0 && plan.creditsPerCycle > 0) {
+      await CreditService.credit(userId, plan.creditsPerCycle, {
+        reason: "subscription_sync",
+        subId: subscription.id,
+      });
+    }
   }
 }
 
