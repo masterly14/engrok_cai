@@ -141,3 +141,15 @@ export async function getUserSubscription() {
   }
   return await checkUserSubscription(user.data.id);
 }
+
+export const getUserCredits = async () => {
+  const user = await onCurrentUser();
+  if (!user) {
+    throw new Error("User not found");
+  }
+  const data = await db.user.findUnique({
+    where: { clerkId: user.id },
+    select: { amountCredits: true, initialAmountCredits: true },
+  });
+  return data;
+}

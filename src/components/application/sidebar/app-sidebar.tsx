@@ -10,12 +10,13 @@ import {
 import { Team } from "./team"
 import { NavMain } from "./nav-main"
 import { CreditDisplay } from "./credit-display"
-import { onBoardUser } from "@/actions/user"
+import { getUserCredits, onBoardUser } from "@/actions/user"
 import { NavUser } from "./nav-user"
 import { ModeToggle } from "@/components/mode-toggle"
 
 export async function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const user = await onBoardUser()
+  const user = await getUserCredits()
+  const userData = await onBoardUser()  
 
   return (
     <Sidebar collapsible="icon" {...props}>
@@ -26,13 +27,13 @@ export async function AppSidebar({ ...props }: React.ComponentProps<typeof Sideb
         <NavMain />
         {/* Ocultar CreditDisplay cuando el sidebar está colapsado */}
         <div className="group-data-[collapsible=icon]:hidden">
-          <CreditDisplay amount={user?.credits!} maxAmount={user?.initialCredits!} />
+          <CreditDisplay amount={user?.amountCredits!} maxAmount={user?.initialAmountCredits!} />
         </div>
       </SidebarContent>
       <SidebarFooter>
         <SidebarSeparator />
         <div className="flex gap-x-3 items-center">
-          <NavUser user={user?.data} />
+          <NavUser user={userData?.data} />
           <ModeToggle />
         </div>
       </SidebarFooter>
