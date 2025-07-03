@@ -38,16 +38,6 @@ type Props = {
 
 const availableIntegrations = [
   {
-    id: "google-calendar",
-    name: "Google Calendar",
-    description: "Agenda y gestiona eventos en tu calendario de Google",
-    className: "hover:border-blue-500 hover:bg-blue-50/50 transition-all duration-200",
-    icon: <Calendar className="w-5 h-5 text-blue-600" />,
-    provider: "GOOGLE_CALENDAR",
-    img: "/integrations-logos-providers/google-calendar.png",
-    color: "blue",
-  },
-  {
     id: "wompi",
     name: "Wompi",
     description: "Procesa pagos y genera enlaces de pago",

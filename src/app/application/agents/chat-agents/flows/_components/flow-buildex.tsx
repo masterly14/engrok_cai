@@ -346,7 +346,7 @@ export function FlowBuilder({ workflowId }: { workflowId?: string }) {
         fileResourceType: "",
         isUploadingMedia: false,
         interactiveButtons: [],
-        initialMessage: !nodes.some((n) => n.type === "conversation"), // Set as initial if it's the first conversation node
+        initialMessage: !nodes.some((n) => n.data?.initialMessage), // Set as initial if no other initial node exists
       };
     if (nodeType === "turnOffAgent")
       defaultData = {

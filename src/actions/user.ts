@@ -94,40 +94,23 @@ export const onBoardUser = async (variantId?: string) => {
         }
       }
       
-      if (!planId) {
-        const freePlan = await db.plan.findFirst({ where: { name: 'Free' } });
-        if (freePlan) {
-            planId = freePlan.id;
-        } else {
-            // As a fallback, create a free plan if it doesn't exist.
-            const newFreePlan = await db.plan.create({
-                data: {
-                    name: 'Free',
-                    price: '0',
-                    variantId: 0, // Using 0 for free plan variantId, ensure this is unique and unused
-                    productId: 0,
-                    creditsPerCycle: 1000,
-                }
-            });
-            planId = newFreePlan.id;
-        }
+      if (planId) {
+        await db.subscription.create({
+          data: {
+            userId: finalUser.id,
+            planId: planId,
+            status: 'ACTIVE',
+            currentCredits: initialCredits,
+            lemonSqueezyId: `onboarding-${finalUser.id}`,
+            email: finalUser.email,
+            name: 'Onboarding Plan',
+            orderId: 0,
+            price: '0',
+            statusFormatted: 'active',
+            cycleEndAt: new Date(new Date().setMonth(new Date().getMonth() + 1)), // 1 mes de prueba
+          },
+        });
       }
-
-      await db.subscription.create({
-        data: {
-          userId: finalUser.id,
-          planId: planId,
-          status: 'ACTIVE',
-          currentCredits: initialCredits,
-          lemonSqueezyId: `onboarding-${finalUser.id}`,
-          email: finalUser.email,
-          name: 'Onboarding Plan',
-          orderId: 0,
-          price: '0',
-          statusFormatted: 'active',
-          cycleEndAt: new Date(new Date().setMonth(new Date().getMonth() + 1)), // 1 mes de prueba
-        },
-      });
 
       const initialTags = [
         { name: "Tecnología", color: "#3b82f6", userId: finalUser.id },
@@ -199,7 +182,7 @@ export const onBoardUser = async (variantId?: string) => {
         email: fullUser.email,
         temporalVariantId: fullUser.temporalVariantId,
       },
-      initialCredits: subscription?.plan.creditsPerCycle ?? 0,
+      initialCredits: subscription?.plan?.creditsPerCycle ?? 0,
       credits: subscription?.currentCredits ?? 0,
       agents: fullUser.agents,
     };
