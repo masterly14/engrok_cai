@@ -1,17 +1,22 @@
 "use client"
 
-import type { ChatContact } from "@prisma/client"
+import type { ChatContact as PrismaChatContact, Message, ChatSession } from "@prisma/client"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ArrowLeft, Bot, Search, AlertCircle } from "lucide-react"
 import { Input } from "@/components/ui/input"
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
 
+interface ChatContactWithDetails extends PrismaChatContact {
+  messages: Message[]
+  sessions: ChatSession[]
+}
+
 interface ContactListProps {
-  contacts: ChatContact[]
-  onContactSelect: (contact: ChatContact) => void
+  contacts: ChatContactWithDetails[]
+  onContactSelect: (contact: ChatContactWithDetails) => void
   selectedContactId?: string
   agentName: string
 }
@@ -19,7 +24,20 @@ interface ContactListProps {
 export function ContactList({ contacts, onContactSelect, selectedContactId, agentName }: ContactListProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const router = useRouter()
-  const filteredContacts = contacts.filter(contact => 
+
+  const sortedContacts = useMemo(() => {
+    if (!contacts) return []
+    return contacts
+      .filter(contact => contact.messages && contact.messages.length > 0)
+      .sort((a, b) => {
+        const lastMessageTimeA = Math.max(...a.messages.map(m => new Date(m.timestamp).getTime()));
+        const lastMessageTimeB = Math.max(...b.messages.map(m => new Date(m.timestamp).getTime()));
+        
+        return lastMessageTimeB - lastMessageTimeA;
+      });
+  }, [contacts]);
+
+  const filteredContacts = sortedContacts.filter(contact => 
     contact.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     contact.phone.includes(searchTerm)
   );
@@ -54,7 +72,7 @@ export function ContactList({ contacts, onContactSelect, selectedContactId, agen
         <div className="p-2 space-y-1">
           {filteredContacts.length > 0 ? (
             filteredContacts.map((contact) => {
-              const needsAttention = (contact as any).sessions?.some((s: any) => s.status === "NEEDS_ATTENTION")
+              const needsAttention = contact.sessions?.some(s => s.status === "NEEDS_ATTENTION")
               return (
                 <button
                   key={contact.id}
@@ -85,7 +103,7 @@ export function ContactList({ contacts, onContactSelect, selectedContactId, agen
           ) : (
             <div className="text-center py-10">
                 <p className="text-sm text-muted-foreground">
-                    {searchTerm ? "No se encontraron contactos" : "No hay contactos para este agente"}
+                    {searchTerm ? "No se encontraron contactos" : "No hay contactos con mensajes"}
                 </p>
             </div>
           )}
