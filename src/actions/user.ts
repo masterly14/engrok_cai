@@ -147,9 +147,23 @@ export const getUserCredits = async () => {
   if (!user) {
     throw new Error("User not found");
   }
+  // You cannot use both `select` and `include` in the same Prisma query.
+  // If you want both the initialAmountCredits and subscriptions, use `select` and nest the relation.
   const data = await db.user.findUnique({
     where: { clerkId: user.id },
-    select: { amountCredits: true, initialAmountCredits: true },
+    select: {
+      initialAmountCredits: true,
+    }
   });
-  return data;
+
+  const subscription = await db.subscription.findFirst({
+    where: {
+      userId: user.id,
+      status: "ACTIVE",
+    }
+  })
+  return {
+    initialAmountCredits: data?.initialAmountCredits,
+    amountCredits: subscription?.currentCredits
+  }
 }

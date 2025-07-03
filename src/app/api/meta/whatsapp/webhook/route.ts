@@ -56,6 +56,7 @@ export async function POST(request: NextRequest) {
       const agent = await db.chatAgent.findFirst({
         where: { whatsappPhoneNumberId: phoneNumberId },
       });
+      console.log("agent", agent);
       if (agent) {
         // Por simplicidad, cobramos 1 conversación por cada mensaje recibido fuera de la ventana gratis.
         try {

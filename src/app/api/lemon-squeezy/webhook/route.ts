@@ -168,12 +168,12 @@ async function upsertSubscription(payload: any) {
   if (!plan) {
     console.log(`[LS Webhook] upsertSubscription: Internal plan not found. Creating...`);
     const planData = {
-      name: variantName,
-      price: String(priceUsd),
-      interval: attributes.interval ?? "month",
-      productId: Number(productId),
-      variantId: planVariantId,
-      creditsPerCycle: creditsPerCycleCalc,
+        name: variantName,
+        price: String(priceUsd),
+        interval: attributes.interval ?? "month",
+        productId: Number(productId),
+        variantId: planVariantId,
+        creditsPerCycle: creditsPerCycleCalc,
     };
     console.log("[LS Webhook] upsertSubscription: Internal plan create data:", planData);
     plan = await db.plan.create({
@@ -197,23 +197,23 @@ async function upsertSubscription(payload: any) {
   console.log(`[LS Webhook] upsertSubscription: Final plan IDs - lsPlan: ${lsPlan.id}, bizPlan: ${plan.id}`);
 
   const updateData = {
-    status: mapStatus(sub.attributes.status_formatted),
-    renewsAt: sub.attributes.renews_at ? new Date(sub.attributes.renews_at) : null,
-    endsAt: sub.attributes.ends_at ? new Date(sub.attributes.ends_at) : null,
-    trialEndsAt: sub.attributes.trial_ends_at ? new Date(sub.attributes.trial_ends_at) : null,
-    planId: lsPlan.id,
-    isPaused: sub.attributes.is_paused,
+      status: mapStatus(sub.attributes.status_formatted),
+      renewsAt: sub.attributes.renews_at ? new Date(sub.attributes.renews_at) : null,
+      endsAt: sub.attributes.ends_at ? new Date(sub.attributes.ends_at) : null,
+      trialEndsAt: sub.attributes.trial_ends_at ? new Date(sub.attributes.trial_ends_at) : null,
+      planId: lsPlan.id,
+      isPaused: sub.attributes.is_paused,
   };
 
   const createData = {
-    lsSubscriptionId: Number(sub.id),
-    userId,
-    status: mapStatus(sub.attributes.status_formatted),
-    renewsAt: sub.attributes.renews_at ? new Date(sub.attributes.renews_at) : null,
-    endsAt: sub.attributes.ends_at ? new Date(sub.attributes.ends_at) : null,
-    trialEndsAt: sub.attributes.trial_ends_at ? new Date(sub.attributes.trial_ends_at) : null,
-    planId: lsPlan.id,
-    isPaused: sub.attributes.is_paused,
+      lsSubscriptionId: Number(sub.id),
+      userId,
+      status: mapStatus(sub.attributes.status_formatted),
+      renewsAt: sub.attributes.renews_at ? new Date(sub.attributes.renews_at) : null,
+      endsAt: sub.attributes.ends_at ? new Date(sub.attributes.ends_at) : null,
+      trialEndsAt: sub.attributes.trial_ends_at ? new Date(sub.attributes.trial_ends_at) : null,
+      planId: lsPlan.id,
+      isPaused: sub.attributes.is_paused,
   };
 
   console.log(`[LS Webhook] upsertSubscription: Upserting LsSubscription with ID ${sub.id}. Update data:`, updateData, "Create data:", createData);
@@ -338,12 +338,12 @@ async function syncInternalPlanAndSubscription(payload: any, isNew: boolean = fa
     }
 
     const createPlanData = {
-      variantId,
-      productId: Number(productId),
-      name: attributes.variant_name ?? `Plan ${variantId}`,
-      price: `${priceUsd}`,
-      interval: attributes.interval ?? "month",
-      creditsPerCycle: approxCredits,
+        variantId,
+        productId: Number(productId),
+        name: attributes.variant_name ?? `Plan ${variantId}`,
+        price: `${priceUsd}`,
+        interval: attributes.interval ?? "month",
+        creditsPerCycle: approxCredits,
     };
     console.log("[LS Webhook] syncInternalPlanAndSubscription: Creating plan with data:", createPlanData);
     plan = await db.plan.create({
@@ -393,22 +393,22 @@ async function syncInternalPlanAndSubscription(payload: any, isNew: boolean = fa
 
   if (!subscription) {
     const createSubData = {
-      planId: plan.id,
-      status: mapStatus(attributes.status_formatted),
-      userId,
-      lemonSqueezyId: sub.id.toString(),
-      email: attributes.user_email,
-      endsAt: attributes.ends_at,
-      name: attributes.variant_name,
-      orderId: Number(attributes.order_id) || 0,
-      price: `${priceUsd}`,
-      renewsAt: attributes.renews_at,
-      statusFormatted: attributes.status_formatted,
-      subscriptionItemId: attributes.first_subscription_item?.subscription_item_id
-        ? String(attributes.first_subscription_item.subscription_item_id)
-        : undefined,
-      trialEndsAt: attributes.trial_ends_at,
-      cycleEndAt: cycleEnd,
+        planId: plan.id,
+        status: mapStatus(attributes.status_formatted),
+        userId,
+        lemonSqueezyId: sub.id.toString(),
+        email: attributes.user_email,
+        endsAt: attributes.ends_at,
+        name: attributes.variant_name,
+        orderId: Number(attributes.order_id) || 0,
+        price: `${priceUsd}`,
+        renewsAt: attributes.renews_at,
+        statusFormatted: attributes.status_formatted,
+        subscriptionItemId: attributes.first_subscription_item?.subscription_item_id
+          ? String(attributes.first_subscription_item.subscription_item_id)
+          : undefined,
+        trialEndsAt: attributes.trial_ends_at,
+        cycleEndAt: cycleEnd,
     };
     console.log("[LS Webhook] syncInternalPlanAndSubscription: Creating internal subscription with data:", createSubData);
     subscription = await db.subscription.create({
@@ -428,12 +428,12 @@ async function syncInternalPlanAndSubscription(payload: any, isNew: boolean = fa
   } else {
     // Update existing subscription
     const updateSubData = {
-      status: mapStatus(attributes.status_formatted),
-      endsAt: attributes.ends_at,
-      renewsAt: attributes.renews_at,
-      cycleEndAt: cycleEnd,
-      isPaused: attributes.is_paused,
-      orderId: Number(attributes.order_id) || subscription.orderId,
+        status: mapStatus(attributes.status_formatted),
+        endsAt: attributes.ends_at,
+        renewsAt: attributes.renews_at,
+        cycleEndAt: cycleEnd,
+        isPaused: attributes.is_paused,
+        orderId: Number(attributes.order_id) || subscription.orderId,
     };
     console.log("[LS Webhook] syncInternalPlanAndSubscription: Updating existing internal subscription with data:", updateSubData);
     await db.subscription.update({
