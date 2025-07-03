@@ -36,33 +36,39 @@ export async function POST(request: NextRequest) {
       ? "https://sandbox.wompi.co/v1/payment_links"
       : "https://production.wompi.co/v1/payment_links";
 
-    const makeRequest = async (url: string) =>
-      fetch(url, {
+    const requestBody = {
+      name,
+      description,
+      amount_in_cents,
+      currency,
+      sku,
+      collect_shipping,
+      redirect_url,
+      single_use: true,
+      expires_at,
+      customer_data: {
+        customer_references: [
+          {
+            label: "Orden ID",
+            is_required: true,
+          },
+        ],
+      },
+    } as const;
+
+    const makeRequest = async (url: string) => {
+      console.log("[Wompi] → URL:", url);
+      console.log("[Wompi] → Authorization: Bearer", wompi_private_key.substring(0, 10) + "... (truncated)");
+      console.log("[Wompi] → Payload:", JSON.stringify(requestBody));
+      return fetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${wompi_private_key}`,
         },
-        body: JSON.stringify({
-          "name": name,
-          "description": description,
-          "amount_in_cents": amount_in_cents,
-          "currency": currency,
-          "sku": sku,
-          "collect_shipping": collect_shipping,
-          "redirect_url": redirect_url,
-          "single_use": true,
-          "expires_at": expires_at,
-          "customer_data": {
-              "customer_references": [
-                  {
-                      "label": "Orden ID",
-                      "is_required": true,
-                  },
-              ]
-          },
-        }),
+        body: JSON.stringify(requestBody),
       });
+    };
 
     let response = await makeRequest(wompiUrl);
 
@@ -76,6 +82,9 @@ export async function POST(request: NextRequest) {
     }
 
     const data = await response.json();
+
+    console.log("[Wompi] ← Response status:", response.status);
+    console.log("[Wompi] ← Body:", JSON.stringify(data));
 
     if (!response.ok) {
       return NextResponse.json(
