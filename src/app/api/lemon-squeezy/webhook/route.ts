@@ -317,11 +317,13 @@ async function syncInternalPlanAndSubscription(payload: any, isNew: boolean = fa
         email: attributes.user_email,
         endsAt: attributes.ends_at,
         name: attributes.variant_name,
-        orderId: attributes.order_id ?? 0,
+        orderId: Number(attributes.order_id) || 0,
         price: `${priceUsd}`,
         renewsAt: attributes.renews_at,
         statusFormatted: attributes.status_formatted,
-        subscriptionItemId: attributes.first_subscription_item?.subscription_item_id ?? undefined,
+        subscriptionItemId: attributes.first_subscription_item?.subscription_item_id
+          ? String(attributes.first_subscription_item.subscription_item_id)
+          : undefined,
         trialEndsAt: attributes.trial_ends_at,
         cycleEndAt: cycleEnd,
       },
@@ -344,6 +346,7 @@ async function syncInternalPlanAndSubscription(payload: any, isNew: boolean = fa
         renewsAt: attributes.renews_at,
         cycleEndAt: cycleEnd,
         isPaused: attributes.is_paused,
+        orderId: Number(attributes.order_id) || subscription.orderId,
       },
     });
 
