@@ -307,10 +307,18 @@ async function syncInternalPlanAndSubscription(payload: any, isNew: boolean = fa
   }
   console.log(`[LS Webhook] syncInternalPlanAndSubscription: Using variantId: ${variantId}`);
 
+  // Price is not reliably in the subscription_created payload.
+  // We fetch our internal LsPlan record, which `upsertSubscription` should have already created/updated with the correct price.
+  const lsPlan = await db.lsPlan.findUnique({ where: { variantId: variantId } });
+  if (!lsPlan) {
+    console.error(`[LS Webhook] syncInternalPlanAndSubscription: Could not find LsPlan for variantId ${variantId}. This should have been created by upsertSubscription. Aborting.`);
+    return;
+  }
+
   // Price is in cents according to LemonSqueezy docs
-  const priceCents: number | undefined = attributes.first_order_item?.price ?? attributes.variants?.[0]?.price ?? attributes.price;
-  const priceUsd = priceCents ? priceCents / 100 : 0;
-  console.log(`[LS Webhook] syncInternalPlanAndSubscription: Price in USD: ${priceUsd}`);
+  const priceCents: number = lsPlan.price; // Get price from our DB record
+  const priceUsd = priceCents / 100;
+  console.log(`[LS Webhook] syncInternalPlanAndSubscription: Price in USD from LsPlan: ${priceUsd}`);
 
   const productId = attributes.product_id ?? attributes.first_order_item?.product_id;
   console.log(`[LS Webhook] syncInternalPlanAndSubscription: Using productId: ${productId}`);
