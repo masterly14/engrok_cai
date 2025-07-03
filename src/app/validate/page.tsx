@@ -35,7 +35,7 @@ export default function ValidatePage() {
           return;
         }
 
-        const user = await onBoardUser();
+        const user = await onBoardUser(variantId);
         if (!user || !user.data) {
           throw new Error("Failed to onboard user.");
         }
