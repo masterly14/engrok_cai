@@ -135,9 +135,13 @@ export const getAgentWithContacts = async (agentId: string) => {
           updatedAt: 'desc'
         },
         include: {
+          messages: {
+            orderBy: {
+              timestamp: 'desc'
+            },
+          },
           sessions: {
             where: { status: { in: ["ACTIVE", "NEEDS_ATTENTION"] } },
-            select: { id: true, status: true }
           }
         }
       }
