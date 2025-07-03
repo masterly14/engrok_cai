@@ -36,41 +36,51 @@ export async function POST(request: NextRequest) {
       ? "https://sandbox.wompi.co/v1/payment_links"
       : "https://production.wompi.co/v1/payment_links";
 
-    const response = await fetch(wompiUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${wompi_private_key}`,
-      },
-      body: JSON.stringify({
-        "name": name,
-        "description": description,
-        "amount_in_cents": amount_in_cents,
-        "currency": currency,
-        "sku": sku,
-        "collect_shipping": collect_shipping,
-        "redirect_url": redirect_url,
-        "single_use": true,
-        "expires_at": expires_at,
-        "customer_data": {
-            "customer_references": [
-                {
-                    "label": "Orden ID",
-                    "is_required": true,
-                },
-            ]
+    const makeRequest = async (url: string) =>
+      fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${wompi_private_key}`,
         },
-      }),
-    });
+        body: JSON.stringify({
+          "name": name,
+          "description": description,
+          "amount_in_cents": amount_in_cents,
+          "currency": currency,
+          "sku": sku,
+          "collect_shipping": collect_shipping,
+          "redirect_url": redirect_url,
+          "single_use": true,
+          "expires_at": expires_at,
+          "customer_data": {
+              "customer_references": [
+                  {
+                      "label": "Orden ID",
+                      "is_required": true,
+                  },
+              ]
+          },
+        }),
+      });
+
+    let response = await makeRequest(wompiUrl);
+
+    // Si respuesta 401 y aún no hemos intentado con el otro entorno
+    if (response.status === 401) {
+      const fallbackUrl = wompiUrl.includes("sandbox")
+        ? "https://production.wompi.co/v1/payment_links"
+        : "https://sandbox.wompi.co/v1/payment_links";
+      console.warn("[Wompi] 401 con", wompiUrl, " → intentando fallback", fallbackUrl);
+      response = await makeRequest(fallbackUrl);
+    }
 
     const data = await response.json();
 
-    console.log(response);
     if (!response.ok) {
       return NextResponse.json(
         {
-          error:
-            data.message || "Error desconocido al crear el enlace de pago.",
+          error: data?.message || "Error desconocido al crear el enlace de pago.",
         },
         { status: response.status }
       );

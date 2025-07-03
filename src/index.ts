@@ -948,6 +948,19 @@ async function executeNode(node: any, session: any, agent: any) {
         console.warn(`[Integration] Proveedor ${provider} no soportado.`);
       }
 
+      // Si falló, enviar mensaje de error al contacto para informarle
+      if (!integrationSuccess) {
+        const errorMsg = node.data.errorBotResponse ||
+          "Lo sentimos, no pudimos generar el link de pago en este momento. Intenta más tarde.";
+        await sendWhatsappMessage(
+          session.contact.phone,
+          agent.whatsappAccessToken,
+          { botResponse: errorMsg },
+          agent,
+          session.contact
+        );
+      }
+
       const successHandle = node.data.statusSuccess || "success";
       const errorHandle = node.data.statusError || "error";
       const handle = integrationSuccess ? successHandle : errorHandle;
