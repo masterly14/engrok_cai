@@ -46,14 +46,6 @@ export async function POST(request: NextRequest) {
       redirect_url,
       single_use: true,
       expires_at,
-      customer_data: {
-        customer_references: [
-          {
-            label: "Orden ID",
-            is_required: true,
-          },
-        ],
-      },
     } as const;
 
     const makeRequest = async (url: string) => {
@@ -71,6 +63,8 @@ export async function POST(request: NextRequest) {
     };
 
     let response = await makeRequest(wompiUrl);
+    console.log("[Wompi] ← Response status:", response.status);
+    console.log("[Wompi] ← Body:", JSON.stringify(response));
 
     // Si respuesta 401 y aún no hemos intentado con el otro entorno
     if (response.status === 401) {
