@@ -76,26 +76,14 @@ export const getAllWorkflows = async () => {
         throw new Error("Not user");
     }
 
-    const workflows = await db.workflow.findMany({
+    return await db.workflow.findMany({
         where: {
-            userId: user.data.id
+            userId: user.data.id,
         },
         orderBy: {
-            'updatedAt': 'desc'
-        }
-    })
-    
-    if (!workflows) {
-        return {
-            status: 500,
-            message: "The workflows could not be obtained"
-        }
-    }
-
-    return {
-        status: 200,
-        workflows: workflows
-    }
+            updatedAt: "desc",
+        },
+    });
 }
 
 export const createWorkflow = async (data: any) => {
