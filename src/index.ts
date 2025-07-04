@@ -8,7 +8,7 @@ import {
 import axios from "axios";
 import { v4 as uuidv4 } from "uuid";
 import Pusher from "pusher";
-import { ChatOpenAI, OpenAIEmbeddings } from "@langchain/openai";
+import { ChatOpenAI } from "@langchain/openai";
 import {
   AIMessage,
   HumanMessage,
@@ -18,11 +18,9 @@ import { z } from "zod";
 import { tool, type Tool } from "@langchain/core/tools";
 import OpenAI from "openai";
 import fs from "fs/promises";
-import { createReadStream, read } from "fs";
+import { createReadStream } from "fs";
 import os from "os";
 import path from "path";
-import { RedisVectorStore } from "@langchain/redis";
-import { createClient } from "redis";
 // Intentamos cargar dinámicamente zod_to_tool; si no existe, usamos un stub.
 
 // --- CONFIGURACIÓN E INICIALIZACIÓN ---
@@ -1256,7 +1254,7 @@ async function executeNode(
     case "ai": {
       console.log(`[Executor] AI node processing for session ${session.id}`);
 
-      // 1. Historial de conversación (últimos 20 mensajes)
+      // 1. Historial de conversación (últimos 20 mensajes entre agente y contacto)
       const recentMessages = await db.message.findMany({
         where: {
           chatAgentId: agent.id,
@@ -1304,43 +1302,10 @@ async function executeNode(
         ) as unknown as Tool;
       });
 
-      // 3. Configurar modelo y contexto
+      // 3. Configurar modelo OpenAI (gpt-4o-mini) con tool-calling mejorado
       let nextNodeId: string | null = null;
       let aiTextResponse: string | null = null;
       try {
-        // --- RAG logic ---
-        let ragContext = "";
-        if (node.data.useKnowledgeBase && node.data.knowledgeBaseId && userInput) {
-          console.log(`[Executor] AI node using Knowledge Base ${node.data.knowledgeBaseId}`);
-          const redisClientForKB = createClient({ url: process.env.REDIS_URL || "" });
-          try {
-            await redisClientForKB.connect();
-            const vectorStore = new RedisVectorStore(new OpenAIEmbeddings(), {
-              redisClient: redisClientForKB,
-              indexName: `kb_${node.data.knowledgeBaseId}`,
-            });
-
-            const retriever = vectorStore.asRetriever(4);
-            const relevantDocs = await retriever.getRelevantDocuments(userInput);
-
-            if (relevantDocs.length > 0) {
-              ragContext =
-                "Contexto de la base de conocimiento:\n" +
-                relevantDocs.map((doc: any) => doc.pageContent).join("\n\n---\n\n");
-              console.log(`[Executor] Found ${relevantDocs.length} relevant documents from KB.`);
-            } else {
-              console.log(`[Executor] No relevant documents found in KB for input.`);
-            }
-          } catch (kbError: any) {
-            console.error(`[Executor] Error retrieving from Knowledge Base:`, kbError.message);
-          } finally {
-            if (redisClientForKB.isOpen) {
-              await redisClientForKB.disconnect();
-            }
-          }
-        }
-        // --- End of RAG logic ---
-
         const model = new ChatOpenAI({
           openAIApiKey: process.env.OPENAI_API_KEY || "",
           modelName: "gpt-4o-mini", // 4.1 nano equivalente
@@ -1356,27 +1321,12 @@ async function executeNode(
           .map((t) => `- ${t.name}: ${t.description}`)
           .join("\n");
 
-        const contextBlock = ragContext
-          ? `\n\nUsa el siguiente contexto para responder la pregunta del usuario. Si la respuesta no está en el contexto, indica que no encontraste la información.\nCONTEXTO:\n---\n${ragContext}\n---\n`
-          : "";
-
-        const systemPrompt = `${persona}${contextBlock}\n\nHerramientas disponibles:\n${toolList}\n\nReglas:\n1. Si la intención del usuario coincide claramente con una herramienta, SOLO llama a esa herramienta.\n2. Si no coincide ninguna, responde en máximo 40 palabras.\n3. No inventes herramientas.\n4. Si dudas, pide aclaración corta.\n`;
-
-        // Evitar pasar IDs de botones (UUID o PAYLOAD) como mensaje al modelo
-        let extraUserMsg: any[] = [];
-        if (
-          userInput &&
-          typeof userInput === "string" &&
-          !/^\w{8}-\w{4}-\w{4}-\w{4}-\w{12}$/.test(userInput) && // no UUID
-          !/^PAYLOAD/i.test(userInput) // no marcador genérico
-        ) {
-          extraUserMsg = [new HumanMessage(userInput)];
-        }
+        const systemPrompt = `${persona}\n\nHerramientas disponibles:\n${toolList}\n\nReglas:\n1. Si la intención del usuario coincide claramente con una herramienta, SOLO llama a esa herramienta.\n2. Si no coincide ninguna, responde en máximo 40 palabras.\n3. No inventes herramientas.\n4. Si dudas, pide aclaración corta.\n`;
 
         const messagesForModel = [
           new SystemMessage(systemPrompt),
           ...chatHistory,
-          ...extraUserMsg,
+          ...(userInput ? [new HumanMessage(userInput)] : []),
         ];
 
         const aiResponse = await model.invoke(messagesForModel);
