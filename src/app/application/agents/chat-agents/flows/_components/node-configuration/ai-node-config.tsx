@@ -49,6 +49,13 @@ export function AiNodeConfig({ selectedNode, updateNode }: AiNodeConfigProps) {
           onBlur={() => handleUpdateNodeData({ name })}
           className="mt-1"
         />
+        <Label htmlFor="ai-node-prompt">Prompt</Label>
+        <Textarea
+          id="ai-node-prompt"
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          onBlur={() => handleUpdateNodeData({ prompt })}
+        />
       </div>
     </div>
   )
