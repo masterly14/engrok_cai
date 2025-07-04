@@ -8,21 +8,28 @@ import {
 import axios from "axios";
 import { v4 as uuidv4 } from "uuid";
 import Pusher from "pusher";
-import { ChatAnthropic } from "@langchain/anthropic";
-import { AIMessage, HumanMessage, SystemMessage } from "@langchain/core/messages";
+import { ChatOpenAI, OpenAIEmbeddings } from "@langchain/openai";
+import {
+  AIMessage,
+  HumanMessage,
+  SystemMessage,
+} from "@langchain/core/messages";
 import { z } from "zod";
-
+import { tool, type Tool } from "@langchain/core/tools";
+import OpenAI from "openai";
+import fs from "fs/promises";
+import { createReadStream, read } from "fs";
+import os from "os";
+import path from "path";
+import { RedisVectorStore } from "@langchain/redis";
+import { createClient } from "redis";
 // Intentamos cargar dinámicamente zod_to_tool; si no existe, usamos un stub.
-let zod_to_tool: (schema: any, meta: any) => any;
-try {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  zod_to_tool = require("@langchain/core/utils/function_calling").zod_to_tool;
-} catch {
-  // Fallback que solo devuelve el meta sin validación
-  zod_to_tool = (schema: any, meta: any) => ({ schema, ...meta });
-}
 
 // --- CONFIGURACIÓN E INICIALIZACIÓN ---
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY || "",
+});
 
 const db = new PrismaClient();
 const pusher = new Pusher({
@@ -222,6 +229,11 @@ async function sendWhatsappMessage(
       if (payload.type === "text") textBody = payload.text.body;
       else if (
         payload.type === "interactive" &&
+        payload.interactive?.type === "button"
+      ) {
+        textBody = payload.interactive?.body?.text;
+      } else if (
+        payload.type === "interactive" &&
         payload.interactive?.type === "button_reply"
       ) {
         textBody = payload.interactive.button_reply?.title;
@@ -258,6 +270,45 @@ async function sendWhatsappMessage(
   }
 }
 
+// ---------------------------------------------------------------------------
+// FUNCIÓN HELPER: TRANSCRIBIR AUDIO CON WHISPER
+// ---------------------------------------------------------------------------
+async function transcribeWhatsappAudio(
+  mediaId: string,
+  metaToken: string
+): Promise<string | null> {
+  const tempPath = path.join(os.tmpdir(), `${mediaId}.ogg`);
+  try {
+    // 1. Obtener la URL del media desde Meta
+    const mediaUrlResp = await axios.get(
+      `https://graph.facebook.com/v19.0/${mediaId}`,
+      { headers: { Authorization: `Bearer ${metaToken}` } }
+    );
+    const mediaUrl = mediaUrlResp.data.url;
+    if (!mediaUrl) return null;
+
+    // 2. Descargar el archivo de audio
+    const audioResp = await axios.get(mediaUrl, {
+      responseType: "arraybuffer",
+      headers: { Authorization: `Bearer ${metaToken}` },
+    });
+    await fs.writeFile(tempPath, Buffer.from(audioResp.data));
+
+    // 3. Enviar a Whisper
+    const transcript = await openai.audio.transcriptions.create({
+      file: createReadStream(tempPath),
+      model: "whisper-1",
+    });
+    return transcript.text;
+  } catch (err: any) {
+    console.error("[Whisper] Error: ", err.message || err);
+    return null;
+  } finally {
+    try {
+      await fs.unlink(tempPath);
+    } catch {}
+  }
+}
 // --- CEREBRO DEL WORKER: FASE DE DECISIÓN ---
 
 // ---------------------------------------------------------------------------
@@ -288,25 +339,7 @@ async function handleIncomingMessage(whatsappPayload: any) {
   const userPhone = whatsappMessage.from;
   const businessPhoneId = whatsappPayload.metadata.phone_number_id; // <-- CORRECCIÓN #1
 
-  let userInput;
-  if (whatsappMessage.type === "text") {
-    userInput = whatsappMessage.text.body;
-  } else if (
-    whatsappMessage.type === "interactive" &&
-    whatsappMessage.interactive.type === "button_reply"
-  ) {
-    userInput = whatsappMessage.interactive.button_reply.id;
-  } else if (whatsappMessage.type === "button") {
-    // Los mensajes de plantilla con quick-reply llegan como type="button"
-    // El identificador relevante para continuar el flujo es el payload
-    userInput = whatsappMessage.button?.payload || whatsappMessage.button?.text;
-  }
-
-  if (!userInput) {
-    console.log("[Handler] Ignoring non-text/button message.");
-    return;
-  }
-
+  // Obtener agente (necesario para audios)
   const agent = await db.chatAgent.findUnique({
     where: { whatsappPhoneNumberId: businessPhoneId },
   });
@@ -315,6 +348,111 @@ async function handleIncomingMessage(whatsappPayload: any) {
     console.error(
       `[Handler] CRITICAL: No agent found for business phone ID ${businessPhoneId}`
     );
+    return;
+  }
+
+  let userInput: string | undefined;
+  let audioTranscription: string | undefined;
+
+  if (whatsappMessage.type === "audio") {
+    console.log(`[Handler] Recibido audio de ${userPhone}. Evaluando…`);
+
+    // Garantizar contacto
+    let existingContact = await db.chatContact.findUnique({
+      where: { phone: userPhone },
+    });
+    if (!existingContact) {
+      existingContact = await db.chatContact.create({
+        data: {
+          id: uuidv4(),
+          phone: userPhone,
+          name: whatsappPayload.contacts[0]?.profile?.name || "Desconocido",
+          chatAgentId: agent.id,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      });
+    }
+
+    // Verificar si el nodo actual espera botón
+    let mustSelectButton = false;
+    try {
+      const activeSession = await db.chatSession.findFirst({
+        where: {
+          contactId: existingContact.id,
+          status: { in: ["ACTIVE", "NEEDS_ATTENTION"] },
+        },
+        orderBy: { updatedAt: "desc" },
+        include: { workflow: true },
+      });
+
+      if (activeSession && activeSession.workflow?.workflow) {
+        const wfData =
+          typeof activeSession.workflow.workflow === "string"
+            ? JSON.parse(activeSession.workflow.workflow)
+            : activeSession.workflow.workflow;
+        const currentNode = wfData.nodes.find(
+          (n: any) => n.id === activeSession.currentNodeId
+        );
+        if (
+          currentNode?.type === "conversation" &&
+          Array.isArray(currentNode.data?.interactiveButtons) &&
+          currentNode.data.interactiveButtons.length > 0
+        ) {
+          mustSelectButton = true;
+        }
+      }
+    } catch (err) {
+      console.error("[Handler] Error evaluando contexto de botones", err);
+    }
+
+    if (mustSelectButton) {
+      await sendWhatsappMessage(
+        userPhone,
+        agent.whatsappAccessToken,
+        { botResponse: "Por favor selecciona una opción para continuar." },
+        agent,
+        existingContact
+      );
+      return;
+    }
+
+    // Transcribir audio
+    const transcript = await transcribeWhatsappAudio(
+      whatsappMessage.audio.id,
+      agent.whatsappAccessToken
+    );
+
+    if (!transcript || !transcript.trim()) {
+      await sendWhatsappMessage(
+        userPhone,
+        agent.whatsappAccessToken,
+        {
+          botResponse:
+            "No pude entender el audio. ¿Puedes intentar de nuevo o escribir tu mensaje?",
+        },
+        agent,
+        existingContact
+      );
+      return;
+    }
+
+    userInput = transcript.trim();
+    audioTranscription = userInput;
+  } else if (whatsappMessage.type === "text") {
+    userInput = whatsappMessage.text.body;
+  } else if (
+    whatsappMessage.type === "interactive" &&
+    whatsappMessage.interactive.type === "button_reply"
+  ) {
+    userInput = whatsappMessage.interactive.button_reply.id;
+  } else if (whatsappMessage.type === "button") {
+    userInput =
+      whatsappMessage.button?.payload || whatsappMessage.button?.text;
+  }
+
+  if (!userInput) {
+    console.log("[Handler] Ignoring non-text/button message.");
     return;
   }
 
@@ -354,6 +492,8 @@ async function handleIncomingMessage(whatsappPayload: any) {
       textBody = whatsappMessage.interactive.button_reply?.title;
     } else if (whatsappMessage.type === "button") {
       textBody = whatsappMessage.button?.text;
+    } else if (whatsappMessage.type === "audio") {
+      textBody = audioTranscription;
     }
 
     await db.message.create({
@@ -565,32 +705,38 @@ async function handleIncomingMessage(whatsappPayload: any) {
       session.variables = updatedVariables;
     }
 
-    const nextNodeId = findNextNodeId(lastNode, userInput, workflowData.edges);
-    if (!nextNodeId) {
-      console.log(
-        `[Handler] End of workflow reached or no edge found for input "${userInput}". Resetting to initial node.`
-      );
-      const initialNode = findInitialNode(
-        workflowData.nodes,
-        workflowData.edges
-      );
-      if (!initialNode) {
-        console.error(`[Handler] CRITICAL: Workflow has no initial node.`);
-        return;
-      }
-      nodeToExecute = initialNode;
-      await db.chatSession.update({
-        where: { id: session.id },
-        data: { currentNodeId: initialNode.id },
-      });
-      session.currentNodeId = initialNode.id;
+    // --- NUEVO: Si el nodo actual es de tipo AI, volvemos a ejecutarlo y dejamos
+    // que la lógica interna (executeNode) decida si debe transicionar o no.
+    if (lastNode?.type === "ai") {
+      nodeToExecute = lastNode;
     } else {
-      nodeToExecute = workflowData.nodes.find((n: any) => n.id === nextNodeId);
-      await db.chatSession.update({
-        where: { id: session.id },
-        data: { currentNodeId: nodeToExecute.id },
-      });
-      session.currentNodeId = nodeToExecute.id;
+      const nextNodeId = findNextNodeId(lastNode, userInput, workflowData.edges);
+      if (!nextNodeId) {
+        console.log(
+          `[Handler] End of workflow reached or no edge found for input "${userInput}". Resetting to initial node.`
+        );
+        const initialNode = findInitialNode(
+          workflowData.nodes,
+          workflowData.edges
+        );
+        if (!initialNode) {
+          console.error(`[Handler] CRITICAL: Workflow has no initial node.`);
+          return;
+        }
+        nodeToExecute = initialNode;
+        await db.chatSession.update({
+          where: { id: session.id },
+          data: { currentNodeId: initialNode.id },
+        });
+        session.currentNodeId = initialNode.id;
+      } else {
+        nodeToExecute = workflowData.nodes.find((n: any) => n.id === nextNodeId);
+        await db.chatSession.update({
+          where: { id: session.id },
+          data: { currentNodeId: nodeToExecute.id },
+        });
+        session.currentNodeId = nodeToExecute.id;
+      }
     }
   }
 
@@ -602,7 +748,12 @@ async function handleIncomingMessage(whatsappPayload: any) {
 
 // --- EJECUTOR DE ACCIONES: FASE DE EJECUCIÓN ---
 
-async function executeNode(node: any, session: any, agent: any, userInput?: string) {
+async function executeNode(
+  node: any,
+  session: any,
+  agent: any,
+  userInput?: string
+) {
   console.log(session);
   const workflowJson = session.workflow.workflow;
   const workflowData =
@@ -1105,21 +1256,26 @@ async function executeNode(node: any, session: any, agent: any, userInput?: stri
     case "ai": {
       console.log(`[Executor] AI node processing for session ${session.id}`);
 
-      // 1. Historial de conversación (últimos 20 mensajes entre agente y contacto)
-      const historyMessages = await db.message.findMany({
+      // 1. Historial de conversación (últimos 20 mensajes)
+      const recentMessages = await db.message.findMany({
         where: {
           chatAgentId: agent.id,
           chatContactId: session.contactId,
         },
-        orderBy: { timestamp: "asc" },
+        orderBy: { timestamp: "desc" }, // traer los más recientes primero
         take: 20,
       });
 
-      const chatHistory = historyMessages.map((m: any) =>
-        m.from === session.contact.phone
-          ? new HumanMessage(m.textBody || "")
-          : new AIMessage(m.textBody || "")
-      );
+      // Los revertimos para que el modelo reciba el historial en orden cronológico
+      const historyMessages = recentMessages.reverse();
+
+      const chatHistory = historyMessages
+        .filter((m: any) => m.textBody && String(m.textBody).trim() !== "")
+        .map((m: any) =>
+          m.from === session.contact.phone
+            ? new HumanMessage(String(m.textBody))
+            : new AIMessage(String(m.textBody))
+        );
 
       // 2. Construir herramientas dinámicas a partir de los edges "condition"
       const conditionalEdges = workflowData.edges.filter(
@@ -1129,42 +1285,107 @@ async function executeNode(node: any, session: any, agent: any, userInput?: stri
           e.data?.condition
       );
 
-      const tools = conditionalEdges.map((edge: any) => {
+      const tools: Tool[] = conditionalEdges.map((edge: any) => {
         const conditionText = edge.data.condition as string;
         const functionName = conditionText
           .replace(/\s+/g, "_")
           .replace(/[^a-zA-Z0-9_]/g, "")
           .toLowerCase();
-        return zod_to_tool(z.object({}), {
-          name: functionName,
-          description: conditionText,
-        });
+        // @ts-ignore – avoid "Type instantiation is excessively deep" error due to complex generics
+        return tool(
+          async (input: {}) => {
+            return `The user's intent matches '${conditionText}'.`;
+          },
+          {
+            name: functionName,
+            description: conditionText,
+            schema: z.object({}),
+          }
+        ) as unknown as Tool;
       });
 
-      // 3. Configurar modelo Anthropic (ignorar error si dependencia falta)
+      // 3. Configurar modelo y contexto
       let nextNodeId: string | null = null;
       let aiTextResponse: string | null = null;
       try {
-        const model = new ChatAnthropic({
-          apiKey: process.env.ANTHROPIC_API_KEY || "",
-          model: "claude-3-sonnet-20240229",
+        // --- RAG logic ---
+        let ragContext = "";
+        if (node.data.useKnowledgeBase && node.data.knowledgeBaseId && userInput) {
+          console.log(`[Executor] AI node using Knowledge Base ${node.data.knowledgeBaseId}`);
+          const redisClientForKB = createClient({ url: process.env.REDIS_URL || "" });
+          try {
+            await redisClientForKB.connect();
+            const vectorStore = new RedisVectorStore(new OpenAIEmbeddings(), {
+              redisClient: redisClientForKB,
+              indexName: `kb_${node.data.knowledgeBaseId}`,
+            });
+
+            const retriever = vectorStore.asRetriever(4);
+            const relevantDocs = await retriever.getRelevantDocuments(userInput);
+
+            if (relevantDocs.length > 0) {
+              ragContext =
+                "Contexto de la base de conocimiento:\n" +
+                relevantDocs.map((doc: any) => doc.pageContent).join("\n\n---\n\n");
+              console.log(`[Executor] Found ${relevantDocs.length} relevant documents from KB.`);
+            } else {
+              console.log(`[Executor] No relevant documents found in KB for input.`);
+            }
+          } catch (kbError: any) {
+            console.error(`[Executor] Error retrieving from Knowledge Base:`, kbError.message);
+          } finally {
+            if (redisClientForKB.isOpen) {
+              await redisClientForKB.disconnect();
+            }
+          }
+        }
+        // --- End of RAG logic ---
+
+        const model = new ChatOpenAI({
+          openAIApiKey: process.env.OPENAI_API_KEY || "",
+          modelName: "gpt-4o-mini", // 4.1 nano equivalente
           temperature: 0.3,
+          maxTokens: 180,
         }).bind({ tools });
 
-        const systemPrompt = `You are an advanced AI assistant.\nMain goal: "${
-          node.data.prompt || ""
-        }".\nIf the user's intent matches any condition you have a corresponding tool for, call that tool. Otherwise just answer.`;
+        const persona =
+          node.data.prompt ||
+          "Eres una asistente virtual llamada Sofia, amable, precisa y en español.";
+
+        const toolList = tools
+          .map((t) => `- ${t.name}: ${t.description}`)
+          .join("\n");
+
+        const contextBlock = ragContext
+          ? `\n\nUsa el siguiente contexto para responder la pregunta del usuario. Si la respuesta no está en el contexto, indica que no encontraste la información.\nCONTEXTO:\n---\n${ragContext}\n---\n`
+          : "";
+
+        const systemPrompt = `${persona}${contextBlock}\n\nHerramientas disponibles:\n${toolList}\n\nReglas:\n1. Si la intención del usuario coincide claramente con una herramienta, SOLO llama a esa herramienta.\n2. Si no coincide ninguna, responde en máximo 40 palabras.\n3. No inventes herramientas.\n4. Si dudas, pide aclaración corta.\n`;
+
+        // Evitar pasar IDs de botones (UUID o PAYLOAD) como mensaje al modelo
+        let extraUserMsg: any[] = [];
+        if (
+          userInput &&
+          typeof userInput === "string" &&
+          !/^\w{8}-\w{4}-\w{4}-\w{4}-\w{12}$/.test(userInput) && // no UUID
+          !/^PAYLOAD/i.test(userInput) // no marcador genérico
+        ) {
+          extraUserMsg = [new HumanMessage(userInput)];
+        }
 
         const messagesForModel = [
           new SystemMessage(systemPrompt),
           ...chatHistory,
-          ...(userInput ? [new HumanMessage(userInput)] : []),
+          ...extraUserMsg,
         ];
 
         const aiResponse = await model.invoke(messagesForModel);
 
         // Texto que enviaremos siempre que exista
-        if (typeof aiResponse.content === "string" && aiResponse.content.trim()) {
+        if (
+          typeof aiResponse.content === "string" &&
+          aiResponse.content.trim()
+        ) {
           aiTextResponse = aiResponse.content;
         }
 
@@ -1190,7 +1411,7 @@ async function executeNode(node: any, session: any, agent: any, userInput?: stri
           agent.whatsappAccessToken,
           { botResponse: aiTextResponse },
           agent,
-          session.contact,
+          session.contact
         );
       }
 
@@ -1204,12 +1425,18 @@ async function executeNode(node: any, session: any, agent: any, userInput?: stri
 
       // 6. Avanzar de nodo o permanecer esperando
       if (nextNodeId) {
-        const nextNode = workflowData.nodes.find((n: any) => n.id === nextNodeId);
+        const nextNode = workflowData.nodes.find(
+          (n: any) => n.id === nextNodeId
+        );
         await db.chatSession.update({
           where: { id: session.id },
           data: { currentNodeId: nextNodeId },
         });
-        await executeNode(nextNode, { ...session, currentNodeId: nextNodeId }, agent);
+        await executeNode(
+          nextNode,
+          { ...session, currentNodeId: nextNodeId },
+          agent
+        );
       } else {
         console.log("[Executor] AI node keeps waiting for more user input.");
       }
@@ -1232,6 +1459,7 @@ function findNextNodeId(currentNode: any, userInput: any, edges: any) {
   console.log(currentNode);
   console.log(userInput);
   if (!currentNode) return null;
+
   if (currentNode.type === "conversation" && userInput) {
     const allButtons =
       currentNode.data.interactiveButtons || currentNode.data.buttons || [];
@@ -1243,7 +1471,10 @@ function findNextNodeId(currentNode: any, userInput: any, edges: any) {
       return edge?.target;
     }
   }
-  const defaultEdge = edges.find((e: any) => e.source === currentNode.id);
+  // Fallback to the default edge (one without a sourceHandle)
+  const defaultEdge = edges.find(
+    (e: any) => e.source === currentNode.id && !e.sourceHandle
+  );
   return defaultEdge?.target;
 }
 
