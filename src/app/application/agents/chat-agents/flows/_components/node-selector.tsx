@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { MessageSquare, Database, Globe, PowerOff, Save, GitBranch, Search, X, Sparkles, Zap, User } from "lucide-react"
+import { MessageSquare, Database, Globe, PowerOff, Save, GitBranch, Search, X, Sparkles, Zap, User, BrainCircuit } from "lucide-react"
 import { useState, useMemo } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Card } from "@/components/ui/card"
@@ -76,6 +76,15 @@ const nodeOptions: NodeOption[] = [
     description: "Capturar respuesta del usuario",
     category: "logic",
     tags: ["save", "store", "variable"],
+  },
+  {
+    type: "ai",
+    label: "Inteligencia Artificial",
+    icon: <BrainCircuit className="w-4 h-4" />,
+    description: "Inteligencia Artificial",
+    category: "ai",
+    tags: ["ai", "chat", "agent"],
+    isNew: true,
   },
   {
     type: "turnOffAgent",

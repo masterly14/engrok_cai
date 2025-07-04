@@ -8,6 +8,19 @@ import {
 import axios from "axios";
 import { v4 as uuidv4 } from "uuid";
 import Pusher from "pusher";
+import { ChatAnthropic } from "@langchain/anthropic";
+import { AIMessage, HumanMessage, SystemMessage } from "@langchain/core/messages";
+import { z } from "zod";
+
+// Intentamos cargar dinámicamente zod_to_tool; si no existe, usamos un stub.
+let zod_to_tool: (schema: any, meta: any) => any;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  zod_to_tool = require("@langchain/core/utils/function_calling").zod_to_tool;
+} catch {
+  // Fallback que solo devuelve el meta sin validación
+  zod_to_tool = (schema: any, meta: any) => ({ schema, ...meta });
+}
 
 // --- CONFIGURACIÓN E INICIALIZACIÓN ---
 
@@ -584,12 +597,12 @@ async function handleIncomingMessage(whatsappPayload: any) {
   console.log(
     `[Handler] Executing node ${nodeToExecute.id} (${nodeToExecute.type})`
   );
-  await executeNode(nodeToExecute, session, agent);
+  await executeNode(nodeToExecute, session, agent, userInput);
 }
 
 // --- EJECUTOR DE ACCIONES: FASE DE EJECUCIÓN ---
 
-async function executeNode(node: any, session: any, agent: any) {
+async function executeNode(node: any, session: any, agent: any, userInput?: string) {
   console.log(session);
   const workflowJson = session.workflow.workflow;
   const workflowData =
@@ -1084,6 +1097,123 @@ async function executeNode(node: any, session: any, agent: any) {
           `[Integration] No edge found after integration node for outcome ${handle}`
         );
       }
+      break;
+    }
+    /* ------------------------------------------------------------------ */
+    /* NUEVO TIPO DE NODO: IA (chat LLM)                                  */
+    /* ------------------------------------------------------------------ */
+    case "ai": {
+      console.log(`[Executor] AI node processing for session ${session.id}`);
+
+      // 1. Historial de conversación (últimos 20 mensajes entre agente y contacto)
+      const historyMessages = await db.message.findMany({
+        where: {
+          chatAgentId: agent.id,
+          chatContactId: session.contactId,
+        },
+        orderBy: { timestamp: "asc" },
+        take: 20,
+      });
+
+      const chatHistory = historyMessages.map((m: any) =>
+        m.from === session.contact.phone
+          ? new HumanMessage(m.textBody || "")
+          : new AIMessage(m.textBody || "")
+      );
+
+      // 2. Construir herramientas dinámicas a partir de los edges "condition"
+      const conditionalEdges = workflowData.edges.filter(
+        (e: any) =>
+          e.source === node.id &&
+          e.sourceHandle === "condition" &&
+          e.data?.condition
+      );
+
+      const tools = conditionalEdges.map((edge: any) => {
+        const conditionText = edge.data.condition as string;
+        const functionName = conditionText
+          .replace(/\s+/g, "_")
+          .replace(/[^a-zA-Z0-9_]/g, "")
+          .toLowerCase();
+        return zod_to_tool(z.object({}), {
+          name: functionName,
+          description: conditionText,
+        });
+      });
+
+      // 3. Configurar modelo Anthropic (ignorar error si dependencia falta)
+      let nextNodeId: string | null = null;
+      let aiTextResponse: string | null = null;
+      try {
+        const model = new ChatAnthropic({
+          apiKey: process.env.ANTHROPIC_API_KEY || "",
+          model: "claude-3-sonnet-20240229",
+          temperature: 0.3,
+        }).bind({ tools });
+
+        const systemPrompt = `You are an advanced AI assistant.\nMain goal: "${
+          node.data.prompt || ""
+        }".\nIf the user's intent matches any condition you have a corresponding tool for, call that tool. Otherwise just answer.`;
+
+        const messagesForModel = [
+          new SystemMessage(systemPrompt),
+          ...chatHistory,
+          ...(userInput ? [new HumanMessage(userInput)] : []),
+        ];
+
+        const aiResponse = await model.invoke(messagesForModel);
+
+        // Texto que enviaremos siempre que exista
+        if (typeof aiResponse.content === "string" && aiResponse.content.trim()) {
+          aiTextResponse = aiResponse.content;
+        }
+
+        if (aiResponse.tool_calls && aiResponse.tool_calls.length) {
+          const calledTool = aiResponse.tool_calls[0].name;
+          const match = conditionalEdges.find((edge: any) => {
+            const fn = (edge.data.condition as string)
+              .replace(/\s+/g, "_")
+              .replace(/[^a-zA-Z0-9_]/g, "")
+              .toLowerCase();
+            return fn === calledTool;
+          });
+          if (match) nextNodeId = match.target;
+        }
+      } catch (err) {
+        console.error("[Executor] AI node error (ignored):", err);
+      }
+
+      // 4. Enviar la respuesta del modelo al usuario (si hay texto)
+      if (aiTextResponse) {
+        await sendWhatsappMessage(
+          session.contact.phone,
+          agent.whatsappAccessToken,
+          { botResponse: aiTextResponse },
+          agent,
+          session.contact,
+        );
+      }
+
+      // 5. Manejar fallback si no se eligió ninguna condición
+      if (!nextNodeId) {
+        const fb = workflowData.edges.find(
+          (e: any) => e.source === node.id && e.sourceHandle === "fallback"
+        );
+        if (fb) nextNodeId = fb.target;
+      }
+
+      // 6. Avanzar de nodo o permanecer esperando
+      if (nextNodeId) {
+        const nextNode = workflowData.nodes.find((n: any) => n.id === nextNodeId);
+        await db.chatSession.update({
+          where: { id: session.id },
+          data: { currentNodeId: nextNodeId },
+        });
+        await executeNode(nextNode, { ...session, currentNodeId: nextNodeId }, agent);
+      } else {
+        console.log("[Executor] AI node keeps waiting for more user input.");
+      }
+
       break;
     }
     default:

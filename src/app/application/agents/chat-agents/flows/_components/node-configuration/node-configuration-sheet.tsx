@@ -16,6 +16,10 @@ import React from "react"
 import { toast } from "sonner"
 import { HandoverToHumanNodeConfig } from "./handover-to-human-node-config"
 import IntegrationNodeConfig from "./integration-node-config"
+import { AiNodeConfig } from "./ai-node-config"; // Importar el nuevo componente
+
+// Define generic node type
+type GenericNode = Node<any>;
 
 interface NodeConfigurationSheetProps {
   selectedNode: Node | null
@@ -63,6 +67,7 @@ export function NodeConfigurationSheet({ selectedNode, isOpen, onClose, updateNo
     trigger: "Trigger",
     handoverToHuman: "Transferencia a Agente",
     integration: "Integration",
+    ai: "IA",
   }
 
   const nodeFriendlyName = nodeTypeToNameMap[selectedNode.type || ""] || selectedNode.type || "Node"
@@ -115,6 +120,13 @@ export function NodeConfigurationSheet({ selectedNode, isOpen, onClose, updateNo
         )
       case "integration":
         return <IntegrationNodeConfig workflowId={workflowId} selectedNode={selectedNode} updateNode={wrappedUpdateNode} />
+      case "ai":
+        return (
+          <AiNodeConfig
+            selectedNode={selectedNode}
+            updateNode={wrappedUpdateNode}
+          />
+        )
       default:
         return (
           <div className="p-6 text-center text-gray-500">
