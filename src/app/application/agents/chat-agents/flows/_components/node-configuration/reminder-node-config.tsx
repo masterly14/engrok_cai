@@ -26,7 +26,7 @@ export function ReminderNodeConfig({ selectedNode, updateNode }: ReminderNodeCon
         delayUnit: unit,
       },
     })
-  }, [delay, unit, selectedNode.id, selectedNode.data, updateNode])
+  }, [delay, unit, selectedNode.id, updateNode])
 
   const handleDelayChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseInt(e.target.value, 10)

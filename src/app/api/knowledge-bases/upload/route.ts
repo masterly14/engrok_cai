@@ -16,9 +16,19 @@ if (process.env.REDIS_URL && process.env.REDIS_TOKEN) {
       url: process.env.REDIS_URL,
       token: process.env.REDIS_TOKEN,
     });
-    console.log("[KB Upload API] Redis connected successfully");
+    
+    // Test de conectividad inmediato
+    await redis.set("connection_test", "ok");
+    const testResult = await redis.get("connection_test");
+    if (testResult === "ok") {
+      console.log("[KB Upload API] Redis connected and tested successfully");
+    } else {
+      throw new Error("Redis connection test failed");
+    }
   } catch (err) {
     console.warn("[KB Upload API] Failed to connect to Redis:", err);
+    console.warn("[KB Upload API] Redis URL format check:", process.env.REDIS_URL?.includes("upstash.io"));
+    redis = null; // Asegurar que redis sea null si falla
   }
 } else {
   console.warn("[KB Upload API] Redis credentials not found, running without Redis");
@@ -101,8 +111,16 @@ export async function POST(request: NextRequest) {
       try {
         const result = await redis.xadd(STREAM_KEY, "*", { payload: JSON.stringify(payload) });
         console.log("[KB Upload API] Successfully enqueued to Redis:", result);
-      } catch (err) {
+      } catch (err: any) {
         console.error("[KB Upload API] Failed to push to Redis stream", err);
+        console.error("[KB Upload API] Error details:", {
+          message: err?.message || "Unknown error",
+          code: err?.code || "Unknown code",
+          cause: err?.cause?.message || "No cause"
+        });
+        
+        // Continuar sin Redis - no fallar la operación completa
+        console.log("[KB Upload API] Continuing without Redis enqueue");
       }
     } else {
       console.log("[KB Upload API] Redis not available, skipping enqueue");
@@ -123,18 +141,45 @@ export async function POST(request: NextRequest) {
 export async function GET() {
   try {
     console.log("[KB Upload API] Testing Redis connection...");
+    
+    // Verificar variables de entorno
+    const envCheck = {
+      REDIS_URL: process.env.REDIS_URL ? "Set" : "Not set",
+      REDIS_TOKEN: process.env.REDIS_TOKEN ? "Set" : "Not set",
+      REDIS_URL_FORMAT: process.env.REDIS_URL?.includes("upstash.io") ? "Valid" : "Invalid"
+    };
+    
     if (redis) {
-      // Usar un comando compatible con Upstash Redis REST API
-      await redis.set("test", "ping");
-      const result = await redis.get("test");
-      console.log("[KB Upload API] Redis connection successful:", result);
-      return NextResponse.json({ status: "Redis connected", test: result });
+      try {
+        // Usar un comando compatible con Upstash Redis REST API
+        await redis.set("test", "ping");
+        const result = await redis.get("test");
+        console.log("[KB Upload API] Redis connection successful:", result);
+        return NextResponse.json({ 
+          status: "Redis connected", 
+          test: result,
+          env: envCheck
+        });
+      } catch (redisErr: any) {
+        console.error("[KB Upload API] Redis test failed:", redisErr);
+        return NextResponse.json({ 
+          status: "Redis configured but connection failed",
+          error: redisErr?.message || "Unknown error",
+          env: envCheck
+        }, { status: 500 });
+      }
     } else {
       console.log("[KB Upload API] Redis not configured");
-      return NextResponse.json({ status: "Redis not configured" });
+      return NextResponse.json({ 
+        status: "Redis not configured",
+        env: envCheck
+      });
     }
-  } catch (err) {
+  } catch (err: any) {
     console.error("[KB Upload API] Redis connection failed:", err);
-    return NextResponse.json({ error: "Redis connection failed" }, { status: 500 });
+    return NextResponse.json({ 
+      error: "Redis connection failed",
+      message: err?.message || "Unknown error"
+    }, { status: 500 });
   }
 } 

@@ -454,55 +454,59 @@ export function FlowBuilder({ workflowId }: { workflowId?: string }) {
     setSelectedNodeId(node.id)
   }, [])
 
-  const updateNode = (nodeId: string, updates: any) => {
-    setNodes((prevNodes) => {
-      const newNodes = prevNodes.map((n) => {
-        if (n.id !== nodeId) return n
-        const currentData = (typeof n.data === "object" && n.data !== null ? n.data : {}) as any
-        const updatedData = (typeof updates.data === "object" && updates.data !== null ? updates.data : {}) as any
-        return {
-          ...n,
-          ...updates,
-          data: {
-            ...currentData,
-            ...updatedData,
-          },
-        }
-      })
-      if (updates.data?.initialMessage === true) {
-        newNodes.forEach((n) => {
-          if (n.id !== nodeId && n.data.initialMessage) n.data.initialMessage = false
-        })
-      }
-      setEdges((prevEdges) => {
-        let removedEdge = false
-        const filtered = prevEdges.filter((edge) => {
-          const sourceNode = newNodes.find((n) => n.id === edge.source)
-          const targetNode = newNodes.find((n) => n.id === edge.target)
-          if (!sourceNode || !targetNode) {
-            removedEdge = true
-            return false
+  const updateNode = useCallback(
+    (nodeId: string, updates: any) => {
+      setNodes((prevNodes) => {
+        const newNodes = prevNodes.map((n) => {
+          if (n.id !== nodeId) return n
+          const currentData = (typeof n.data === "object" && n.data !== null ? n.data : {}) as any
+          const updatedData =
+            typeof updates.data === "object" && updates.data !== null ? updates.data : ({} as any)
+          return {
+            ...n,
+            ...updates,
+            data: {
+              ...currentData,
+              ...updatedData,
+            },
           }
-          const isValid = validateConnection(sourceNode, targetNode, newNodes)
-          if (!isValid) removedEdge = true
-          return isValid
         })
-        if (removedEdge) {
-          toast.error("Se eliminaron conexiones inválidas debido a cambios en la configuración del nodo")
+        if (updates.data?.initialMessage === true) {
+          newNodes.forEach((n) => {
+            if (n.id !== nodeId && n.data.initialMessage) n.data.initialMessage = false
+          })
         }
-        return filtered
+        setEdges((prevEdges) => {
+          let removedEdge = false
+          const filtered = prevEdges.filter((edge) => {
+            const sourceNode = newNodes.find((n) => n.id === edge.source)
+            const targetNode = newNodes.find((n) => n.id === edge.target)
+            if (!sourceNode || !targetNode) {
+              removedEdge = true
+              return false
+            }
+            const isValid = validateConnection(sourceNode, targetNode, newNodes)
+            if (!isValid) removedEdge = true
+            return isValid
+          })
+          if (removedEdge) {
+            toast.error("Se eliminaron conexiones inválidas debido a cambios en la configuración del nodo")
+          }
+          return filtered
+        })
+        const newGlobalVars: Record<string, string> = {}
+        newNodes.forEach((n) => {
+          if (n.type === "captureResponse") {
+            const varName = (n.data as any)?.variableName?.trim()
+            if (varName) newGlobalVars[varName] = ""
+          }
+        })
+        setGlobalVariables(newGlobalVars)
+        return newNodes
       })
-      const newGlobalVars: Record<string, string> = {}
-      newNodes.forEach((n) => {
-        if (n.type === "captureResponse") {
-          const varName = (n.data as any)?.variableName?.trim()
-          if (varName) newGlobalVars[varName] = ""
-        }
-      })
-      setGlobalVariables(newGlobalVars)
-      return newNodes
-    })
-  }
+    },
+    [setNodes, setEdges, setGlobalVariables],
+  )
 
   useEffect(() => {
     const vars: Record<string, string> = {}
