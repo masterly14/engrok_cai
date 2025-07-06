@@ -1457,88 +1457,150 @@ async function executeNode(
         }
       }
 
-      // 2. Construir herramientas dinámicas a partir de los edges "condition"
+      // 2. Construir herramientas dinámicas
+      let tools: Tool[] = []
       const conditionalEdges = workflowData.edges.filter(
-        (e: any) =>
-          e.source === node.id &&
-          e.sourceHandle === "condition" &&
-          e.data?.condition
-      );
+        (e: any) => e.source === node.id && e.sourceHandle === "condition" && e.data?.condition
+      )
 
-      const tools: Tool[] = conditionalEdges.map((edge: any) => {
-        const conditionText = edge.data.condition as string;
-        const functionName = conditionText
+      tools = conditionalEdges.map((edge: any) => {
+        const conditionText = edge.data.condition as string
+        const functionName = `intent_${conditionText
           .replace(/\s+/g, "_")
           .replace(/[^a-zA-Z0-9_]/g, "")
-          .toLowerCase();
-        // @ts-ignore – avoid "Type instantiation is excessively deep" error due to complex generics
+          .toLowerCase()}`
         return tool(
-          async (input: {}) => {
-            return `The user's intent matches '${conditionText}'.`;
-          },
+          async (input: {}) => `User intent matches: ${conditionText}`,
           {
             name: functionName,
-            description: conditionText,
+            description: `Use this tool if the user's intent is related to: ${conditionText}`,
             schema: z.object({}),
           }
-        ) as unknown as Tool;
-      });
+        ) as unknown as Tool
+      })
+
+      // Herramienta para extraer variables, si están definidas
+      const variablesToExtract = node.data.extractVariables || []
+      let extractionTool: Tool | null = null
+      if (variablesToExtract.length > 0) {
+        const schemaObject = variablesToExtract.reduce((acc: any, v: any) => {
+          acc[v.name] = z.string().optional().describe(v.description)
+          return acc
+        }, {})
+
+        extractionTool = tool(
+          async (input: any) => {
+            console.log("[Executor] AI extracted data:", input)
+            const currentVars = (session.variables as Record<string, any>) || {}
+
+            // Filtramos las claves null o undefined del input antes de hacer merge
+            const a = Object.entries(input).reduce(
+              (acc, [key, value]) => {
+                if (value !== null && value !== undefined) {
+                  acc[key] = value
+                }
+                return acc
+              },
+              {} as Record<string, any>
+            )
+
+            const updatedVariables = { ...currentVars, ...a }
+
+            await db.chatSession.update({
+              where: { id: session.id },
+              data: { variables: updatedVariables },
+            })
+            session.variables = updatedVariables
+            return "Data extracted successfully and saved to session."
+          },
+          {
+            name: "extract_user_data",
+            description: "Extracts relevant user information from the conversation. Use it whenever the user provides any of the specified data points.",
+            schema: z.object(schemaObject),
+          }
+        ) as unknown as Tool
+        tools.push(extractionTool)
+      }
 
       // 3. Configurar modelo OpenAI (gpt-4o-mini) con tool-calling mejorado
-      let nextNodeId: string | null = null;
-      let aiTextResponse: string | null = null;
+      let nextNodeId: string | null = null
+      let aiTextResponse: string | null = null
       try {
         const model = new ChatOpenAI({
           openAIApiKey: process.env.OPENAI_API_KEY || "",
-          modelName: "gpt-4o-mini", // 4.1 nano equivalente
+          modelName: "gpt-4o-mini",
           temperature: 0.3,
-          maxTokens: 180,
-        }).bind({ tools });
+          maxTokens: 250,
+        }).bind({ tools })
 
-        const persona =
-          node.data.prompt ||
-          "Eres una asistente virtual llamada Sofia, amable, precisa y en español.";
+        const persona = node.data.prompt || "Eres una asistente virtual llamada Sofia, amable, precisa y en español."
 
-        let basePrompt = persona;
+        let basePrompt = persona
         if (ragContext) {
-          basePrompt += `\n\nInformación de referencia:\n${ragContext}`;
+          basePrompt += `\n\n## Base de Conocimiento (Contexto):\n${ragContext}`
         }
 
-        const toolList = tools
-          .map((t) => `- ${t.name}: ${t.description}`)
-          .join("\n");
+        const toolDescriptions = tools.map((t) => `- ${t.name}: ${t.description}`).join("\n")
 
-        const systemPrompt = `${basePrompt}\n\nHerramientas disponibles:\n${toolList}\n\nReglas:\n1. Si la intención del usuario coincide claramente con una herramienta, SOLO llama a esa herramienta.\n2. Si no coincide ninguna, responde en máximo 40 palabras.\n3. No inventes herramientas.\n4. Si dudas, pide aclaración corta.\n`;
+        const systemPrompt = `
+          ${basePrompt}
+          
+          ## Your Tools:
+          ${toolDescriptions}
+          
+          ## Operational Rules:
+          1. Your main goal is to have a natural and helpful conversation.
+          2. **Data Extraction**: If the user provides information that matches fields in the \`extract_user_data\` tool, use it to capture that data. You can continue the conversation after extracting data.
+          3. **Intent Detection**: If the user's intent clearly matches one of the \`intent_*\` tools, use it to classify the intent. This will end your turn.
+          4. **Priority**: Conversation comes first. Only use tools when appropriate. If you extract data and also detect an intent in the same message, use both tools.
+          5. Always respond in Spanish and in less than 60 words, unless you need to present a list.
+        `.trim()
 
         const messagesForModel = [
           new SystemMessage(systemPrompt),
           ...chatHistory,
           ...(userInput ? [new HumanMessage(userInput)] : []),
-        ];
+        ]
 
-        const aiResponse = await model.invoke(messagesForModel);
+        const aiResponse = await model.invoke(messagesForModel)
 
         // Texto que enviaremos siempre que exista
-        if (
-          typeof aiResponse.content === "string" &&
-          aiResponse.content.trim()
-        ) {
-          aiTextResponse = aiResponse.content;
+        if (typeof aiResponse.content === "string" && aiResponse.content.trim()) {
+          aiTextResponse = aiResponse.content
         }
 
-        if (aiResponse.tool_calls && aiResponse.tool_calls.length) {
-          const calledTool = aiResponse.tool_calls[0].name;
-          const match = conditionalEdges.find((edge: any) => {
-            const fn = (edge.data.condition as string)
-              .replace(/\s+/g, "_")
-              .replace(/[^a-zA-Z0-9_]/g, "")
-              .toLowerCase();
-            return fn === calledTool;
-          });
-          if (match) nextNodeId = match.target;
+        if (aiResponse.tool_calls && aiResponse.tool_calls.length > 0) {
+          for (const call of aiResponse.tool_calls) {
+            const toolName = call.name
+
+            // Find the tool from our list to execute it
+            const toolToExecute = tools.find((t) => t.name === toolName)
+
+            if (toolToExecute) {
+              // @ts-ignore
+              const toolResult = await toolToExecute.func(call.args)
+              console.log(`[Executor] Result for tool ${toolName}:`, toolResult)
+            }
+
+            // If it's an intent tool, we need to transition.
+            if (toolName.startsWith("intent_")) {
+              const match = conditionalEdges.find((edge: any) => {
+                const fn = `intent_${(edge.data.condition as string)
+                  .replace(/\s+/g, "_")
+                  .replace(/[^a-zA-Z0-9_]/g, "")
+                  .toLowerCase()}`
+                return fn === toolName
+              })
+
+              if (match) {
+                nextNodeId = match.target
+                break // Stop processing more tools if we found a transition
+              }
+            }
+          }
         }
       } catch (err) {
-        console.error("[Executor] AI node error (ignored):", err);
+        console.error("[Executor] AI node error (ignored):", err)
       }
 
       // 4. Enviar la respuesta del modelo al usuario (si hay texto)

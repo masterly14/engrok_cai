@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Loader2, Save } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
+import { Textarea } from "@/components/ui/textarea"
 
 type Props = {
   selectedNode: Node
@@ -43,13 +44,22 @@ export const GoogleCalendarActionConfig = ({ selectedNode, updateNode }: Props) 
   const [isLoadingCalendars, setIsLoadingCalendars] = useState(false)
 
   // State for GET_AVAILABILITY
-  const [selectedCalendarId, setSelectedCalendarId] = useState(selectedNode.data.fields?.calendarId || "")
+  const [calendarId, setCalendarId] = useState(selectedNode.data.fields?.calendarId || "")
   const [daysToCheck, setDaysToCheck] = useState(selectedNode.data.fields?.daysToCheck || "15")
   const [startTime, setStartTime] = useState(selectedNode.data.fields?.startTime || "09:00")
   const [endTime, setEndTime] = useState(selectedNode.data.fields?.endTime || "17:00")
 
+  // State for CREATE_EVENT
+  const [eventTitle, setEventTitle] = useState(selectedNode.data.fields?.title || "Cita con {{contact.name}}")
+  const [eventDescription, setEventDescription] = useState(
+    selectedNode.data.fields?.description || "Detalles de la cita agendada a través de Karolai."
+  )
+  const [eventStartTimeVar, setEventStartTimeVar] = useState(selectedNode.data.fields?.startTimeVar || "user_selected_slot")
+  const [eventDuration, setEventDuration] = useState(selectedNode.data.fields?.duration || "30")
+  const [attendeesVar, setAttendeesVar] = useState(selectedNode.data.fields?.attendeesVar || "contact.email")
+
   // Generic state
-  const [saveResponseTo, setSaveResponseTo] = useState<string>(selectedNode.data.saveResponseTo || "disponibilidad")
+  const [saveResponseTo, setSaveResponseTo] = useState<string>(selectedNode.data.saveResponseTo || "")
 
   useEffect(() => {
     const fetchCalendars = async () => {
@@ -63,9 +73,9 @@ export const GoogleCalendarActionConfig = ({ selectedNode, updateNode }: Props) 
         const data = await res.json()
         setCalendars(data.calendars)
         // Set default calendar if not already set
-        if (!selectedCalendarId && data.calendars.length > 0) {
+        if (!calendarId && data.calendars.length > 0) {
           const primaryCalendar = data.calendars.find((c: any) => c.primary) || data.calendars[0]
-          setSelectedCalendarId(primaryCalendar.id)
+          setCalendarId(primaryCalendar.id)
         }
       } catch (error: any) {
         toast.error("Error al cargar calendarios", { description: error.message })
@@ -89,13 +99,13 @@ export const GoogleCalendarActionConfig = ({ selectedNode, updateNode }: Props) 
     let nodeName = "Google Calendar"
 
     if (action === "GET_AVAILABILITY") {
-      if (!selectedCalendarId || !daysToCheck || !startTime || !endTime) {
+      if (!calendarId || !daysToCheck || !startTime || !endTime) {
         toast.error("Completa todos los campos para ver disponibilidad.")
         return
       }
       fields = {
         connectionId: selectedNode.data.connectionId,
-        calendarId: selectedCalendarId,
+        calendarId: calendarId,
         daysToCheck: parseInt(daysToCheck, 10),
         startTime,
         endTime,
@@ -104,10 +114,20 @@ export const GoogleCalendarActionConfig = ({ selectedNode, updateNode }: Props) 
     }
 
     if (action === "CREATE_EVENT") {
-      // Logic for create event will be added here.
-      // For now, just save the action type.
+      if (!calendarId || !eventTitle || !eventStartTimeVar || !eventDuration) {
+        toast.error("Completa todos los campos obligatorios para crear el evento.")
+        return
+      }
       nodeName = "Crear Evento (GCal)"
-      fields = selectedNode.data.fields // Preserve existing fields for now
+      fields = {
+        connectionId: selectedNode.data.connectionId,
+        calendarId: calendarId,
+        title: eventTitle,
+        description: eventDescription,
+        startTimeVar: eventStartTimeVar,
+        duration: eventDuration,
+        attendeesVar: attendeesVar,
+      }
     }
 
     updateNode(selectedNode.id, {
@@ -117,10 +137,11 @@ export const GoogleCalendarActionConfig = ({ selectedNode, updateNode }: Props) 
         provider: "GOOGLE_CALENDAR",
         action: action,
         fields: fields,
-        saveResponseTo: saveResponseTo || "availability",
+        saveResponseTo: saveResponseTo,
       },
     })
-    toast.success(`Configuración de Google Calendar guardada. Las fechas se almacenarán en la variable {{${saveResponseTo || 'disponibilidad'}}}.`)
+    const varMessage = saveResponseTo ? ` El resultado se guardará en la variable {{${saveResponseTo}}}.` : ""
+    toast.success(`Configuración de Google Calendar guardada.${varMessage}`)
   }
 
   return (
@@ -148,7 +169,7 @@ export const GoogleCalendarActionConfig = ({ selectedNode, updateNode }: Props) 
             <h4 className="font-medium text-center">Opciones de Disponibilidad</h4>
             <div className="space-y-2">
               <Label>Calendario de Google</Label>
-              <Select value={selectedCalendarId} onValueChange={setSelectedCalendarId} disabled={isLoadingCalendars}>
+              <Select value={calendarId} onValueChange={setCalendarId} disabled={isLoadingCalendars}>
                 <SelectTrigger>
                   <SelectValue placeholder={isLoadingCalendars ? "Cargando calendarios..." : "Selecciona un calendario..."} />
                 </SelectTrigger>
@@ -220,8 +241,93 @@ export const GoogleCalendarActionConfig = ({ selectedNode, updateNode }: Props) 
         )}
 
         {action === "CREATE_EVENT" && (
-          <div className="p-4 border rounded-md text-center animate-in fade-in-50">
-            <p className="text-sm text-muted-foreground">La configuración para crear eventos estará disponible próximamente.</p>
+          <div className="space-y-4 p-4 border rounded-md animate-in fade-in-50">
+            <h4 className="font-medium text-center">Opciones para Crear Evento</h4>
+            <div className="space-y-2">
+              <Label>Calendario de Google</Label>
+              <Select value={calendarId} onValueChange={setCalendarId} disabled={isLoadingCalendars}>
+                <SelectTrigger>
+                  <SelectValue placeholder={isLoadingCalendars ? "Cargando calendarios..." : "Selecciona un calendario..."} />
+                </SelectTrigger>
+                <SelectContent>
+                  {isLoadingCalendars ? (
+                    <div className="flex items-center justify-center p-2">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span className="ml-2">Cargando...</span>
+                    </div>
+                  ) : (
+                    calendars.map((cal) => (
+                      <SelectItem key={cal.id} value={cal.id}>
+                        {cal.summary}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="eventTitle">Título del Evento</Label>
+              <Input
+                id="eventTitle"
+                placeholder="Ej: Cita con {{contact.name}}"
+                value={eventTitle}
+                onChange={(e) => setEventTitle(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">{"Puedes usar variables como `{{contact.name}}`."}</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="eventDescription">Descripción del Evento</Label>
+              <Textarea
+                id="eventDescription"
+                placeholder="Ej: Confirmación de cita para el servicio..."
+                value={eventDescription}
+                onChange={(e) => setEventDescription(e.target.value)}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="eventStartTimeVar">Variable de Hora de Inicio</Label>
+                <Input
+                  id="eventStartTimeVar"
+                  placeholder="Ej: user_selected_slot"
+                  value={eventStartTimeVar}
+                  onChange={(e) => setEventStartTimeVar(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {"La variable debe contener una fecha/hora en formato ISO (ej: `2024-08-15T10:00:00-05:00`)."}
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="eventDuration">Duración (minutos)</Label>
+                <Input
+                  id="eventDuration"
+                  type="number"
+                  placeholder="Ej: 30"
+                  value={eventDuration}
+                  onChange={(e) => setEventDuration(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="attendeesVar">Variables de Invitados (emails)</Label>
+              <Input
+                id="attendeesVar"
+                placeholder="Ej: contact.email, {{some_other_email_var}}"
+                value={attendeesVar}
+                onChange={(e) => setAttendeesVar(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">{"Separa las variables o emails con comas."}</p>
+            </div>
+            <Separator />
+            <div className="space-y-2">
+              <Label htmlFor="saveResponseTo">Guardar ID del evento en la variable (opcional)</Label>
+              <Input
+                id="saveResponseTo"
+                placeholder="google_event_id"
+                value={saveResponseTo}
+                onChange={(e) => setSaveResponseTo(e.target.value)}
+              />
+            </div>
           </div>
         )}
 

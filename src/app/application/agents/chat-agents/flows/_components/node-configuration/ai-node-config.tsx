@@ -20,8 +20,9 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { Bot, MessageSquare, Database, Plus, Info, Sparkles, FileText, Upload } from "lucide-react"
+import { Bot, MessageSquare, Database, Plus, Info, Sparkles, FileText, Upload, Trash2 } from "lucide-react"
 import dynamic from "next/dynamic"
+import { toast } from "sonner"
 
 const FileUploader = dynamic(() => import("../file-uploader"), {
   ssr: false,
@@ -38,6 +39,13 @@ interface AiNodeData {
   prompt?: string
   ragEnabled?: boolean
   knowledgeBaseId?: string
+  extractVariables?: ExtractVariable[]
+}
+
+interface ExtractVariable {
+  id: string
+  name: string
+  description: string
 }
 
 interface AiNodeConfigProps {
@@ -51,6 +59,7 @@ export function AiNodeConfig({ selectedNode, updateNode, knowledgeBases }: AiNod
   const [prompt, setPrompt] = useState(selectedNode.data.prompt || "")
   const [ragEnabled, setRagEnabled] = useState(selectedNode.data.ragEnabled || false)
   const [knowledgeBaseId, setKnowledgeBaseId] = useState(selectedNode.data.knowledgeBaseId || "")
+  const [extractVariables, setExtractVariables] = useState<ExtractVariable[]>(selectedNode.data.extractVariables || [])
   const [kbList, setKbList] = useState<any[]>(knowledgeBases || [])
   const [isLoading, setIsLoading] = useState(false)
 
@@ -75,8 +84,37 @@ export function AiNodeConfig({ selectedNode, updateNode, knowledgeBases }: AiNod
   }, [fetchKbs])
 
   const handleUpdateNodeData = (newData: Partial<AiNodeData>) => {
+    const invalidVariable = extractVariables.find((v) => !v.name || !v.description)
+    if (invalidVariable) {
+      toast.error("Todas las variables a extraer deben tener un nombre y una descripción.")
+      return
+    }
+
     updateNode(selectedNode.id, {
-      data: { ...selectedNode.data, ...newData },
+      data: { ...selectedNode.data, ...newData, extractVariables: extractVariables },
+    })
+    toast.success("Configuración del nodo AI guardada.")
+  }
+
+  const addVariable = () => {
+    setExtractVariables([...extractVariables, { id: Math.random().toString(36).substring(7), name: "", description: "" }])
+  }
+
+  const updateVariable = (id: string, field: "name" | "description", value: string) => {
+    setExtractVariables(extractVariables.map((v) => (v.id === id ? { ...v, [field]: value } : v)))
+  }
+
+  const removeVariable = (id: string) => {
+    setExtractVariables(extractVariables.filter((v) => v.id !== id))
+  }
+
+  const onBlurSave = () => {
+    handleUpdateNodeData({
+      name,
+      prompt,
+      ragEnabled,
+      knowledgeBaseId,
+      extractVariables,
     })
   }
 
@@ -115,7 +153,7 @@ export function AiNodeConfig({ selectedNode, updateNode, knowledgeBases }: AiNod
               id="ai-node-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              onBlur={() => handleUpdateNodeData({ name })}
+              onBlur={onBlurSave}
               placeholder="Ej: Asistente de Ventas, Soporte Técnico..."
               className="transition-all duration-200 focus:ring-2 focus:ring-primary/20"
             />
@@ -129,7 +167,7 @@ export function AiNodeConfig({ selectedNode, updateNode, knowledgeBases }: AiNod
               id="ai-node-prompt"
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              onBlur={() => handleUpdateNodeData({ prompt })}
+              onBlur={onBlurSave}
               placeholder="Describe cómo debe comportarse el asistente, su personalidad, conocimientos específicos..."
               className="min-h-[100px] transition-all duration-200 focus:ring-2 focus:ring-primary/20"
               rows={4}
@@ -284,6 +322,66 @@ export function AiNodeConfig({ selectedNode, updateNode, knowledgeBases }: AiNod
               </Dialog>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Extract Variables */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Database className="w-4 h-4" />
+            Extracción de Variables
+          </CardTitle>
+          <CardDescription>
+            Define qué datos debe extraer el asistente de la conversación y guardarlos para su uso posterior.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Button onClick={addVariable} variant="outline" size="sm" className="w-full gap-2">
+            <Plus className="w-4 h-4" />
+            Añadir Variable a Extraer
+          </Button>
+          <div className="space-y-3">
+            {extractVariables.map((variable) => (
+              <div
+                key={variable.id}
+                className="grid grid-cols-[1fr_1.5fr_auto] gap-3 items-end p-3 border rounded-lg bg-muted/20 animate-in fade-in-30"
+              >
+                <div className="space-y-1.5">
+                  <Label htmlFor={`var-name-${variable.id}`} className="text-xs">
+                    Nombre Variable
+                  </Label>
+                  <Input
+                    id={`var-name-${variable.id}`}
+                    placeholder="ej: nombre_completo"
+                    value={variable.name}
+                    onChange={(e) => updateVariable(variable.id, "name", e.target.value)}
+                    onBlur={onBlurSave}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor={`var-desc-${variable.id}`} className="text-xs">
+                    Descripción para la IA
+                  </Label>
+                  <Input
+                    id={`var-desc-${variable.id}`}
+                    placeholder="ej: Nombre y apellido del usuario"
+                    value={variable.description}
+                    onChange={(e) => updateVariable(variable.id, "description", e.target.value)}
+                    onBlur={onBlurSave}
+                  />
+                </div>
+                <Button
+                  onClick={() => removeVariable(variable.id)}
+                  size="icon"
+                  variant="ghost"
+                  className="w-8 h-8 hover:bg-destructive/10"
+                >
+                  <Trash2 className="w-4 h-4 text-destructive" />
+                </Button>
+              </div>
+            ))}
+          </div>
         </CardContent>
       </Card>
 
