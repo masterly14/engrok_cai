@@ -340,6 +340,13 @@ interface BatchSendEvent {
   perContactVariables?: Record<string, Record<string, any>>;
 }
 
+interface WompiSuccessEvent {
+  kind: "wompi_payment_success";
+  sessionId: string;
+  sourceNodeId: string;
+  transactionId: string;
+}
+
 interface KbUploadEvent {
   kind: "kb_upload";
   kbId: string;
@@ -1133,6 +1140,9 @@ async function executeNode(
             sessionVariables
           );
 
+          // Inyectar una referencia única para el webhook
+          fields.reference = `krl::${session.id}::${node.id}`;
+
           // 2. Obtener las credenciales Wompi del usuario (owner del agente)
           const wompiCreds = await db.wompiIntegration.findUnique({
             where: { userId: agent.userId },
@@ -1728,6 +1738,8 @@ async function processMessages() {
             await handleBatchSend(messageObject as BatchSendEvent);
           } else if (messageObject?.kind === "reminder_continuation") {
             await handleReminderContinuation(messageObject as ReminderContinuationEvent);
+          } else if (messageObject?.kind === "wompi_payment_success") {
+            await handlePaymentSuccess(messageObject as WompiSuccessEvent);
           } else {
             await handleIncomingMessage(messageObject);
           }
@@ -1782,6 +1794,65 @@ async function startWorker() {
 }
 
 startWorker();
+
+// ---------------------------------------------------------------------------
+// NUEVO: Manejar continuación de flujo por pago exitoso en Wompi
+// ---------------------------------------------------------------------------
+async function handlePaymentSuccess(event: WompiSuccessEvent) {
+  const { sessionId, sourceNodeId, transactionId } = event;
+  console.log(`[Payment Success] Resuming flow for session ${sessionId} from node ${sourceNodeId}`);
+
+  try {
+    const session = await db.chatSession.findUnique({
+      where: { id: sessionId },
+      include: { workflow: true, chatAgent: true, contact: true },
+    });
+
+    if (!session || !session.workflow || !session.chatAgent) {
+      console.error(`[Payment Success] Session, workflow, or agent not found for session ID: ${sessionId}`);
+      return;
+    }
+
+    if (session.status !== "ACTIVE") {
+      console.warn(`[Payment Success] Session ${sessionId} is not active. Ignoring payment event.`);
+      return;
+    }
+
+    const workflowJson = session.workflow.workflow;
+    const workflowData = typeof workflowJson === "string" ? JSON.parse(workflowJson) : workflowJson;
+
+    // Encontrar el edge que sale del handle 'success_payment' del nodo de integración original
+    const nextEdge = workflowData.edges.find(
+      (e: any) => e.source === sourceNodeId && e.sourceHandle === "success_payment"
+    );
+
+    if (!nextEdge || !nextEdge.target) {
+      console.warn(`[Payment Success] No 'success_payment' edge found for node ${sourceNodeId} in workflow ${session.workflowId}. Flow stops.`);
+      return;
+    }
+
+    const nextNodeId = nextEdge.target;
+    const nextNode = workflowData.nodes.find((n: any) => n.id === nextNodeId);
+
+    if (!nextNode) {
+      console.error(`[Payment Success] Target node ${nextNodeId} not found in workflow.`);
+      return;
+    }
+
+    // Actualizar la sesión para que apunte al siguiente nodo
+    await db.chatSession.update({
+      where: { id: sessionId },
+      data: { currentNodeId: nextNodeId },
+    });
+
+    // Ejecutar el siguiente nodo
+    console.log(`[Payment Success] Executing next node ${nextNodeId} (${nextNode.type})`);
+    await executeNode(nextNode, { ...session, currentNodeId: nextNodeId }, session.chatAgent);
+
+  } catch (error: any) {
+    console.error(`[Payment Success] Failed handling successful payment event:`, error);
+  }
+}
 
 // ---------------------------------------------------------------------------
 // NUEVO: Manejar continuación de recordatorios

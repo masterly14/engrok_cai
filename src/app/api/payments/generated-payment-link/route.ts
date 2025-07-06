@@ -13,6 +13,7 @@ export async function POST(request: NextRequest) {
       expires_at,
       wompi_private_key,
       collect_shipping,
+      reference,
     } = body;
 
     if (
@@ -36,17 +37,19 @@ export async function POST(request: NextRequest) {
       ? "https://sandbox.wompi.co/v1/payment_links"
       : "https://production.wompi.co/v1/payment_links";
 
-    const requestBody = {
+    const requestBody: Record<string, any> = {
       name,
       description,
       amount_in_cents,
       currency,
-      sku,
       collect_shipping,
       redirect_url,
       single_use: true,
-      expires_at,
-    } as const;
+    };
+
+    if (sku) requestBody.sku = sku;
+    if (expires_at) requestBody.expires_at = expires_at;
+    if (reference) requestBody.reference = reference;
 
     const makeRequest = async (url: string) => {
       console.log("[Wompi] → URL:", url);
