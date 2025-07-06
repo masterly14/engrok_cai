@@ -30,6 +30,8 @@ async function createCalendarEvent(
     },
   }
 
+  console.log("Creating Google Calendar event with payload:", JSON.stringify(event, null, 2))
+
   const response = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events`, {
     method: "POST",
     headers: {
@@ -45,12 +47,16 @@ async function createCalendarEvent(
     throw new Error(`Google Calendar API error: ${errorData.error?.message || "Failed to create event"}`)
   }
 
-  return await response.json()
+  const responseData = await response.json()
+  console.log("Successfully created Google Calendar event:", responseData)
+  return responseData
 }
 
 export async function POST(request: Request) {
   try {
+    console.log("Received request to create calendar event")
     const body = await request.json()
+    console.log("Request body:", body)
     const {
       connectionId,
       calendarId = "primary",
@@ -61,15 +67,21 @@ export async function POST(request: Request) {
       attendeesVar, // comma-separated emails or variables
     } = body
 
+    console.log("Extracted parameters:", { connectionId, calendarId, title, description, startTime, duration, attendeesVar })
+
     if (!connectionId || !title || !startTime || !duration) {
+      console.error("Missing required fields")
       return new NextResponse("Missing required fields: connectionId, title, startTime, duration", { status: 400 })
     }
 
     const accessToken = await getIntegrationAccessToken(connectionId)
+    console.log("Retrieved access token")
 
     // Parse attendees string into an array of emails
     const attendees = attendeesVar ? attendeesVar.split(",").map((s: string) => s.trim()) : []
+    console.log("Parsed attendees:", attendees)
 
+    console.log("Calling createCalendarEvent function")
     const createdEvent = await createCalendarEvent(
       accessToken,
       calendarId,
@@ -80,6 +92,7 @@ export async function POST(request: Request) {
       attendees
     )
 
+    console.log("Event creation successful, sending response.")
     return NextResponse.json({ event: createdEvent })
   } catch (error: any) {
     console.error("[CREATE_EVENT_POST_ERROR]", error)

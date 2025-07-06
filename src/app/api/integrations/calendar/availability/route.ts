@@ -83,11 +83,11 @@ export async function POST(request: Request) {
     const body = await request.json()
     const {
       connectionId,
-      calendarId = "primary",
+      calendarId = body.calendarId || "primary",
       daysToCheck = 15,
-      startTime = "09:00",
-      endTime = "17:00",
-      eventDurationMinutes = 30, // Default to 30 min slots
+      startTime = body.startTime || "09:00",
+      endTime = body.endTime || "17:00",
+      eventDurationMinutes = body.eventDurationMinutes || 30, // Default to 30 min slots
     } = body
 
     if (!connectionId) {
