@@ -9,8 +9,25 @@ async function getAvailability(
   endTime: string,
   eventDurationMinutes: number
 ) {
-  const timeMin = new Date()
-  timeMin.setHours(0, 0, 0, 0) // Start of today
+  // Forcing Bogota timezone as requested.
+  const timeZone = "America/Bogota"
+  const timeZoneOffset = "-05:00" // Bogota is UTC-5 and doesn't have DST.
+
+  // Use Intl.DateTimeFormat to reliably get the current date in the target timezone.
+  const dtf = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  })
+  const { year, month, day } = dtf
+    .formatToParts(new Date())
+    .reduce((acc, part) => ({ ...acc, [part.type]: part.value }), {} as Record<string, string>)
+
+  const todayInTimeZone = `${year}-${month}-${day}`
+
+  // Create timeMin at the beginning of today in the target timezone.
+  const timeMin = new Date(`${todayInTimeZone}T00:00:00.000${timeZoneOffset}`)
   const timeMax = new Date(timeMin)
   timeMax.setDate(timeMin.getDate() + daysToCheck)
 
@@ -24,6 +41,7 @@ async function getAvailability(
       timeMin: timeMin.toISOString(),
       timeMax: timeMax.toISOString(),
       items: [{ id: calendarId }],
+      timeZone: timeZone, // Inform Google API about the timezone context.
     }),
   })
 
@@ -38,18 +56,21 @@ async function getAvailability(
 
   // --- Availability Calculation Logic ---
   const availableSlots = []
-  const [startHour, startMinute] = startTime.split(":").map(Number)
-  const [endHour, endMinute] = endTime.split(":").map(Number)
 
   for (let i = 0; i < daysToCheck; i++) {
-    const day = new Date(timeMin)
-    day.setDate(day.getDate() + i)
+    const dayToProcess = new Date(timeMin)
+    dayToProcess.setDate(dayToProcess.getDate() + i)
 
-    const dayStart = new Date(day)
-    dayStart.setHours(startHour, startMinute, 0, 0)
+    // Construct the start and end of the working day in the target timezone.
+    // We get the date parts again to handle day transitions correctly.
+    const currentDayParts = dtf.formatToParts(dayToProcess).reduce(
+      (acc, part) => ({ ...acc, [part.type]: part.value }),
+      {} as Record<string, string>
+    )
+    const dayString = `${currentDayParts.year}-${currentDayParts.month}-${currentDayParts.day}`
 
-    const dayEnd = new Date(day)
-    dayEnd.setHours(endHour, endMinute, 0, 0)
+    const dayStart = new Date(`${dayString}T${startTime}:00${timeZoneOffset}`)
+    const dayEnd = new Date(`${dayString}T${endTime}:00${timeZoneOffset}`)
 
     let cursor = new Date(dayStart)
 
@@ -71,7 +92,7 @@ async function getAvailability(
           end: slotEnd.toISOString(),
         })
       }
-      cursor.setMinutes(cursor.getMinutes() + 15) // Check every 15 minutes for a new slot start
+      cursor = new Date(cursor.getTime() + 15 * 60 * 1000) // Check every 15 minutes for a new slot start
     }
   }
 
@@ -109,7 +130,7 @@ export async function POST(request: Request) {
   } catch (error: any) {
     console.error("[AVAILABILITY_POST_ERROR]", error)
     if (error.response) {
-      console.error("[AVAILABILITY_POST_ERROR] Data:", error.response.data);
+      console.error("[AVAILABILITY_POST_ERROR] Data:", error.response.data)
     }
     return new NextResponse(error.message || "Internal Server Error", { status: 500 })
   }
