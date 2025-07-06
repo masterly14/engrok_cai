@@ -1227,66 +1227,146 @@ async function executeNode(
             session.variables || {}
           ) as any;
 
-          let {
-            connectionId,
-            calendarId = "primary",
-            daysToCheck = 15,
-            startTime = "09:00",
-            endTime = "17:00",
-            eventDurationMinutes = 30,
-          } = fields as any;
+          const action = node.data.action || "GET_AVAILABILITY";
 
-          // Asegurar tipos correctos
-          daysToCheck = typeof daysToCheck === "string" ? parseInt(daysToCheck, 10) : Number(daysToCheck);
-          eventDurationMinutes = typeof eventDurationMinutes === "string" ? parseInt(eventDurationMinutes, 10) : Number(eventDurationMinutes);
+          if (action === "GET_AVAILABILITY") {
+            let {
+              connectionId,
+              calendarId = "primary",
+              daysToCheck = 15,
+              startTime = "09:00",
+              endTime = "17:00",
+              eventDurationMinutes = 30,
+            } = fields as any;
 
-          if (!connectionId) {
-            throw new Error("connectionId no definido en el nodo de integración");
-          }
+            // Asegurar tipos correctos
+            daysToCheck = typeof daysToCheck === "string" ? parseInt(daysToCheck, 10) : Number(daysToCheck);
+            eventDurationMinutes = typeof eventDurationMinutes === "string" ? parseInt(eventDurationMinutes, 10) : Number(eventDurationMinutes);
 
-          const baseUrl =
-            process.env.NEXT_PUBLIC_BASE_URL || process.env.BASE_URL || "http://localhost:3000";
+            if (!connectionId) {
+              throw new Error("connectionId no definido en el nodo de integración");
+            }
 
-          const resp = await axios.post(`${baseUrl}/api/integrations/calendar/availability`, {
-            connectionId,
-            calendarId,
-            daysToCheck,
-            startTime,
-            endTime,
-            eventDurationMinutes,
-          });
+            const baseUrl =
+              process.env.NEXT_PUBLIC_BASE_URL || process.env.BASE_URL || "http://localhost:3000";
 
-          if (resp.status >= 200 && resp.status < 300) {
-            const slots = resp.data?.availability || [];
-
-            // Convertir a string legible
-            const formatted = slots
-              .map((s: any) => `${new Date(s.start).toLocaleString()} - ${new Date(s.end).toLocaleString()}`)
-              .join("\n");
-
-            const varName = node.data.saveResponseTo || "disponibilidad";
-
-            const updatedVars = {
-              ...(session.variables || {}),
-              [varName]: formatted,
-            };
-
-            await db.chatSession.update({
-              where: { id: session.id },
-              data: { variables: updatedVars },
+            const resp = await axios.post(`${baseUrl}/api/integrations/calendar/availability`, {
+              connectionId,
+              calendarId,
+              daysToCheck,
+              startTime,
+              endTime,
+              eventDurationMinutes,
             });
 
-            session.variables = updatedVars;
+            if (resp.status >= 200 && resp.status < 300) {
+              const slots = resp.data?.availability || [];
 
-            // No enviamos mensaje de disponibilidad; solo la guardamos en variables de sesión.
+              const formatted = slots
+                .map((s: any) => `${new Date(s.start).toLocaleString()} - ${new Date(s.end).toLocaleString()}`)
+                .join("\n");
+
+              const varName = node.data.saveResponseTo || "disponibilidad";
+
+              const updatedVars = {
+                ...(session.variables || {}),
+                [varName]: formatted,
+              };
+
+              await db.chatSession.update({
+                where: { id: session.id },
+                data: { variables: updatedVars },
+              });
+
+              session.variables = updatedVars;
+              integrationSuccess = true;
+            } else {
+              integrationSuccess = false;
+            }
+          } else if (action === "CREATE_EVENT") {
+            const {
+              connectionId,
+              calendarId = "primary",
+              title,
+              description,
+              startTimeVar,
+              duration = 30,
+              attendeesVar = "",
+            } = fields as any;
+
+            if (!connectionId) throw new Error("connectionId no definido");
+            if (!title) throw new Error("title es obligatorio");
+            if (!startTimeVar) throw new Error("startTimeVar es obligatorio");
+
+            // Resolver la fecha/hora de inicio
+            let startTimeValue: string = startTimeVar;
+            if (session.variables && session.variables[startTimeVar]) {
+              startTimeValue = session.variables[startTimeVar];
+            }
+
+            if (!startTimeValue) {
+              throw new Error("No se pudo resolver la hora de inicio del evento");
+            }
+
+            // Resolver asistentes (pueden ser variables o emails directos)
+            const attendeesList = attendeesVar
+              .split(",")
+              .map((s: string) => s.trim())
+              .filter((s: string) => s !== "")
+              .map((token: string) => (session.variables?.[token] ? session.variables[token] : token));
+
+            const baseUrl =
+              process.env.NEXT_PUBLIC_BASE_URL || process.env.BASE_URL || "https://karolai.co";
+
+            const resp = await axios.post(`${baseUrl}/api/integrations/calendar/events`, {
+              connectionId,
+              calendarId,
+              title,
+              description,
+              startTime: startTimeValue,
+              duration,
+              attendeesVar: attendeesList.join(","),
+            });
+
+            if (resp.status >= 200 && resp.status < 300) {
+              const event = resp.data?.event;
+              const varName = node.data.saveResponseTo || "google_event";
+
+              const updatedVars = {
+                ...(session.variables || {}),
+                [varName]: event,
+              };
+
+              await db.chatSession.update({
+                where: { id: session.id },
+                data: { variables: updatedVars },
+              });
+
+              session.variables = updatedVars;
+
+              // Enviar botResponse si existe
+              if (node.data.botResponse) {
+                const populated = populateNodeDataWithVariables(
+                  { botResponse: node.data.botResponse },
+                  session.variables || {}
+                );
+                await sendWhatsappMessage(
+                  session.contact.phone,
+                  agent.whatsappAccessToken,
+                  populated,
+                  agent,
+                  session.contact
+                );
+              }
+              integrationSuccess = true;
+            } else {
+              integrationSuccess = false;
+            }
           } else {
-            integrationSuccess = false;
+            console.warn(`[Integration] Acción de Google Calendar desconocida: ${action}`);
           }
         } catch (error: any) {
-          console.error(
-            `[Integration] Error procesando integración Google Calendar:`,
-            error.message
-          );
+          console.error(`[Integration] Error procesando integración Google Calendar:`, error.message);
           integrationSuccess = false;
         }
       } else {

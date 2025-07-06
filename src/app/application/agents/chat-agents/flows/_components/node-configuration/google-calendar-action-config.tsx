@@ -55,7 +55,7 @@ export const GoogleCalendarActionConfig = ({ selectedNode, updateNode }: Props) 
     selectedNode.data.fields?.description || "Detalles de la cita agendada a través de Karolai."
   )
   const [eventStartTimeVar, setEventStartTimeVar] = useState(selectedNode.data.fields?.startTimeVar || "user_selected_slot")
-  const [eventDuration, setEventDuration] = useState(selectedNode.data.fields?.duration || "30")
+  const [eventDurationMinutes, setEventDurationMinutes] = useState(selectedNode.data.fields?.eventDurationMinutes || "30")
   const [attendeesVar, setAttendeesVar] = useState(selectedNode.data.fields?.attendeesVar || "contact.email")
 
   // Generic state
@@ -109,12 +109,13 @@ export const GoogleCalendarActionConfig = ({ selectedNode, updateNode }: Props) 
         daysToCheck: parseInt(daysToCheck, 10),
         startTime,
         endTime,
+        eventDurationMinutes: parseInt(eventDurationMinutes, 10),
       }
       nodeName = "Ver Disponibilidad (GCal)"
     }
 
     if (action === "CREATE_EVENT") {
-      if (!calendarId || !eventTitle || !eventStartTimeVar || !eventDuration) {
+      if (!calendarId || !eventTitle || !eventStartTimeVar || !eventDurationMinutes) {
         toast.error("Completa todos los campos obligatorios para crear el evento.")
         return
       }
@@ -125,7 +126,7 @@ export const GoogleCalendarActionConfig = ({ selectedNode, updateNode }: Props) 
         title: eventTitle,
         description: eventDescription,
         startTimeVar: eventStartTimeVar,
-        duration: eventDuration,
+        eventDurationMinutes: parseInt(eventDurationMinutes, 10),
         attendeesVar: attendeesVar,
       }
     }
@@ -229,6 +230,16 @@ export const GoogleCalendarActionConfig = ({ selectedNode, updateNode }: Props) 
             </div>
             <Separator />
             <div className="space-y-2">
+              <Label>Duración del evento (minutos)</Label>
+              <Input
+                type="number"
+                value={eventDurationMinutes}
+                onChange={(e) => setEventDurationMinutes(e.target.value)}
+                placeholder="Ej: 30"
+              />
+            </div>
+            <Separator />
+            <div className="space-y-2">
               <Label htmlFor="saveResponseTo">Guardar disponibilidad en la variable</Label>
               <Input
                 id="saveResponseTo"
@@ -298,13 +309,12 @@ export const GoogleCalendarActionConfig = ({ selectedNode, updateNode }: Props) 
                 </p>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="eventDuration">Duración (minutos)</Label>
+                <Label>Duración del evento (minutos)</Label>
                 <Input
-                  id="eventDuration"
                   type="number"
+                  value={eventDurationMinutes}
+                  onChange={(e) => setEventDurationMinutes(e.target.value)}
                   placeholder="Ej: 30"
-                  value={eventDuration}
-                  onChange={(e) => setEventDuration(e.target.value)}
                 />
               </div>
             </div>
