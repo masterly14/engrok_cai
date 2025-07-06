@@ -730,6 +730,7 @@ export function FlowBuilder({ workflowId }: { workflowId?: string }) {
           globalVariables={Object.keys(globalVariables)}
           onValidationStateChange={setHasConfigErrors}
           onSaveFlow={handleSave}
+          knowledgeBases={knowledgeBases}
         />
         <Dialog open={isTestDialogOpen} onOpenChange={setIsTestDialogOpen}>
           <DialogContent className="sm:max-w-md">
