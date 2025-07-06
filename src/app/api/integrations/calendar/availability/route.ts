@@ -108,6 +108,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ availability: availableSlots })
   } catch (error: any) {
     console.error("[AVAILABILITY_POST_ERROR]", error)
+    if (error.response) {
+      console.error("[AVAILABILITY_POST_ERROR] Data:", error.response.data);
+    }
     return new NextResponse(error.message || "Internal Server Error", { status: 500 })
   }
 } 
