@@ -1,26 +1,66 @@
 import { memo } from "react"
+import Image from "next/image"
 import { Handle, Position, type NodeProps } from "reactflow"
-import { Database, CheckCircle, XCircle, CreditCard } from "lucide-react"
+import { Database, CheckCircle, XCircle, CreditCard, Calendar } from "lucide-react"
+
+const integrationDetails = {
+  WOMPI: {
+    name: "Wompi",
+    img: "/integrations-logos-providers/wompi.jpg",
+    icon: <CreditCard className="w-5 h-5 text-white" />,
+    color: "bg-green-500",
+    headerBg: "bg-gradient-to-r from-green-50 to-green-100",
+    headerBorder: "border-green-200",
+    successLabel: "Link Generado",
+    errorLabel: "Error al Generar",
+  },
+  GOOGLE_CALENDAR: {
+    name: "Google Calendar",
+    img: "/integrations-logos-providers/google-calendar.png",
+    icon: <Calendar className="w-5 h-5 text-white" />,
+    color: "bg-blue-500",
+    headerBg: "bg-gradient-to-r from-blue-50 to-blue-100",
+    headerBorder: "border-blue-200",
+    successLabel: "Disponibilidad Obtenida",
+    errorLabel: "Error al Obtener",
+  },
+  DEFAULT: {
+    name: "Integración",
+    img: null,
+    icon: <Database className="w-5 h-5 text-white" />,
+    color: "bg-orange-500",
+    headerBg: "bg-gradient-to-r from-orange-50 to-orange-100",
+    headerBorder: "border-orange-200",
+    successLabel: "Éxito",
+    errorLabel: "Error",
+  },
+}
 
 const IntegrationNode = ({ data }: NodeProps) => {
   const statusSuccess = data.statusSuccess || "success"
   const statusError = data.statusError || "error"
   const statusPaymentSuccess = "success_payment"
 
+  const details = integrationDetails[data.provider as keyof typeof integrationDetails] || integrationDetails.DEFAULT
+
   return (
     <div className="bg-white rounded-xl shadow-lg w-80 border-2 border-stone-200/80 font-sans overflow-hidden">
       {/* Header */}
-      <div className="bg-gradient-to-r from-orange-50 to-orange-100 p-4 border-b border-orange-200">
+      <div className={`${details.headerBg} p-4 border-b ${details.headerBorder}`}>
         <div className="flex items-center">
-          <div className="p-2 bg-orange-500 rounded-lg mr-3">
-            <Database className="w-5 h-5 text-white" />
+          <div className={`p-2 ${details.color} rounded-lg mr-3 flex items-center justify-center`}>
+            {details.img ? (
+              <Image src={details.img} alt={details.name} width={20} height={20} className="w-5 h-5" />
+            ) : (
+              details.icon
+            )}
           </div>
           <div className="flex-grow min-w-0">
-            <strong className="text-sm font-semibold text-stone-800 truncate block" title={data.name || "Integración"}>
-              {data.name || "Integración"}
+            <strong className="text-sm font-semibold text-stone-800 truncate block" title={data.name || details.name}>
+              {data.name || details.name}
             </strong>
-            <p className="text-xs text-stone-600 truncate" title={data.provider || "Configurar integración..."}>
-              {data.provider || "No configurado"}
+            <p className="text-xs text-stone-600 truncate" title={details.name}>
+              {data.provider ? details.name : "No configurado"}
             </p>
           </div>
         </div>
@@ -36,37 +76,33 @@ const IntegrationNode = ({ data }: NodeProps) => {
       />
       
       {/* Main Content */}
-      <div className="p-4">
+      <div className="p-4 space-y-3">
         {/* Success Output */}
-        <div className="mb-3">
-          <div className="flex items-center justify-between group">
-            <div className="flex items-center">
-              <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
-              <span className="text-sm font-medium text-stone-700">Link Generado</span>
-            </div>
-            <Handle
-              type="source"
-              position={Position.Right}
-              id={statusSuccess}
-              className="w-3 h-3 !bg-green-500 !border-2 !border-white transition-all group-hover:scale-110"
-            />
+        <div className="relative">
+          <div className="flex items-center">
+            <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
+            <span className="text-sm font-medium text-stone-700">{details.successLabel}</span>
           </div>
+          <Handle
+            type="source"
+            position={Position.Right}
+            id={statusSuccess}
+            className="w-3 h-3 !bg-green-500 !border-2 !border-white"
+          />
         </div>
         
         {/* Error Output */}
-        <div className="mb-3">
-          <div className="flex items-center justify-between group">
-            <div className="flex items-center">
-              <XCircle className="w-4 h-4 text-red-500 mr-2" />
-              <span className="text-sm font-medium text-stone-700">Error al Generar</span>
-            </div>
-            <Handle
-              type="source"
-              position={Position.Right}
-              id={statusError}
-              className="w-3 h-3 !bg-red-500 !border-2 !border-white transition-all group-hover:scale-110"
-            />
+        <div className="relative">
+          <div className="flex items-center">
+            <XCircle className="w-4 h-4 text-red-500 mr-2" />
+            <span className="text-sm font-medium text-stone-700">{details.errorLabel}</span>
           </div>
+          <Handle
+            type="source"
+            position={Position.Right}
+            id={statusError}
+            className="w-3 h-3 !bg-red-500 !border-2 !border-white"
+          />
         </div>
       </div>
 

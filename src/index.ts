@@ -1220,6 +1220,75 @@ async function executeNode(
           );
           integrationSuccess = false;
         }
+      } else if (provider === "GOOGLE_CALENDAR") {
+        try {
+          const fields = deepInterpolate(
+            node.data.fields || {},
+            session.variables || {}
+          ) as any;
+
+          let {
+            connectionId,
+            calendarId = "primary",
+            daysToCheck = 15,
+            startTime = "09:00",
+            endTime = "17:00",
+            eventDurationMinutes = 30,
+          } = fields as any;
+
+          // Asegurar tipos correctos
+          daysToCheck = typeof daysToCheck === "string" ? parseInt(daysToCheck, 10) : Number(daysToCheck);
+          eventDurationMinutes = typeof eventDurationMinutes === "string" ? parseInt(eventDurationMinutes, 10) : Number(eventDurationMinutes);
+
+          if (!connectionId) {
+            throw new Error("connectionId no definido en el nodo de integración");
+          }
+
+          const baseUrl =
+            process.env.NEXT_PUBLIC_BASE_URL || process.env.BASE_URL || "http://localhost:3000";
+
+          const resp = await axios.post(`${baseUrl}/api/integrations/calendar/availability`, {
+            connectionId,
+            calendarId,
+            daysToCheck,
+            startTime,
+            endTime,
+            eventDurationMinutes,
+          });
+
+          if (resp.status >= 200 && resp.status < 300) {
+            const slots = resp.data?.availability || [];
+
+            // Convertir a string legible
+            const formatted = slots
+              .map((s: any) => `${new Date(s.start).toLocaleString()} - ${new Date(s.end).toLocaleString()}`)
+              .join("\n");
+
+            const varName = node.data.saveResponseTo || "disponibilidad";
+
+            const updatedVars = {
+              ...(session.variables || {}),
+              [varName]: formatted,
+            };
+
+            await db.chatSession.update({
+              where: { id: session.id },
+              data: { variables: updatedVars },
+            });
+
+            session.variables = updatedVars;
+
+            // No enviamos mensaje de disponibilidad; solo la guardamos en variables de sesión.
+          } else {
+            integrationSuccess = false;
+          }
+        } catch (error: any) {
+          console.error(
+            `[Integration] Error procesando integración Google Calendar:`,
+            error.message
+          );
+          integrationSuccess = false;
+        }
       } else {
         console.warn(`[Integration] Proveedor ${provider} no soportado.`);
       }

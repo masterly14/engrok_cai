@@ -4,7 +4,6 @@ import {
   ConnectionExists,
   createConnection,
   getSessionToken,
-  createOrUpdateSync,
 } from "@/actions/nango";
 import { Button } from "../ui/button";
 import {
@@ -12,22 +11,12 @@ import {
   CardContent,
   CardDescription,
   CardHeader,
-  CardTitle,
 } from "../ui/card";
 import { useEffect, useState } from "react";
 import { onBoardUser } from "@/actions/user";
 import Nango from "@nangohq/frontend";
-import {
-  Calendar,
-  CheckCircle,
-  Shield,
-  Loader2,
-  AlertCircle,
-} from "lucide-react";
+import { Calendar, Shield, Loader2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
-import GoogleActions from "../integrations/google-actions";
-import GoogleSheetsActions from "../integrations/google-sheets-actions";
-import { IntegrationNodeData } from "@/app/application/agents/voice-agents/workflows/types";
 
 const IntegrationComponent = ({
   setIntegrationConnection,
@@ -36,7 +25,7 @@ const IntegrationComponent = ({
   authMode,
   nodeId,
   updateNode,
-  selectedNode
+  _selectedNode
 }: {
   setIntegrationConnection: (isConnected: boolean) => void;
   visibleName: string;
@@ -44,19 +33,13 @@ const IntegrationComponent = ({
   authMode: string;
   nodeId: string;
   updateNode: (nodeId: string, updates: any) => void;
-  selectedNode: any
+  _selectedNode: any
 }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [jsonData, setJsonData] = useState<any>(null);
   const [userId, setUserId] = useState<string | null>(null);
-  const [connectionId, setConnectionId] = useState<string | null>(null);
-
-  const handleDataChange = (updates: Partial<IntegrationNodeData>) => {
-    updateNode(nodeId, updates);
-  };
 
   const handleConnect = async () => {
     toast("Asegurate de no bloquear las ventanas emergentes. Si no lo haces, no se podrá conectar con la aplicación.")
@@ -89,19 +72,11 @@ const IntegrationComponent = ({
         });
 
         setIsConnected(true);
+        setIntegrationConnection(true);
         console.log("Conexión creada:", connection);
-        setConnectionId(connection.id);
 
-        // 1️⃣ Crear/actualizar Sync en Nango
-        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || window.location.origin;
-        const { syncName } = await createOrUpdateSync({
-          connectionId: connection.connectionId,
-          providerConfigKey,
-          webhookUrl: `${baseUrl}/api/nango/webhook/${providerConfigKey}`,
-        });
-
-        // 2️⃣ Persistir en nodo
-        updateNode(nodeId, { data: { connectionId: connection.id, syncName } });
+        // Guardar el connectionId en el nodo
+        updateNode(nodeId, { data: { connectionId: connection.id } });
       }
       
     } catch (error) {
@@ -132,19 +107,11 @@ const IntegrationComponent = ({
       );
       const connId = connection.connection?.connectionId || null;
       console.log("connId", connection);
-      setConnectionId(connId);
       setIsConnected(connection.isConnected);
       setIntegrationConnection(connection.isConnected);
 
-      // Asegurarse de que existe el sync (por si aún no se creó)
       if (connId) {
-        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || window.location.origin;
-        const { syncName } = await createOrUpdateSync({
-          connectionId: connId,
-          providerConfigKey,
-          webhookUrl: `${baseUrl}/api/nango/webhook/${providerConfigKey}`,
-        });
-        updateNode(nodeId, { data: { connectionId: connId, syncName } });
+        updateNode(nodeId, { data: { connectionId: connId } });
       }
     } catch (error) {
       console.error("Error verificando conexión:", error);
@@ -176,28 +143,9 @@ const IntegrationComponent = ({
   if (isConnected) {
     return (
       <Card className="w-full max-w-md mx-auto border-green-200 bg-green-50/50">
-        <CardContent className="pt-0">
-          <div className="flex items-center justify-center gap-2 p-3 bg-white rounded-lg border border-green-200">
-            <Calendar className="h-4 w-4 text-green-600" />
-            <span className="text-sm font-medium text-green-700">
-              {visibleName}
-            </span>
-          </div>
-          {providerConfigKey === "google-calendar" && (
-            <GoogleActions
-              data={selectedNode.data as IntegrationNodeData}
-              onDataChange={handleDataChange}
-              userId={userId}
-            />
-          )}
-          {providerConfigKey === "google-sheet" && (
-            <GoogleSheetsActions
-              data={selectedNode.data as IntegrationNodeData}
-              onDataChange={handleDataChange}
-              userId={userId}
-            />
-          )}
-          
+        <CardContent className="flex items-center justify-center p-6 gap-2">
+          <Calendar className="h-4 w-4 text-green-600" />
+          <span className="text-sm font-medium text-green-700">{visibleName} conectado</span>
         </CardContent>
       </Card>
     );

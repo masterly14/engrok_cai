@@ -1,4 +1,4 @@
-import { clsx, type ClassValue } from "clsx"
+import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
 
 export function cn(...inputs: ClassValue[]) {
@@ -48,4 +48,37 @@ export function sanitizeData(data: any): any {
   
   // Return other types as is
   return data;
+}
+
+export function findBestMatchingToken(credentials: any): string | null {
+  if (!credentials || !Array.isArray(credentials)) {
+    return null
+  }
+
+  const now = Date.now()
+
+  // Find a non-expired token first
+  const nonExpired = credentials.find(
+    (cred) => cred.expires_at && new Date(cred.expires_at).getTime() > now
+  )
+
+  if (nonExpired) {
+    return nonExpired.access_token
+  }
+
+  // If all are expired, return the most recently expired one, if available
+  const sortedByExpiry = credentials
+    .filter((cred) => cred.expires_at)
+    .sort((a, b) => new Date(b.expires_at).getTime() - new Date(a.expires_at).getTime())
+
+  if (sortedByExpiry.length > 0) {
+    return sortedByExpiry[0].access_token
+  }
+
+  // Fallback to the first token found if no expiry info is available
+  if (credentials.length > 0 && credentials[0].access_token) {
+    return credentials[0].access_token
+  }
+
+  return null
 }

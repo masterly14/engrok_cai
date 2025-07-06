@@ -29,6 +29,8 @@ import {
 } from "@/actions/integrations"
 import { toast } from "sonner"
 import Image from "next/image"
+import IntegrationComponent from "@/components/nango/integrationComponent"
+import { GoogleCalendarActionConfig } from "./google-calendar-action-config"
 
 type Props = {
   selectedNode: Node
@@ -47,6 +49,16 @@ const availableIntegrations = [
     img: "/integrations-logos-providers/wompi.jpg",
     color: "green",
   },
+  {
+    id: "google-calendar",
+    name: "Google Calendar",
+    description: "Integra con Google Calendar para obtener disponibilidad de horarios y crear eventos.",
+    className: "hover:border-green-500 hover:bg-green-50/50 transition-all duration-200",
+    icon: <Calendar className="w-5 h-5 text-green-600" />,
+    provider: "GOOGLE_CALENDAR",
+    img: "/integrations-logos-providers/google-calendar.png",
+    color: "green",
+  }
 ]
 
 const IntegrationNodeConfig = ({ selectedNode, updateNode, workflowId }: Props) => {
@@ -375,14 +387,16 @@ const IntegrationNodeConfig = ({ selectedNode, updateNode, workflowId }: Props) 
                   </Button>
                 </CardContent>
               </Card>
+            ) : selectedIntegration === "GOOGLE_CALENDAR" ? (
+              <GoogleCalendarActionConfig selectedNode={selectedNode} updateNode={updateNode} />
             ) : (
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">Integration Settings</CardTitle>
-                  <CardDescription>Configure your {getSelectedIntegrationData()?.name} integration</CardDescription>
+                  <CardTitle className="text-base">Configuración de Integración</CardTitle>
+                  <CardDescription>Configura tu integración con {getSelectedIntegrationData()?.name}</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-muted-foreground">Integration configuration options will appear here.</p>
+                  <p className="text-sm text-muted-foreground">Configuración de integración para {getSelectedIntegrationData()?.name}</p>
                 </CardContent>
               </Card>
             )
@@ -392,13 +406,13 @@ const IntegrationNodeConfig = ({ selectedNode, updateNode, workflowId }: Props) 
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-base">
                     <Key className="w-4 h-4" />
-                    Connect Wompi Account
+                    Conecta tu cuenta de Wompi
                   </CardTitle>
-                  <CardDescription>Enter your Wompi API credentials to establish the connection</CardDescription>
+                  <CardDescription>Ingresa tus credenciales de Wompi para establecer la conexión</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="publicKey">Public Key</Label>
+                    <Label htmlFor="publicKey">Clave Pública</Label>
                     <Input
                       id="publicKey"
                       placeholder="pub_test_..."
@@ -408,7 +422,7 @@ const IntegrationNodeConfig = ({ selectedNode, updateNode, workflowId }: Props) 
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="privateKey">Private Key</Label>
+                    <Label htmlFor="privateKey">Clave Privada</Label>
                     <Input
                       id="privateKey"
                       type="password"
@@ -419,7 +433,7 @@ const IntegrationNodeConfig = ({ selectedNode, updateNode, workflowId }: Props) 
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="eventToken">Event Token</Label>
+                    <Label htmlFor="eventToken">Token de Evento</Label>
                     <Input
                       id="eventToken"
                       type="password"
@@ -434,21 +448,36 @@ const IntegrationNodeConfig = ({ selectedNode, updateNode, workflowId }: Props) 
                     className="w-full"
                     disabled={!wompiPublicKey || !wompiPrivateKey || !wompiEventToken}
                   >
-                    Validate & Connect
+                    Validar y Conectar
                   </Button>
                 </CardContent>
               </Card>
+            ) : selectedIntegration === "GOOGLE_CALENDAR" ? (
+              <IntegrationComponent
+                setIntegrationConnection={(connected) => {
+                  setIsConnected(connected)
+                  if (connected) {
+                    toast.success("Cuenta de Google Calendar conectada exitosamente!")
+                  }
+                }}
+                visibleName="Google Calendar"
+                providerConfigKey="google-calendar"
+                authMode="O_AUTH2"
+                nodeId={selectedNode.id}
+                updateNode={updateNode}
+                _selectedNode={selectedNode}
+              />
             ) : (
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">Account Connection Required</CardTitle>
+                  <CardTitle className="text-base">Conexión de Cuenta Requerida</CardTitle>
                   <CardDescription>
-                    Connect your {getSelectedIntegrationData()?.name} account to continue
+                    Conecta tu cuenta de {getSelectedIntegrationData()?.name} para continuar
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <Button onClick={() => handleConnectAccount(selectedIntegration!)} className="w-full">
-                    Connect Account
+                    Conectar Cuenta
                   </Button>
                 </CardContent>
               </Card>
@@ -459,9 +488,9 @@ const IntegrationNodeConfig = ({ selectedNode, updateNode, workflowId }: Props) 
                 <div className="text-center space-y-3">
                   <AlertCircle className="w-8 h-8 text-muted-foreground mx-auto" />
                   <div>
-                    <p className="font-medium">No Integration Selected</p>
+                    <p className="font-medium">No se ha seleccionado ninguna integración</p>
                     <p className="text-sm text-muted-foreground">
-                      Please select an integration from the list above.
+                      Por favor, selecciona una integración de la lista de arriba.
                     </p>
                   </div>
                 </div>

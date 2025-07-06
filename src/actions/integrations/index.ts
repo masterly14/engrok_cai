@@ -4,6 +4,12 @@ import { db } from "@/utils";
 import { onBoardUser } from "../user";
 import { IntegrationProvider } from "@prisma/client";
 import { OpenAIToolSet } from "composio-core";
+import { auth } from "@clerk/nextjs/server";
+import { Prisma, PrismaClient } from "@prisma/client";
+import { Nango } from "@nangohq/node";
+
+const prisma = new PrismaClient();
+const nango = new Nango({ secretKey: process.env.NANGO_SECRET_KEY! });
 
 export const validateIntegrationUser = async (provider: string) => {
   const user = await onBoardUser();
@@ -280,3 +286,59 @@ export const generateWompiPaymentLink = async ({
     data,
   } as const;
 };
+
+export async function getGoogleCalendars() {
+  const { userId: clerkId } = await auth()
+  if (!clerkId) {
+    throw new Error("User not authenticated")
+  }
+
+  const user = await prisma.user.findUnique({ where: { clerkId } })
+  if (!user) {
+    throw new Error("User not found in DB")
+  }
+
+  const connection = await prisma.connection.findFirst({
+    where: {
+      userId: user.id,
+      providerConfigKey: "google-calendar",
+    },
+  })
+
+  if (!connection?.connectionId) {
+    throw new Error("Google Calendar connection not found for this user.")
+  }
+
+  try {
+    const calendarListResponse = await nango.proxy({
+      connectionId: connection.connectionId,
+      providerConfigKey: "google-calendar",
+      method: "GET",
+      endpoint: "/calendar/v3/users/me/calendarList",
+      retries: 3,
+    })
+
+    const calendars =
+      calendarListResponse.data?.items?.map((cal: any) => ({
+        id: cal.id,
+        summary: cal.summary,
+        primary: cal.primary || false,
+      })) || []
+
+    return { calendars }
+  } catch (error) {
+    console.error("Error fetching google calendars via Nango proxy:", error)
+    throw new Error("Failed to fetch calendars from Google API.")
+  }
+}
+
+export async function getIntegrationAccessToken(
+  connectionId: string,
+  providerConfigKey: string
+): Promise<string> {
+  const token = await nango.getToken(connectionId, providerConfigKey)
+  if (!token) {
+    throw new Error("No valid access token found for the connection.")
+  }
+  return token.toString()
+}
