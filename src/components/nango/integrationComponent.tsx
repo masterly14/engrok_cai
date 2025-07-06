@@ -76,7 +76,7 @@ const IntegrationComponent = ({
         console.log("Conexión creada:", connection);
 
         // Guardar el connectionId en el nodo
-        updateNode(nodeId, { data: { connectionId: connection.id } });
+        updateNode(nodeId, { data: { ..._selectedNode.data, fields: { ..._selectedNode.data.fields, connectionId: connection.connectionId } } });
       }
       
     } catch (error) {
@@ -111,7 +111,7 @@ const IntegrationComponent = ({
       setIntegrationConnection(connection.isConnected);
 
       if (connId) {
-        updateNode(nodeId, { data: { connectionId: connId } });
+        updateNode(nodeId, { data: { ..._selectedNode.data, fields: { ..._selectedNode.data.fields, connectionId: connId } } });
       }
     } catch (error) {
       console.error("Error verificando conexión:", error);
