@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button'; // Suponiendo que usas ShadCN UI
 import { Loader2 } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
+import Link from "next/link"
 
 // Declara las propiedades de la ventana global para TypeScript
 declare global {
@@ -15,6 +17,8 @@ declare global {
 const WhatsAppConnectButton = () => {
   const [sdkLoaded, setSdkLoaded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [connectedPhone, setConnectedPhone] = useState<string | null>(null);
 
   useEffect(() => {
     if (document.getElementById('facebook-jssdk')) {
@@ -87,8 +91,8 @@ const WhatsAppConnectButton = () => {
 
       if (response.ok) {
         console.log('¡Conexión exitosa!', data);
-        // Recargamos la página para que el nuevo agente aparezca inmediatamente en la interfaz.
-        window.location.reload();
+        setConnectedPhone(data.phoneNumber ?? null);
+        setShowSuccessDialog(true);
       } else {
         throw new Error(data.error || 'Falló el intercambio de código');
       }
@@ -101,13 +105,39 @@ const WhatsAppConnectButton = () => {
   };
 
   return (
-    <Button 
-      onClick={handleFacebookLogin} 
-      disabled={!sdkLoaded || isLoading}
-    >
-      {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-      {isLoading ? 'Conectando...' : 'Conectar Cuenta de WhatsApp'}
-    </Button>
+    <>
+      <Button 
+        onClick={handleFacebookLogin} 
+        disabled={!sdkLoaded || isLoading}
+      >
+        {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+        {isLoading ? 'Conectando...' : 'Conectar Cuenta de WhatsApp'}
+      </Button>
+      <AlertDialog open={showSuccessDialog} onOpenChange={(open) => { if (!open) window.location.reload(); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¡Línea conectada con éxito!</AlertDialogTitle>
+            <AlertDialogDescription>
+              Ya puedes enviar un mensaje de WhatsApp a tu nueva línea para verificar que el agente esté funcionando correctamente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {connectedPhone && (
+            <div className="text-center my-4">
+              <Link
+                href={`https://wa.me/${connectedPhone.replace(/\D/g, "")}`}
+                target="_blank"
+                className="font-medium text-blue-600 hover:underline"
+              >
+                Abrir chat con {connectedPhone}
+              </Link>
+            </div>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => window.location.reload()}>Continuar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };
 
