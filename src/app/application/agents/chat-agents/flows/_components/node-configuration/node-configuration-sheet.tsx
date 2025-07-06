@@ -31,9 +31,10 @@ interface NodeConfigurationSheetProps {
   onValidationStateChange?: (hasErrors: boolean) => void
   onSaveFlow?: () => void
   workflowChatAgentId: string
+  knowledgeBases: any[]
 }
 
-export function NodeConfigurationSheet({ selectedNode, isOpen, onClose, updateNode, workflowId, globalVariables, onValidationStateChange, onSaveFlow, workflowChatAgentId }: NodeConfigurationSheetProps) {
+export function NodeConfigurationSheet({ selectedNode, isOpen, onClose, updateNode, workflowId, globalVariables, onValidationStateChange, onSaveFlow, workflowChatAgentId, knowledgeBases }: NodeConfigurationSheetProps) {
   if (!selectedNode) return null
 
   const [hasErrors, setHasErrors] = React.useState(false)
@@ -125,6 +126,7 @@ export function NodeConfigurationSheet({ selectedNode, isOpen, onClose, updateNo
           <AiNodeConfig
             selectedNode={selectedNode}
             updateNode={wrappedUpdateNode}
+            knowledgeBases={knowledgeBases}
           />
         )
       default:
