@@ -335,9 +335,18 @@ export async function getGoogleCalendars() {
 export async function getIntegrationAccessToken(
   connectionId: string,
 ): Promise<string> {
-  const token = await nango.getToken(connectionId, "google-calendar")
-  if (!token) {
-    throw new Error("No valid access token found for the connection.")
+  // providerConfigKey primero, luego connectionId
+  const conn = await nango.getConnection(
+    'google-calendar',
+    connectionId,
+    false,  // forceRefresh
+    true    // refreshToken
+  );
+
+  // Type guard to ensure we have OAuth2 credentials
+  if ('access_token' in conn.credentials && typeof conn.credentials.access_token === 'string') {
+    return conn.credentials.access_token;
   }
-  return token.toString()
+
+  throw new Error("No valid access token found for the connection.");
 }
