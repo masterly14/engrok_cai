@@ -17,10 +17,11 @@ import {
 import { z } from "zod";
 import { tool, type Tool } from "@langchain/core/tools";
 import OpenAI from "openai";
+import { downloadFileFromR2, deleteFileFromR2 } from "@/lib/r2-utils";
 import fs from "fs/promises";
+import path from "path";
 import { createReadStream } from "fs";
 import os from "os";
-import path from "path";
 // Intentamos cargar dinámicamente zod_to_tool; si no existe, usamos un stub.
 
 // --- CONFIGURACIÓN E INICIALIZACIÓN ---
@@ -317,6 +318,13 @@ interface ExternalTriggerEvent {
   workflowId: string;
   phone: string;
   variables?: Record<string, any>;
+}
+
+interface ReminderContinuationEvent {
+  kind: "reminder_continuation";
+  sessionId: string;
+  nextNodeId: string;
+  agentId: string;
 }
 
 // NEW: Tipo para eventos de envío por lotes
@@ -1255,6 +1263,64 @@ async function executeNode(
       }
       break;
     }
+    case "reminder": {
+      console.log(`[Executor] Scheduling reminder for session ${session.id}`);
+
+      const delay = parseInt(node.data.delay, 10) || 0;
+      const unit = node.data.delayUnit || "seconds";
+      const delayString = `${delay}${unit.charAt(0)}`;
+
+      const nextNodeId = findNextNodeId(node, null, workflowData.edges);
+
+      if (!nextNodeId) {
+        console.warn(`[Executor] Reminder node ${node.id} has no outgoing edge. Stopping flow.`);
+        return;
+      }
+
+      const qstashUrl = process.env.QSTASH_URL;
+      const qstashToken = process.env.QSTASH_TOKEN;
+      const redisRestUrl = process.env.UPSTASH_REDIS_REST_URL;
+      const redisRestToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+
+      if (!qstashUrl || !qstashToken || !redisRestUrl || !redisRestToken) {
+        console.error("[Executor] QStash or Upstash Redis REST credentials not configured. Cannot schedule reminder.");
+        return;
+      }
+
+      try {
+        console.log(`[Executor] Scheduling Redis command with delay ${delayString}`);
+
+        const qstashPayload = {
+          url: redisRestUrl,
+          token: redisRestToken,
+          command: [
+            "XADD",
+            STREAM_KEY,
+            "*",
+            "payload",
+            JSON.stringify({
+              kind: "reminder_continuation",
+              sessionId: session.id,
+              nextNodeId: nextNodeId,
+              agentId: agent.id,
+            }),
+          ],
+        };
+
+        await axios.post(qstashUrl, qstashPayload, {
+          headers: {
+            "Authorization": `Bearer ${qstashToken}`,
+            "Content-Type": "application/json",
+            "Upstash-Delay": delayString,
+          },
+        });
+
+        console.log(`[Executor] Reminder scheduled successfully for session ${session.id}.`);
+      } catch (error: any) {
+        console.error(`[Executor] Failed to schedule reminder via QStash:`, error.response?.data || error.message);
+      }
+      break;
+    }
     /* ------------------------------------------------------------------ */
     /* NUEVO TIPO DE NODO: IA (chat LLM)                                  */
     /* ------------------------------------------------------------------ */
@@ -1660,6 +1726,8 @@ async function processMessages() {
             await handleKbUpload(messageObject as KbUploadEvent);
           } else if (messageObject?.kind === "batch_send") {
             await handleBatchSend(messageObject as BatchSendEvent);
+          } else if (messageObject?.kind === "reminder_continuation") {
+            await handleReminderContinuation(messageObject as ReminderContinuationEvent);
           } else {
             await handleIncomingMessage(messageObject);
           }
@@ -1714,6 +1782,57 @@ async function startWorker() {
 }
 
 startWorker();
+
+// ---------------------------------------------------------------------------
+// NUEVO: Manejar continuación de recordatorios
+// ---------------------------------------------------------------------------
+async function handleReminderContinuation(event: ReminderContinuationEvent) {
+  const { sessionId, nextNodeId, agentId } = event;
+  console.log(`[Reminder] Continuing flow for session ${sessionId} on node ${nextNodeId}`);
+
+  try {
+    const agent = await db.chatAgent.findUnique({ where: { id: agentId } });
+    if (!agent) {
+      console.error(`[Reminder] Agent ${agentId} not found.`);
+      return;
+    }
+
+    const session = await db.chatSession.findUnique({
+      where: { id: sessionId },
+      include: { contact: true, workflow: true },
+    });
+
+    if (!session) {
+      console.error(`[Reminder] Session ${sessionId} not found.`);
+      return;
+    }
+
+    if (session.status !== "ACTIVE") {
+      console.warn(`[Reminder] Session ${sessionId} is not active (status: ${session.status}). Aborting.`);
+      return;
+    }
+
+    const workflowJson = session.workflow.workflow;
+    const workflowData = typeof workflowJson === "string" ? JSON.parse(workflowJson) : workflowJson;
+
+    const nodeToExecute = workflowData.nodes.find((n: any) => n.id === nextNodeId);
+
+    if (!nodeToExecute) {
+      console.error(`[Reminder] Node ${nextNodeId} not found in workflow ${session.workflowId}.`);
+      return;
+    }
+
+    await db.chatSession.update({
+      where: { id: session.id },
+      data: { currentNodeId: nodeToExecute.id },
+    });
+
+    console.log(`[Reminder] Executing node ${nodeToExecute.id} (${nodeToExecute.type})`);
+    await executeNode(nodeToExecute, { ...session, currentNodeId: nodeToExecute.id }, agent);
+  } catch (error: any) {
+    console.error(`[Reminder] Failed handling reminder continuation:`, error);
+  }
+}
 
 // ---------------------------------------------------------------------------
 // NUEVO: Manejar eventos provenientes de Webhook Trigger
@@ -1892,53 +2011,76 @@ async function handleKbUpload(event: KbUploadEvent) {
     "@langchain/community/vectorstores/upstash"
   );
 
-  // Loaders variables
-  const loaders: { ext: RegExp; loader: (p: string) => Promise<any[]> }[] = [
+  // Loaders variables - usando loaders que trabajan con buffers
+  const loaders: { ext: RegExp; loader: (buffer: Buffer, filename: string) => Promise<any[]> }[] = [
     {
       ext: /\.(pdf)$/i,
-      loader: async (p: string) => {
+      loader: async (buffer: Buffer, filename: string) => {
         const { PDFLoader } = await import(
           "@langchain/community/document_loaders/fs/pdf"
         );
-        const l = new PDFLoader(p);
-        return l.load();
+        // Crear un archivo temporal solo para PDF (necesario por LangChain)
+        const tempPath = `/tmp/${filename}`;
+        await fs.writeFile(tempPath, buffer);
+        try {
+          const l = new PDFLoader(tempPath);
+          return await l.load();
+        } finally {
+          // Limpiar archivo temporal
+          try {
+            await fs.unlink(tempPath);
+          } catch {}
+        }
       },
     },
     {
       ext: /\.(txt|md)$/i,
-      loader: async (p: string) => {
-        const { TextLoader } = await import(
-          "langchain/document_loaders/fs/text"
-        );
-        const l = new TextLoader(p);
-        return l.load();
+      loader: async (buffer: Buffer, filename: string) => {
+        const { Document } = await import("@langchain/core/documents");
+        const text = buffer.toString('utf-8');
+        return [new Document({ pageContent: text, metadata: { source: filename } })];
       },
     },
     {
       ext: /\.(docx?)$/i,
-      loader: async (p: string) => {
+      loader: async (buffer: Buffer, filename: string) => {
         const { DocxLoader } = await import(
           "@langchain/community/document_loaders/fs/docx"
         );
-        const l = new DocxLoader(p);
-        return l.load();
+        // Crear un archivo temporal para DOCX (necesario por LangChain)
+        const tempPath = `/tmp/${filename}`;
+        await fs.writeFile(tempPath, buffer);
+        try {
+          const l = new DocxLoader(tempPath);
+          return await l.load();
+        } finally {
+          // Limpiar archivo temporal
+          try {
+            await fs.unlink(tempPath);
+          } catch {}
+        }
       },
     },
   ];
 
   try {
     let documents: any[] = [];
-    for (const filePath of files) {
-      const matchLoader = loaders.find((l) => l.ext.test(filePath));
+    for (const r2Key of files) {
+      const matchLoader = loaders.find((l) => l.ext.test(r2Key));
       if (matchLoader) {
         try {
-          const docs = await matchLoader.loader(filePath);
+          // Descargar archivo desde R2
+          const fileBuffer = await downloadFileFromR2(r2Key);
+          const filename = r2Key.split('/').pop() || 'unknown';
+          
+          // Usar el loader con el buffer directamente
+          const docs = await matchLoader.loader(fileBuffer, filename);
           documents.push(...docs);
         } catch (err) {
-          console.warn(`[KB Upload] Error loading ${filePath}`, err);
+          console.warn(`[KB Upload] Error loading ${r2Key}`, err);
         }
       } else {
-        console.warn(`[KB Upload] No loader for ${filePath}`);
+        console.warn(`[KB Upload] No loader for ${r2Key}`);
       }
     }
 
@@ -1989,11 +2131,13 @@ async function handleKbUpload(event: KbUploadEvent) {
       });
     } catch {}
   } finally {
-    // cleanup temporales
-    for (const f of files) {
+    // cleanup archivos de R2
+    for (const r2Key of files) {
       try {
-        await fs.unlink(f);
-      } catch {}
+        await deleteFileFromR2(r2Key);
+      } catch (err) {
+        console.warn(`[KB Upload] Error deleting ${r2Key} from R2`, err);
+      }
     }
   }
 }

@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { MessageSquare, Database, Globe, PowerOff, Save, GitBranch, Search, X, Sparkles, Zap, User, BrainCircuit } from "lucide-react"
+import { MessageSquare, Database, Globe, PowerOff, Save, GitBranch, Search, X, Sparkles, Zap, User, BrainCircuit, Clock } from "lucide-react"
 import { useState, useMemo } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Card } from "@/components/ui/card"
@@ -76,6 +76,15 @@ const nodeOptions: NodeOption[] = [
     description: "Capturar respuesta del usuario",
     category: "logic",
     tags: ["save", "store", "variable"],
+  },
+  {
+    type: "reminder",
+    label: "Recordatorio",
+    icon: <Clock className="w-4 h-4" />,
+    description: "Espera un tiempo y luego continúa el flujo",
+    category: "logic",
+    tags: ["wait", "delay", "schedule", "timer", "reminder"],
+    isNew: true,
   },
   {
     type: "ai",

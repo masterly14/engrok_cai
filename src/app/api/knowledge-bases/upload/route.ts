@@ -2,9 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { onBoardUser } from "@/actions/user";
 import { db } from "@/utils";
 import { v4 as uuidv4 } from "uuid";
-import fs from "fs/promises";
-import path from "path";
-import os from "os";
+import { uploadFileToR2, generateR2Key } from "@/lib/r2-utils";
 
 // Temporal: Sin Redis para testing
 let redis: any = null;
@@ -63,20 +61,18 @@ export async function POST(request: NextRequest) {
 
     console.log("[KB Upload API] Creating KB:", { kbId, kbName });
 
-    // 3. Guardar archivos temporalmente y construir payload
-    console.log("[KB Upload API] Saving files to temp...");
-    const tempPaths: string[] = [];
+    // 3. Subir archivos a R2 y construir payload
+    console.log("[KB Upload API] Uploading files to R2...");
+    const r2Keys: string[] = [];
     for (const file of files) {
       console.log("[KB Upload API] Processing file:", file.name);
       const arrayBuffer = await file.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
-      const tmpPath = path.join(
-        os.tmpdir(),
-        `${kbId}-${file.name.replace(/\s+/g, "_")}`,
-      );
-      await fs.writeFile(tmpPath, buffer);
-      tempPaths.push(tmpPath);
-      console.log("[KB Upload API] File saved to:", tmpPath);
+      const r2Key = generateR2Key(file.name, userId);
+      
+      await uploadFileToR2(r2Key, buffer, file.type);
+      r2Keys.push(r2Key);
+      console.log("[KB Upload API] File uploaded to R2:", r2Key);
     }
 
     // 4. Insertar registro preliminar en la BD
@@ -99,7 +95,7 @@ export async function POST(request: NextRequest) {
         kind: "kb_upload",
         kbId,
         userId,
-        files: tempPaths,
+        files: r2Keys,
       };
       
       try {

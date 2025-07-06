@@ -17,6 +17,7 @@ import { toast } from "sonner"
 import { HandoverToHumanNodeConfig } from "./handover-to-human-node-config"
 import IntegrationNodeConfig from "./integration-node-config"
 import { AiNodeConfig } from "./ai-node-config"; // Importar el nuevo componente
+import { ReminderNodeConfig } from "./reminder-node-config"
 
 // Define generic node type
 type GenericNode = Node<any>;
@@ -69,6 +70,7 @@ export function NodeConfigurationSheet({ selectedNode, isOpen, onClose, updateNo
     handoverToHuman: "Transferencia a Agente",
     integration: "Integration",
     ai: "IA",
+    reminder: "Recordatorio",
   }
 
   const nodeFriendlyName = nodeTypeToNameMap[selectedNode.type || ""] || selectedNode.type || "Node"
@@ -127,6 +129,13 @@ export function NodeConfigurationSheet({ selectedNode, isOpen, onClose, updateNo
             selectedNode={selectedNode}
             updateNode={wrappedUpdateNode}
             knowledgeBases={knowledgeBases}
+          />
+        )
+      case "reminder":
+        return (
+          <ReminderNodeConfig
+            selectedNode={selectedNode}
+            updateNode={wrappedUpdateNode}
           />
         )
       default:
