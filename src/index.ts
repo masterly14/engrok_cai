@@ -1248,7 +1248,7 @@ async function executeNode(
             }
 
             const baseUrl =
-              process.env.NEXT_PUBLIC_BASE_URL || process.env.BASE_URL || "http://localhost:3000";
+              process.env.NEXT_PUBLIC_BASE_URL || process.env.BASE_URL || "https://karolai.co";
 
             const resp = await axios.post(`${baseUrl}/api/integrations/calendar/availability`, {
               connectionId,

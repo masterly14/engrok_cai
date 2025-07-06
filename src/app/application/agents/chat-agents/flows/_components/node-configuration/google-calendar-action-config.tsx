@@ -104,7 +104,7 @@ export const GoogleCalendarActionConfig = ({ selectedNode, updateNode }: Props) 
         return
       }
       fields = {
-        connectionId: selectedNode.data.connectionId,
+        connectionId: selectedNode.data.fields?.connectionId,
         calendarId: calendarId,
         daysToCheck: parseInt(daysToCheck, 10),
         startTime,
@@ -121,7 +121,7 @@ export const GoogleCalendarActionConfig = ({ selectedNode, updateNode }: Props) 
       }
       nodeName = "Crear Evento (GCal)"
       fields = {
-        connectionId: selectedNode.data.connectionId,
+        connectionId: selectedNode.data.fields?.connectionId,
         calendarId: calendarId,
         title: eventTitle,
         description: eventDescription,
