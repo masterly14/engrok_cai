@@ -31,6 +31,7 @@ import TriggerNode from "./nodes/trigger-node"
 import HandoverToHumanNode from "./nodes/handover-to-human-node"
 import AINode from "./nodes/ai-node" // Importar el nuevo nodo
 import integrationNode from "./nodes/integration-node"
+import ReminderNode from "./nodes/reminder-node" // Importar el nodo de recordatorio
 
 import { Button } from "@/components/ui/button"
 import { Plus, Workflow, Save, Play, MoreHorizontal, Loader2, CheckCircle, Pencil, Send } from "lucide-react"
@@ -67,6 +68,7 @@ const nodeTypes: NodeTypes = {
   handoverToHuman: HandoverToHumanNode,
   integration: integrationNode,
   ai: AINode, // Registrar el nuevo nodo
+  reminder: ReminderNode, // Registrar el nodo de recordatorio
 }
 
 const validateConnection = (sourceNode: Node, targetNode: Node, allNodes: Node[]): boolean => {
@@ -426,6 +428,15 @@ export function FlowBuilder({ workflowId }: { workflowId?: string }) {
           name: "Inteligencia Artificial",
           prompt: "Eres un asistente de IA. Tu objetivo es resolver las dudas del usuario.",
           conditions: [], // Inicialmente sin condiciones de salida
+        }
+      if (nodeType === "reminder")
+        defaultData = {
+          ...defaultData,
+          name: "New Reminder",
+          delay: 60, // 1 minute default
+          delayUnit: "seconds",
+          botResponse: "",
+          userResponse: "",
         }
       const newNode: Node = {
         id: uuidv4(),
