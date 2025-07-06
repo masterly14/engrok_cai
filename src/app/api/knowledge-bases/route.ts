@@ -15,6 +15,8 @@ export async function GET() {
       select: { id: true, name: true },
     });
 
+    console.log("[API] Knowledge bases fetched", knowledgeBases);
+    
     return NextResponse.json(knowledgeBases);
   } catch (err) {
     console.error("[API] Error fetching knowledge bases", err);

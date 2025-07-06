@@ -332,6 +332,13 @@ interface BatchSendEvent {
   perContactVariables?: Record<string, Record<string, any>>;
 }
 
+interface KbUploadEvent {
+  kind: "kb_upload";
+  kbId: string;
+  userId: string;
+  files: string[];
+}
+
 async function handleIncomingMessage(whatsappPayload: any) {
   const whatsappMessage = whatsappPayload.messages[0];
   const userPhone = whatsappMessage.from;
@@ -1024,7 +1031,7 @@ async function executeNode(
       };
 
       const url = interpolateVariables(node.data.url, enrichedVariables);
-      const method = (node.data.method || "POST").toUpperCase();
+      const method = (node.data.method || ", POST").toUpperCase();
       let bodyContent: any = {};
 
       // body puede venir como JSON string o como objeto
@@ -1275,6 +1282,36 @@ async function executeNode(
             : new AIMessage(String(m.textBody))
         );
 
+      // 1.5. Si RAG habilitado: obtener contexto de KB
+      let ragContext = "";
+      if (node.data.ragEnabled && node.data.knowledgeBaseId && userInput) {
+        try {
+          const kb = await db.knowledgeBase.findUnique({ where: { id: node.data.knowledgeBaseId } });
+          if (kb && kb.trieveApiKey) {
+            const { UpstashVectorStore } = await import("@langchain/community/vectorstores/upstash");
+            const { OpenAIEmbeddings } = await import("@langchain/openai");
+
+            const embeddings = new OpenAIEmbeddings({ openAIApiKey: process.env.OPENAI_API_KEY || "" });
+
+            // @ts-ignore – UpstashVectorStore constructor typing
+            const store = new UpstashVectorStore({
+              indexName: kb.trieveApiKey,
+              url: process.env.UPSTASH_VECTOR_REST_URL!,
+              token: process.env.UPSTASH_VECTOR_REST_TOKEN!,
+              embeddings,
+            } as any);
+
+            const retriever = store.asRetriever({ k: 4 });
+            const docs = await retriever.getRelevantDocuments(userInput);
+            if (docs && docs.length) {
+              ragContext = docs.map((d: any) => d.pageContent).join("\n---\n");
+            }
+          }
+        } catch (err) {
+          console.error("[Executor] Error fetching RAG context", err);
+        }
+      }
+
       // 2. Construir herramientas dinámicas a partir de los edges "condition"
       const conditionalEdges = workflowData.edges.filter(
         (e: any) =>
@@ -1317,11 +1354,16 @@ async function executeNode(
           node.data.prompt ||
           "Eres una asistente virtual llamada Sofia, amable, precisa y en español.";
 
+        let basePrompt = persona;
+        if (ragContext) {
+          basePrompt += `\n\nInformación de referencia:\n${ragContext}`;
+        }
+
         const toolList = tools
           .map((t) => `- ${t.name}: ${t.description}`)
           .join("\n");
 
-        const systemPrompt = `${persona}\n\nHerramientas disponibles:\n${toolList}\n\nReglas:\n1. Si la intención del usuario coincide claramente con una herramienta, SOLO llama a esa herramienta.\n2. Si no coincide ninguna, responde en máximo 40 palabras.\n3. No inventes herramientas.\n4. Si dudas, pide aclaración corta.\n`;
+        const systemPrompt = `${basePrompt}\n\nHerramientas disponibles:\n${toolList}\n\nReglas:\n1. Si la intención del usuario coincide claramente con una herramienta, SOLO llama a esa herramienta.\n2. Si no coincide ninguna, responde en máximo 40 palabras.\n3. No inventes herramientas.\n4. Si dudas, pide aclaración corta.\n`;
 
         const messagesForModel = [
           new SystemMessage(systemPrompt),
@@ -1553,7 +1595,9 @@ const CONSUMER_NAME = `consumer-${
 
 async function setupConsumerGroup() {
   try {
-    await redisClient.xgroup("CREATE", STREAM_KEY, GROUP_NAME, "$", "MKSTREAM");
+    // Creamos el consumer-group desde el inicio del stream ("0") para que, si
+    // el worker se reinicia y hay mensajes pendientes, puedan ser reclamados.
+    await redisClient.xgroup("CREATE", STREAM_KEY, GROUP_NAME, "0", "MKSTREAM");
     console.log(`[Setup] Consumer group ${GROUP_NAME} created.`);
   } catch (error: any) {
     if (error.message.includes("BUSYGROUP")) {
@@ -1579,7 +1623,7 @@ async function processMessages() {
         "COUNT",
         "1",
         "BLOCK",
-        "0",
+        "5000", // Upstash cierra bloqueos muy largos; usamos 5 s y luego seguimos
         "STREAMS",
         STREAM_KEY,
         ">"
@@ -1587,12 +1631,33 @@ async function processMessages() {
       if (response) {
         const [stream, messages] = response[0] as [string, any[]];
         const [messageId, fields] = messages[0];
-        const payloadIndex = fields.findIndex((f: any) => f === "payload");
-        if (payloadIndex !== -1) {
-          const messageObject = JSON.parse(fields[payloadIndex + 1]);
 
+        // `fields` may come in two shapes depending on the client that hizo XADD:
+        //  a) Flat array → ["payload", "{...}"]
+        //  b) Nested pairs → [["payload", "{...}"]] (observado cuando XADD se llamó vía REST)
+
+        let payloadRaw: string | undefined;
+
+        if (Array.isArray(fields[0])) {
+          // Forma b)
+          for (const pair of fields as any[]) {
+            if (Array.isArray(pair) && pair[0] === "payload") {
+              payloadRaw = pair[1] as string;
+              break;
+            }
+          }
+        } else {
+          // Forma a)
+          const idx = (fields as any[]).findIndex((f: any) => f === "payload");
+          if (idx !== -1) payloadRaw = fields[idx + 1];
+        }
+
+        if (payloadRaw) {
+          const messageObject = JSON.parse(payloadRaw);
           if (messageObject?.kind === "external") {
             await handleExternalTrigger(messageObject as ExternalTriggerEvent);
+          } else if (messageObject?.kind === "kb_upload") {
+            await handleKbUpload(messageObject as KbUploadEvent);
           } else if (messageObject?.kind === "batch_send") {
             await handleBatchSend(messageObject as BatchSendEvent);
           } else {
@@ -1600,6 +1665,8 @@ async function processMessages() {
           }
           await redisClient.xack(STREAM_KEY, GROUP_NAME, messageId);
           console.log(`[Worker] Message ${messageId} processed and ACKed.`);
+        } else {
+          console.warn(`[Worker] Received message ${messageId} without 'payload' field. Skipping.`);
         }
       }
     } catch (error: any) {
@@ -1806,5 +1873,127 @@ async function handleBatchSend(event: BatchSendEvent) {
     }
   } catch (error: any) {
     console.error(`[BatchSend] Error processing batch send:`, error);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// NUEVO: Manejar eventos de subida de Knowledge Bases
+// ---------------------------------------------------------------------------
+async function handleKbUpload(event: KbUploadEvent) {
+  const { kbId, userId, files } = event;
+  console.log(`[KB Upload] Procesando KB ${kbId} para user ${userId}`);
+
+  // Importar dinámicamente solo lo necesario
+  const { RecursiveCharacterTextSplitter } = await import(
+    "langchain/text_splitter"
+  );
+  const { OpenAIEmbeddings } = await import("@langchain/openai");
+  const { UpstashVectorStore } = await import(
+    "@langchain/community/vectorstores/upstash"
+  );
+
+  // Loaders variables
+  const loaders: { ext: RegExp; loader: (p: string) => Promise<any[]> }[] = [
+    {
+      ext: /\.(pdf)$/i,
+      loader: async (p: string) => {
+        const { PDFLoader } = await import(
+          "@langchain/community/document_loaders/fs/pdf"
+        );
+        const l = new PDFLoader(p);
+        return l.load();
+      },
+    },
+    {
+      ext: /\.(txt|md)$/i,
+      loader: async (p: string) => {
+        const { TextLoader } = await import(
+          "langchain/document_loaders/fs/text"
+        );
+        const l = new TextLoader(p);
+        return l.load();
+      },
+    },
+    {
+      ext: /\.(docx?)$/i,
+      loader: async (p: string) => {
+        const { DocxLoader } = await import(
+          "@langchain/community/document_loaders/fs/docx"
+        );
+        const l = new DocxLoader(p);
+        return l.load();
+      },
+    },
+  ];
+
+  try {
+    let documents: any[] = [];
+    for (const filePath of files) {
+      const matchLoader = loaders.find((l) => l.ext.test(filePath));
+      if (matchLoader) {
+        try {
+          const docs = await matchLoader.loader(filePath);
+          documents.push(...docs);
+        } catch (err) {
+          console.warn(`[KB Upload] Error loading ${filePath}`, err);
+        }
+      } else {
+        console.warn(`[KB Upload] No loader for ${filePath}`);
+      }
+    }
+
+    if (!documents.length) {
+      console.error(`[KB Upload] No valid documents loaded for KB ${kbId}`);
+      return;
+    }
+
+    // Split
+    const splitter = new RecursiveCharacterTextSplitter({
+      chunkSize: 400,
+      chunkOverlap: 50,
+    });
+    const splitDocs = await splitter.splitDocuments(documents as any);
+
+    // Embeddings & Vector Store
+    const embeddings = new OpenAIEmbeddings({
+      openAIApiKey: process.env.OPENAI_API_KEY || "",
+    });
+
+    const indexName = `kb_${kbId}`;
+    await UpstashVectorStore.fromDocuments(
+      splitDocs as any,
+      embeddings as any,
+      {
+        indexName,
+        namespace: indexName, // Upstash SDK requiere namespace si se van a almacenar vectores
+        url: process.env.UPSTASH_VECTOR_REST_URL!,
+        token: process.env.UPSTASH_VECTOR_REST_TOKEN!,
+      } as any
+    );
+
+    await db.knowledgeBase.update({
+      where: { id: kbId },
+      data: {
+        trieveApiKey: indexName, // reutilizamos campo para guardar index
+        updatedAt: new Date(),
+      },
+    });
+
+    console.log(`[KB Upload] KB ${kbId} procesada y almacenada en ${indexName}`);
+  } catch (err) {
+    console.error(`[KB Upload] Error procesando KB ${kbId}`, err);
+    try {
+      await db.knowledgeBase.update({
+        where: { id: kbId },
+        data: { updatedAt: new Date() },
+      });
+    } catch {}
+  } finally {
+    // cleanup temporales
+    for (const f of files) {
+      try {
+        await fs.unlink(f);
+      } catch {}
+    }
   }
 }

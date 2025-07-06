@@ -8,6 +8,8 @@ import { Bot } from "lucide-react";
 export interface AiNodeData {
   name: string;
   prompt: string;
+  ragEnabled: boolean;
+  knowledgeBaseId: string;
 }
 
 // El componente del nodo de IA rediseñado

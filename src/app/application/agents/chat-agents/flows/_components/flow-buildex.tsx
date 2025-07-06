@@ -116,6 +116,7 @@ export function FlowBuilder({ workflowId }: { workflowId?: string }) {
   const [isTestDialogOpen, setIsTestDialogOpen] = useState(false)
   const [testPhone, setTestPhone] = useState("")
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false)
+  const [knowledgeBases, setKnowledgeBases] = useState<any[]>([])
 
   // State for AI Node connection modal
   const [isConditionModalOpen, setIsConditionModalOpen] = useState(false)
@@ -586,6 +587,18 @@ export function FlowBuilder({ workflowId }: { workflowId?: string }) {
       toast.warning("Este flujo no tiene un agente asignado. Asigna uno para habilitar todas las funcionalidades.")
     }
   }, [agentData])
+
+
+  useEffect(() => {
+    if (selectedNode?.type === "ai") {
+      const fetchKnowledgeBases = async () => {
+        const res = await fetch("/api/knowledge-bases")
+        const data = await res.json()
+        setKnowledgeBases(data)
+      }
+      fetchKnowledgeBases()
+    }
+  }, [selectedNode])
 
   return (
     <div className="w-full h-full flex-1 relative bg-gradient-to-br from-gray-50 to-gray-100" ref={reactFlowWrapper}>
