@@ -140,7 +140,7 @@ export function IntegrationNodeConfig({ selectedNode, updateNode }: NodeConfigur
             authMode={selectedIntegrationConfig.authMode}
             nodeId={selectedNode.id}
             updateNode={updateNode}
-            selectedNode={selectedNode}
+            _selectedNode={selectedNode}
             setIntegrationConnection={() => {}}
           />
         </div>
