@@ -94,7 +94,7 @@ export async function POST(request: Request) {
       return new NextResponse("Connection ID is required", { status: 400 })
     }
 
-    const accessToken = await getIntegrationAccessToken(connectionId, "google-calendar")
+    const accessToken = await getIntegrationAccessToken(connectionId)
 
     const availableSlots = await getAvailability(
       accessToken,
