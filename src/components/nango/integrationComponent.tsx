@@ -52,7 +52,7 @@ const IntegrationComponent = ({
         throw new Error("Usuario no encontrado");
       }
 
-      const sessionToken = await getSessionToken(user?.data.id);
+      const sessionToken = await getSessionToken(user?.data.clerkId);
       if (!sessionToken) {
         throw new Error("Error al obtener el token de sesión");
       }
@@ -66,7 +66,7 @@ const IntegrationComponent = ({
       if (result.isPending === false) {
         const connection = await createConnection({
           authMode: authMode,
-          endUserId: user?.data.id,
+          endUserId: user?.data.clerkId,
           integrationId: result.connectionId,
           providerConfigKey: result.providerConfigKey,
         });
@@ -96,13 +96,13 @@ const IntegrationComponent = ({
 
       setUserId(user?.data.id);
 
-      const sessionToken = await getSessionToken(user?.data.id);
+      const sessionToken = await getSessionToken(user?.data.clerkId);
       if (!sessionToken) {
         throw new Error("Error al obtener el token de sesión");
       }
 
       const connection = await ConnectionExists(
-        user?.data.id,
+        user?.data.clerkId,
         providerConfigKey
       );
       const connId = connection.connection?.connectionId || null;

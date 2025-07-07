@@ -368,7 +368,7 @@ const VoiceAgentsClient = ({ agents }: { agents: AgentWithTools[] }) => {
 
           const nango = new Nango({ connectSessionToken: sessionToken })
 
-          const result = await nango.auth(provider, user.id)
+          const result = await nango.auth(provider)
 
           if (result?.connectionId) {
             await createConnection({

@@ -124,6 +124,7 @@ export const onBoardUser = async (variantId?: string) => {
         name: fullUser.name,
         email: fullUser.email,
         temporalVariantId: fullUser.temporalVariantId,
+        clerkId: fullUser.clerkId,
       },
       agents: fullUser.agents,
     };

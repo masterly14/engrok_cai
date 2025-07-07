@@ -28,7 +28,7 @@ const generateConnectSessionToken = async (
 
   await db.user.update({
     where: {
-      id: userId,
+      clerkId: userId,
     },
     data: {
       nangoConnectSessionToken: data.token,
@@ -45,7 +45,7 @@ const generateConnectSessionToken = async (
 export const getSessionToken = async (userId: string) => {
   const user = await db.user.findUnique({
     where: {
-      id: userId,
+      clerkId: userId,
     },
     select: {
       nangoConnectSessionToken: true,
@@ -88,15 +88,25 @@ export const createConnection = async ({
   integrationId: string;
   providerConfigKey: string;
   authMode: string;
-  endUserId: string;
+  endUserId: string; // clerkId del usuario
 }) => {
+  // Buscamos el usuario interno por su clerkId para obtener el UUID
+  const user = await db.user.findUnique({
+    where: { clerkId: endUserId },
+    select: { id: true },
+  });
+
+  if (!user) {
+    throw new Error("Usuario no encontrado al crear la conexión");
+  }
+
   const connection = await db.connection.create({
     data: {
       connectionId: integrationId,
-      providerConfigKey: providerConfigKey,
-      authMode: authMode,
-      endUserId: endUserId,
-      userId: endUserId,
+      providerConfigKey,
+      authMode,
+      endUserId, // seguimos guardando el clerkId para referencia
+      userId: user.id, // UUID correcto
     },
   });
 
