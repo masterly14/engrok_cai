@@ -1,79 +1,72 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { createAssistantAction, updateAssistantAction } from "@/actions/vapi/assistant";
+import { Agent } from "@prisma/client";
+import { publishAgent as publishAgentAction } from "@/actions/agents";
 
-type CreateAgentInput = {
+// Tipo para crear un agente. No necesita vapiId ni toolIds.
+export interface CreateAgentInput {
   name: string;
   firstMessage: string;
   prompt: string;
   backgroundSound?: string;
   voiceId?: string;
   knowledgeBaseId?: string | null;
-  vapiId?: string;
-};
+}
 
+// Tipo para publicar/actualizar. Requiere vapiId y la lista de toolIds.
+export interface PublishAgentInput extends CreateAgentInput {
+  vapiId: string;
+  toolIds: string[];
+}
+
+/**
+ * Hook para CREAR un nuevo agente.
+ * Se comunica con la acción que crea el asistente en Vapi
+ * y luego (implícitamente) en nuestra BD.
+ */
 export function useCreateAgent() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: CreateAgentInput) => {
+    mutationFn: async (agentData: CreateAgentInput) => {
       const formData = new FormData();
-      formData.append("name", data.name);
-      formData.append("firstMessage", data.firstMessage);
-      formData.append("prompt", data.prompt);
-      formData.append("backgroundSound", data.backgroundSound || "");
-      formData.append("voiceId", data.voiceId || "");
-      if (data.knowledgeBaseId) {
-        formData.append("knowledgeBaseId", data.knowledgeBaseId);
-      }
-
-      const response = await createAssistantAction(formData);
-      if (response.status !== 201 && response.status !== 200) {
-        throw new Error(response.message || "Error al crear el agente");
-      }
-      return response.data;
-    },
-    onSuccess: () => {
-      toast.success("Agente creado correctamente");
-      queryClient.invalidateQueries({ queryKey: ["agents"] });
-    },
-    onError: (error: any) => {
-      toast.error(error.message || "Error al crear el agente");
-    },
-  });
-} 
-
-export function usePublishAgent() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (data: CreateAgentInput) => {
-      if (!data.vapiId) {
-        throw new Error("vapiId es requerido para actualizar el agente");
+      formData.append("name", agentData.name);
+      formData.append("firstMessage", agentData.firstMessage);
+      formData.append("prompt", agentData.prompt);
+      formData.append("backgroundSound", agentData.backgroundSound || "");
+      formData.append("voiceId", agentData.voiceId || "");
+      if (agentData.knowledgeBaseId) {
+        formData.append("knowledgeBaseId", agentData.knowledgeBaseId);
       }
       
-      const formData = new FormData();
-      formData.append("name", data.name);
-      formData.append("firstMessage", data.firstMessage);
-      formData.append("prompt", data.prompt);
-      formData.append("backgroundSound", data.backgroundSound || "");
-      formData.append("voiceId", data.voiceId || "");
-      if (data.knowledgeBaseId) {
-        formData.append("knowledgeBaseId", data.knowledgeBaseId);
-      }
-      const response = await updateAssistantAction(formData, data.vapiId);
-      if (response.status !== 201 && response.status !== 200) {
-        throw new Error(response.message || "Error al actualizar el agente");
-      }
-      return response.data;
+      const newAssistant = await createAssistantAction(formData);
+      
+      return newAssistant;
     },
-    onSuccess: (updatedAgent) => {
-      toast.success("Agente actualizado correctamente");
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["agents"] });
-      return updatedAgent;
+      toast.success("Agente creado con éxito");
     },
-    onError: (error: any) => {
-      toast.error(error.message || "Error al actualizar el agente");
+    onError: (error) => {
+      toast.error(`Error al crear el agente: ${error.message}`);
+    },
+  });
+}
+
+/**
+ * Hook para PUBLICAR (actualizar) un agente existente.
+ * Llama a nuestra propia server action `publishAgentAction` que se encarga de todo.
+ */
+export function usePublishAgent() {
+  const queryClient = useQueryClient();
+  return useMutation<Agent, Error, PublishAgentInput>({
+    mutationFn: (agentData) => publishAgentAction(agentData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["agents"] });
+    },
+    onError: (error) => {
+      toast.error(`Error al publicar el agente: ${error.message}`);
     },
   });
 }

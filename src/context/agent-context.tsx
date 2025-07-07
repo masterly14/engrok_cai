@@ -3,13 +3,17 @@
 import type React from "react"
 import { createContext, useContext, useState, useEffect } from "react"
 import type { Agent, AgentFormData } from "../types/agent"
+import { Agent as PrismaAgent, Tool } from "@prisma/client"
+
+export type AgentWithTools = PrismaAgent & { tools: Tool[] }
 
 interface AgentContextType {
-  selectedAgent: Agent | null
-  setSelectedAgent: (agent: Agent | null) => void
-  formData: AgentFormData
-  setFormData: (data: AgentFormData) => void
+  selectedAgent: AgentWithTools | null
+  setSelectedAgent: (agent: AgentWithTools | null) => void
+  formData: any
+  setFormData: (formData: any) => void
   hasChanges: boolean
+  setHasChanges: (hasChanges: boolean) => void
   resetForm: () => void
   isCreatingNew: boolean
   setIsCreatingNew: (creating: boolean) => void
@@ -26,50 +30,42 @@ const defaultFormData: AgentFormData = {
 }
 
 export function AgentProvider({ children }: { children: React.ReactNode }) {
-  const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null)
-  const [formData, setFormData] = useState<AgentFormData>(defaultFormData)
-  const [originalData, setOriginalData] = useState<AgentFormData>(defaultFormData)
+  const [selectedAgent, setSelectedAgent] = useState<AgentWithTools | null>(null)
+  const [originalFormData, setOriginalFormData] = useState<any>({})
+  const [formData, setFormData] = useState<any>({
+    name: "",
+    firstMessage: "",
+    prompt: "",
+    backgroundSound: "off",
+    voiceId: "",
+  })
+  const [hasChanges, setHasChanges] = useState(false)
   const [isCreatingNew, setIsCreatingNew] = useState(false)
 
-  // Detectar si hay cambios comparando con los datos originales
-  const hasChanges = JSON.stringify(formData) !== JSON.stringify(originalData)
-
-  // Cuando se selecciona un agente, cargar sus datos en el formulario
   useEffect(() => {
     if (selectedAgent) {
-      const agentFormData: AgentFormData = {
+      const initialData = {
         name: selectedAgent.name,
-        firstMessage: selectedAgent.firstMessage,
-        prompt: selectedAgent.prompt,
-        backgroundSound: selectedAgent.backgroundSound || "",
+        firstMessage: selectedAgent.firstMessage || "",
+        prompt: selectedAgent.prompt || "",
+        backgroundSound: selectedAgent.backgroundSound || "off",
         voiceId: selectedAgent.voiceId || "",
       }
-      setFormData(agentFormData)
-      setOriginalData(agentFormData)
-      setIsCreatingNew(false) // Si se selecciona un agente, no estamos creando uno nuevo
-    } else if (isCreatingNew) {
-      // Solo resetear el formulario si estamos explícitamente creando uno nuevo
-      setFormData(defaultFormData)
-      setOriginalData(defaultFormData)
+      setFormData(initialData)
+      setOriginalFormData(initialData)
+      setIsCreatingNew(false)
+      setHasChanges(false)
+    } else {
+      // Limpiar formulario si no hay agente seleccionado
+      const blankForm = { name: "", firstMessage: "", prompt: "", backgroundSound: "off", voiceId: "" }
+      setFormData(blankForm)
+      setOriginalFormData(blankForm)
     }
-  }, [selectedAgent, isCreatingNew])
+  }, [selectedAgent])
 
   const resetForm = () => {
-    if (selectedAgent) {
-      const agentFormData: AgentFormData = {
-        name: selectedAgent.name,
-        firstMessage: selectedAgent.firstMessage,
-        prompt: selectedAgent.prompt,
-        backgroundSound: selectedAgent.backgroundSound || "",
-        voiceId: selectedAgent.voiceId || "",
-      }
-      setFormData(agentFormData)
-      setOriginalData(agentFormData)
-    } else {
-      setFormData(defaultFormData)
-      setOriginalData(defaultFormData)
-    }
-    setIsCreatingNew(false) // Al resetear, ya no estamos creando
+    setFormData(originalFormData)
+    setHasChanges(false)
   }
 
   return (
@@ -80,6 +76,7 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
         formData,
         setFormData,
         hasChanges,
+        setHasChanges,
         resetForm,
         isCreatingNew,
         setIsCreatingNew,

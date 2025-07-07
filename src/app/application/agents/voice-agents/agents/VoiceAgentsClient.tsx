@@ -12,16 +12,31 @@ import { Badge } from "@/components/ui/badge"
 import { generatePrompt } from "@/actions/claude"
 import { getElevenLabsVoices } from "@/actions/elevenlabs"
 import type { ElevenLabsVoice } from "@/types/agent"
-import { useAgent } from "@/context/agent-context"
+import { AgentProvider, useAgent, AgentWithTools } from "@/context/agent-context"
 import { toast } from "sonner"
-import { useCreateAgent, usePublishAgent } from "@/hooks/use-create-agent"
+import { useCreateAgent, usePublishAgent, PublishAgentInput } from "@/hooks/use-create-agent"
 import { TemplateDialog, type Template } from "./_components/template-dialog"
 import DeleteAgent from "./_components/delete-agent"
 import StartCall from "./_components/start-call"
-import { Agent } from "@prisma/client"
+import { Checkbox } from "@/components/ui/checkbox"
+import { getAllTools } from "@/actions/tools"
+import { Tool } from "@prisma/client"
+import { useUser } from "@clerk/nextjs"
+import { ConnectionExists, createConnection, getSessionToken } from "@/actions/nango"
+import Nango from "@nangohq/frontend"
 
-const VoiceAgentsClient = ({ agents }: { agents: Agent[] }) => {
-  const { selectedAgent, formData, setFormData, hasChanges, resetForm, isCreatingNew, setIsCreatingNew, setSelectedAgent } = useAgent()
+const VoiceAgentsClient = ({ agents }: { agents: AgentWithTools[] }) => {
+  const {
+    selectedAgent,
+    formData,
+    setFormData,
+    hasChanges,
+    setHasChanges,
+    resetForm,
+    isCreatingNew,
+    setIsCreatingNew,
+    setSelectedAgent,
+  } = useAgent()
   const createAgentMutation = useCreateAgent()
   const publishAgent = usePublishAgent()
   const [aiPromptGenerated, setAiPromptGenerated] = useState<boolean>(false)
@@ -40,6 +55,10 @@ const VoiceAgentsClient = ({ agents }: { agents: Agent[] }) => {
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const [showTemplateDialog, setShowTemplateDialog] = useState<boolean>(false)
   const [isPublishing, setIsPublishing] = useState<boolean>(false)
+  const [availableTools, setAvailableTools] = useState<Tool[]>([])
+  const [selectedToolIds, setSelectedToolIds] = useState<Set<string>>(new Set())
+  const [isConnecting, setIsConnecting] = useState<string | null>(null)
+  const { user } = useUser()
 
   // Effect to initialize form data when an agent is selected
   useEffect(() => {
@@ -50,7 +69,6 @@ const VoiceAgentsClient = ({ agents }: { agents: Agent[] }) => {
         prompt: selectedAgent.prompt || "",
         backgroundSound: selectedAgent.backgroundSound || "off",
         voiceId: selectedAgent.voiceId || "",
-
       })
       // Only set fileId if knowledgeBaseId exists
       if ('knowledgeBaseId' in selectedAgent) {
@@ -70,7 +88,6 @@ const VoiceAgentsClient = ({ agents }: { agents: Agent[] }) => {
   const openTemplateDialog = () => {
     setShowTemplateDialog(true)
   }
-
 
   // Exponer la función para que el sidebar pueda usarla
   useEffect(() => {
@@ -104,6 +121,7 @@ const VoiceAgentsClient = ({ agents }: { agents: Agent[] }) => {
       ...formData,
       [field]: value,
     })
+    setHasChanges(true)
   }
 
   const handleGeneratePrompt = async () => {
@@ -174,25 +192,26 @@ const VoiceAgentsClient = ({ agents }: { agents: Agent[] }) => {
     setIsPublishing(true)
     try {
       if (!selectedAgent?.vapiId) {
-        toast.error("No se puede actualizar el agente sin un vapiId");
-        return;
+        toast.error("No se puede actualizar el agente sin un vapiId")
+        return
       }
-      
-      const updatedAgent = await publishAgent.mutateAsync({
+
+      const publishData: PublishAgentInput = {
         name: formData.name,
         firstMessage: formData.firstMessage,
         prompt: formData.prompt,
         backgroundSound: formData.backgroundSound,
         voiceId: formData.voiceId,
-        knowledgeBaseId: fileId,
         vapiId: selectedAgent.vapiId,
-      }) as Agent;
+        toolIds: Array.from(selectedToolIds),
+      }
 
-      // Actualizar el estado global con el agente actualizado; el useEffect en el contexto sincronizará el formulario automáticamente
-      setSelectedAgent(updatedAgent);
-      toast.success("Agente actualizado correctamente");
+      const updatedAgent = await publishAgent.mutateAsync(publishData)
+
+      setSelectedAgent(updatedAgent as AgentWithTools)
+      toast.success("Agente actualizado correctamente")
     } catch (error) {
-      console.error("Error publishing agent:", error);
+      console.error("Error publishing agent:", error)
     } finally {
       setIsPublishing(false)
     }
@@ -286,6 +305,94 @@ const VoiceAgentsClient = ({ agents }: { agents: Agent[] }) => {
   const handleDeleteSuccess = () => {
     toast.success("Agente eliminado correctamente")
     setSelectedAgent(null)
+  }
+
+  // Efecto para cargar las herramientas disponibles en la plataforma
+  useEffect(() => {
+    const fetchTools = async () => {
+      const tools = await getAllTools()
+      setAvailableTools(tools)
+    }
+    fetchTools()
+  }, [])
+
+  // Efecto para actualizar las herramientas seleccionadas cuando cambia el agente
+  useEffect(() => {
+    if (selectedAgent?.tools) {
+      setSelectedToolIds(new Set(selectedAgent.tools.map((t: Tool) => t.id)))
+    } else {
+      setSelectedToolIds(new Set())
+    }
+  }, [selectedAgent])
+
+  const handleToolToggle = async (tool: Tool) => {
+    if (!user) {
+      toast.error("Por favor, inicia sesión para gestionar las herramientas.")
+      return
+    }
+
+    const newSet = new Set(selectedToolIds)
+
+    if (newSet.has(tool.id)) {
+      // Disabling tool
+      newSet.delete(tool.id)
+      setSelectedToolIds(newSet)
+      setHasChanges(true)
+    } else {
+      // Enabling tool
+      // @ts-ignore - Assuming tool has a provider property after schema migration
+      if (!tool.provider) {
+        newSet.add(tool.id)
+        setSelectedToolIds(newSet)
+        setHasChanges(true)
+        return
+      }
+
+      // @ts-ignore
+      const provider = tool.provider as string
+      setIsConnecting(tool.id)
+
+      try {
+        const { isConnected } = await ConnectionExists(user.id, provider)
+
+        if (isConnected) {
+          newSet.add(tool.id)
+          setSelectedToolIds(newSet)
+          setHasChanges(true)
+        } else {
+          toast.info(`Conecta tu cuenta de ${provider} para usar esta herramienta.`)
+
+          const sessionData = await getSessionToken(user.id)
+          const sessionToken = typeof sessionData === "string" ? sessionData : sessionData?.token
+          if (!sessionToken) throw new Error("Could not get session token")
+
+          const nango = new Nango({ connectSessionToken: sessionToken })
+
+          const result = await nango.auth(provider, user.id)
+
+          if (result?.connectionId) {
+            await createConnection({
+              integrationId: result.connectionId,
+              providerConfigKey: provider,
+              authMode: "OAUTH2", // Assuming OAuth2, might need adjustment
+              endUserId: user.id,
+            })
+
+            newSet.add(tool.id)
+            setSelectedToolIds(newSet)
+            setHasChanges(true)
+            toast.success(`¡Conexión con ${provider} exitosa!`)
+          } else {
+            throw new Error("Nango connection failed.")
+          }
+        }
+      } catch (error) {
+        console.error("Error handling tool toggle:", error)
+        toast.error(`No se pudo conectar con ${provider}. Inténtalo de nuevo.`)
+      } finally {
+        setIsConnecting(null)
+      }
+    }
   }
 
   return (
@@ -601,6 +708,48 @@ const VoiceAgentsClient = ({ agents }: { agents: Agent[] }) => {
                     </SelectContent>
                   </Select>
                 </div>
+
+                {/* Tools Card */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Herramientas</CardTitle>
+                    <CardDescription>
+                      Expande las capacidades de tu agente conectando herramientas externas.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {availableTools.length > 0 ? (
+                        availableTools.map((tool) => (
+                          <div key={tool.id} className="flex items-start space-x-3">
+                            <Checkbox
+                              id={`tool-${tool.id}`}
+                              checked={selectedToolIds.has(tool.id)}
+                              onCheckedChange={() => handleToolToggle(tool)}
+                              disabled={isConnecting === tool.id}
+                            />
+                            <div className="grid gap-1.5 leading-none">
+                              <label
+                                htmlFor={`tool-${tool.id}`}
+                                className="font-medium cursor-pointer"
+                              >
+                                {tool.name}
+                              </label>
+                              <p className="text-sm text-muted-foreground">
+                                {tool.description}
+                              </p>
+                            </div>
+                            {isConnecting === tool.id && (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            )}
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-sm text-muted-foreground">Cargando herramientas...</p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
               </CardContent>
             </Card>
           </div>

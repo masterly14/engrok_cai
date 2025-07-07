@@ -108,7 +108,7 @@ export async function POST(request: Request) {
       daysToCheck = 15,
       startTime = body.startTime || "09:00",
       endTime = body.endTime || "17:00",
-      eventDurationMinutes = body.eventDurationMinutes || 30, // Default to 30 min slots
+      eventDurationMinutes = body.eventDurationMinutes || 60, // Default to 30 min slots
     } = body
 
     if (!connectionId) {

@@ -107,9 +107,18 @@ export const ConnectionExists = async (
   userId: string,
   providerConfigKey: string
 ) => {
+  const user = await db.user.findUnique({
+    where: {
+      clerkId: userId,
+    },
+    select: {
+      id: true,
+    },
+  });
+
   const connection = await db.connection.findFirst({
     where: {
-      userId: userId,
+      userId: user?.id,
       providerConfigKey: providerConfigKey,
     },
   });
