@@ -23,7 +23,7 @@ export default function RootLayout({
   return (
     <ClerkProvider localization={esES as any}>
       <html lang="es" suppressHydrationWarning>
-        <body className={`${raleway.className} antialiased`}>
+        <body className={`${raleway.className} antialiased notranslate`}>
           <ThemeProvider>
             <main>
               <ReactQueryProvider>{children}</ReactQueryProvider>
