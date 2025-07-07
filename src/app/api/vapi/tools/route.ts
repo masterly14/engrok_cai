@@ -1,9 +1,9 @@
 "use server"
 import { NextRequest, NextResponse } from "next/server"
 import { db } from "@/utils" // prisma client helper
-// Importamos directamente la lógica de los endpoints internos para evitar latencia de red
-import { POST as availabilityFn } from "../../integrations/calendar/availability/route"
-import { POST as createEventFn } from "../../integrations/calendar/events/route"
+// Importamos la lógica de los nuevos endpoints específicos para Vapi
+import { POST as availabilityVapiFn } from "../calendar/availability/route"
+import { POST as createEventVapiFn } from "../calendar/events/route"
 
 // Tipos mínimos extraídos de la documentación de Vapi
 type VapiToolCall = {
@@ -35,22 +35,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Agent not found" }, { status: 404 })
     }
 
-    // 3. Obtener la integración de Google Calendar para ese usuario
-    const integration = await db.integration.findFirst({
-      where: {
-        userId: agent.userId,
-        provider: "GOOGLE_CALENDAR",
-      },
-      select: { id: true },
-    })
-
-    if (!integration) {
-      return NextResponse.json({ error: "No Google Calendar integration configured for this user" }, { status: 400 })
-    }
-
-    const connectionId = integration.id
-
-    // 4. Procesar cada llamada de herramienta
+    // 3. Procesar cada llamada de herramienta
     const toolCalls: VapiToolCall[] = body?.message?.toolCallList || []
     if (toolCalls.length === 0) {
       return NextResponse.json({ error: "No tool calls provided" }, { status: 400 })
@@ -59,35 +44,62 @@ export async function POST(req: NextRequest) {
     const results = await Promise.all(
       toolCalls.map(async (call) => {
         const { id: toolCallId, name, arguments: rawArgs } = call
-        // A veces Vapi envía arguments como string JSON
         const args: Record<string, any> = typeof rawArgs === "string" ? JSON.parse(rawArgs) : rawArgs || {}
 
         let result: string
 
-        // Helper para simular una Request interna y reusar la lógica existente sin hop de red
-        const makeInternalRequest = (payload: Record<string, any>) =>
-          new Request(req.url, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ connectionId, ...payload }),
+        try {
+          // A. Encontrar la herramienta en nuestra DB para obtener su proveedor
+          const tool = await db.tool.findUnique({
+            where: { name },
+            select: { provider: true },
           })
 
-        try {
+          if (!tool) {
+            throw new Error(`Tool "${name}" not found in database.`)
+          }
+          if (!tool.provider) {
+            throw new Error(`Tool "${name}" does not have a configured provider.`)
+          }
+
+          // B. Buscar la conexión específica para ese proveedor y usuario
+          const connection = await db.connection.findFirst({
+            where: {
+              userId: agent.userId,
+              providerConfigKey: tool.provider,
+            },
+            select: { connectionId: true },
+          })
+
+          if (!connection) {
+            throw new Error(`No connection found for provider "${tool.provider}" for this user.`)
+          }
+
+          const connectionId = connection.connectionId
+
+          // C. Helper para simular una Request interna
+          const makeInternalRequest = (payload: Record<string, any>) =>
+            new Request(req.url, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ connectionId, ...payload }),
+            })
+
+          // D. Ejecutar la lógica de la herramienta
           if (name === "getAvailability") {
-            const apiRes = await availabilityFn(makeInternalRequest(args))
+            const apiRes = await availabilityVapiFn(makeInternalRequest(args))
             const data = await apiRes.json()
             if (!apiRes.ok) throw new Error(typeof data === "string" ? data : JSON.stringify(data))
 
-            // Devuelve los primeros 5 slots legibles
             const list = (data.availability || []).slice(0, 5) as { start: string }[]
             result =
               list.length > 0
                 ? `Horarios disponibles: ${list
-                    .map((s) => new Date(s.start).toISOString())
+                    .map((s) => new Date(s.start).toLocaleString())
                     .join(", ")}`
                 : "No hay disponibilidad en los próximos días."
           } else if (name === "createEvent") {
-            const apiRes = await createEventFn(makeInternalRequest(args))
+            const apiRes = await createEventVapiFn(makeInternalRequest(args))
             const data = await apiRes.json()
             if (!apiRes.ok) throw new Error(typeof data === "string" ? data : JSON.stringify(data))
 

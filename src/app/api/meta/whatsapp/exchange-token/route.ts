@@ -77,6 +77,44 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "No se pudo determinar WABA o phoneNumberId" }, { status: 400 });
     }
 
+    // ---- Registrar el número de teléfono para la API de Cloud ----
+    try {
+        console.log(`Registrando el número de teléfono ID: ${finalPhoneNumberId}`);
+        
+        // Generar un PIN aleatorio de 6 dígitos para la verificación en dos pasos.
+        // Esto es requerido por la API de registro.
+        const pin = Math.floor(100000 + Math.random() * 900000).toString();
+
+        const registerUrl = `https://graph.facebook.com/v20.0/${finalPhoneNumberId}/register`;
+        const registerResponse = await fetch(registerUrl, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                messaging_product: 'whatsapp',
+                pin: pin
+            })
+        });
+
+        const registerData = await registerResponse.json();
+
+        if (!registerResponse.ok || !registerData.success) {
+            console.error('Error al registrar el número de teléfono:', registerData);
+            // No lanzamos un error fatal, pero lo registramos. 
+            // El número podría ya estar registrado o haber otro problema.
+            // El flujo puede continuar para guardar los datos.
+        } else {
+            console.log('Número de teléfono registrado con éxito!');
+        }
+
+    } catch (err) {
+        console.error('Excepción al intentar registrar el número de teléfono:', err);
+        // Tampoco lanzamos un error fatal aquí para permitir que se guarden los datos.
+    }
+    // ----------------------------------------------------------------
+
     try {
       const phoneRes = await fetch(`https://graph.facebook.com/v20.0/${finalPhoneNumberId}?fields=display_phone_number&access_token=${accessToken}`);
       const phoneJson = await phoneRes.json();

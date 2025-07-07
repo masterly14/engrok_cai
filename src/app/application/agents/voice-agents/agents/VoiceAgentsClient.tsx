@@ -195,7 +195,7 @@ const VoiceAgentsClient = ({ agents }: { agents: AgentWithTools[] }) => {
         toast.error("No se puede actualizar el agente sin un vapiId")
         return
       }
-
+      
       const publishData: PublishAgentInput = {
         name: formData.name,
         firstMessage: formData.firstMessage,

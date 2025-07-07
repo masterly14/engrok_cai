@@ -111,24 +111,18 @@ export async function publishAgent(data: {
     name: tool.name,
     description: tool.description,
     parameters: tool.parameters,
-    server: {
-      url: `${process.env.NEXT_PUBLIC_APP_URL}/api/vapi/tools`,
-    },
   }))
 
   // 3. Crear el payload para la API de Vapi
   const vapiPayload = {
     name: updatedDbAgent.name,
     firstMessage: updatedDbAgent.firstMessage,
-    prompt: updatedDbAgent.prompt,
     backgroundSound: updatedDbAgent.backgroundSound,
-    voiceId: updatedDbAgent.voiceId,
     model: {
       provider: "openai",
       model: "gpt-4o",
       functions: vapiFunctions,
     },
-    // Añade aquí otros campos que Vapi espere
   }
 
   // 4. Realizar la llamada PATCH a Vapi
