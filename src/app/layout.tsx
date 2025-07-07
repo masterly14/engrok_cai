@@ -22,7 +22,7 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider localization={esES as any}>
-      <html lang="en">
+      <html lang="en" suppressHydrationWarning>
         <body className={`${raleway.className} antialiased`}>
           <ThemeProvider>
             <main>

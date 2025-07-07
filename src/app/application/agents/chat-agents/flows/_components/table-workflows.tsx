@@ -31,14 +31,17 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  Plus,
   MoreHorizontal,
   Trash2,
-  Edit,
   Copy,
-  Calendar,
   WorkflowIcon,
   FilePlus2,
+  Plus,
+  BotMessageSquare,
+  CalendarDays,
+  Target,
+  ShoppingCart,
+  Pencil,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
@@ -76,307 +79,244 @@ type TemplateDef = {
   id: string;
   name: string;
   description: string;
-  getJson: () => any;
+  icon?: React.FC<React.SVGProps<SVGSVGElement>>;
+  getJson: () => { nodes: any[]; edges: any[] };
 };
 
 const TEMPLATES: TemplateDef[] = [
   {
-    id: "destinos",
-    name: "Guía de Destinos Turísticos",
-    description: "Menú con ciudades y sub-menús de lugares destacados.",
+    id: "appointment-scheduler-google",
+    name: "Agendamiento de Citas (Google)",
+    description:
+      "Agenda citas usando la integración con Google Calendar para verificar y reservar horarios.",
+    icon: CalendarDays,
     getJson: () => ({
       nodes: [
         {
-          id: "c_inicio",
+          id: "conv-start",
+          type: "conversation",
+          position: { x: 0, y: 150 },
           data: {
-            name: "Destinos",
+            name: "Iniciar Agendamiento",
             botResponse:
-              "¡Hola! ¿Sobre qué ciudad quieres información turística?",
-            responseType: "text",
-            userResponse: "DESTINOS",
-            interactiveButtons: [
-              { id: "PARIS", type: "reply", title: "París" },
-              { id: "TOKYO", type: "reply", title: "Tokio" },
-              { id: "NEWYORK", type: "reply", title: "Nueva York" },
-            ],
+              "¡Hola! Soy tu asistente virtual. Para agendar una cita, primero necesito saber qué día te gustaría.",
+            initialMessage: true,
           },
-          type: "conversation",
-          width: 320,
-          height: 380,
-          dragging: false,
-          position: { x: -1280, y: -20 },
-          selected: false,
-          positionAbsolute: { x: -1280, y: -20 },
         },
         {
-          id: "c_paris",
+          id: "capture-day",
+          type: "captureResponse",
+          position: { x: 350, y: 150 },
           data: {
-            name: "Menú París",
-            botResponse: "París 🇫🇷\nElige lo que quieres ver:",
-            interactiveButtons: [
-              { id: "PAR_MUSEO", type: "reply", title: "Museos" },
-              { id: "PAR_GASTRO", type: "reply", title: "Gastronomía" },
-            ],
+            name: "Capturar Día",
+            variableName: "dia_preferido",
           },
-          type: "conversation",
-          width: 320,
-          height: 332,
-          dragging: false,
-          position: { x: -340, y: -560 },
-          selected: false,
-          positionAbsolute: { x: -340, y: -560 },
         },
         {
-          id: "c_par_museo",
+          id: "integration-google-avail",
+          type: "integration",
+          position: { x: 700, y: 150 },
           data: {
-            name: "Museos París",
+            name: "Verificar Disponibilidad",
+            integration: "google-calendar",
+            action: "get-availability",
+            // Este input sería configurado en el nodo.
+            // Aquí se asume que se usa la variable capturada.
+            input: { date: "{{dia_preferido}}" },
+            output: "horarios_disponibles",
+          },
+        },
+        {
+          id: "conv-show",
+          type: "conversation",
+          position: { x: 1050, y: 150 },
+          data: {
+            name: "Mostrar Horarios",
             botResponse:
-              "• Museo del Louvre 🖼️\n• Musée d'Orsay 🎨\n• Centro Pompidou 🏛️",
-            fileOrImageUrl: "https://example.com/louvre.jpg",
-            fileResourceType: "image",
+              "Perfecto. Estos son los horarios disponibles para el {{dia_preferido}}: {{horarios_disponibles}}. ¿Cuál prefieres?",
           },
-          type: "conversation",
-          width: 320,
-          height: 290,
-          dragging: false,
-          position: { x: 940, y: -640 },
-          selected: false,
-          positionAbsolute: { x: 940, y: -640 },
         },
         {
-          id: "c_par_gastro",
+          id: "capture-choice",
+          type: "captureResponse",
+          position: { x: 1400, y: 150 },
           data: {
-            name: "Gastronomía París",
-            botResponse: "• Croissant 🥐\n• Macarons 🍬\n• Quesos franceses 🧀",
+            name: "Capturar Horario",
+            variableName: "horario_elegido",
           },
-          type: "conversation",
-          width: 320,
-          height: 258,
-          dragging: false,
-          position: { x: 940, y: -260 },
-          selected: false,
-          positionAbsolute: { x: 940, y: -260 },
         },
         {
-          id: "c_tokyo",
+          id: "integration-google-book",
+          type: "integration",
+          position: { x: 1750, y: 150 },
           data: {
-            name: "Menú Tokio",
-            botResponse: "Tokio 🇯🇵\nSelecciona:",
-            interactiveButtons: [
-              { id: "TOK_TEMPL", type: "reply", title: "Templos" },
-              { id: "TOK_FOOD", type: "reply", title: "Comida" },
-            ],
+            name: "Crear Evento en Calendar",
+            integration: "google-calendar",
+            action: "create-event",
+            input: {
+              dateTime: "{{horario_elegido}}",
+              attendee: "{{whatsapp.contact.wa_id}}",
+              duration: 30,
+            },
+            output: "evento_creado",
           },
-          type: "conversation",
-          width: 320,
-          height: 332,
-          dragging: false,
-          position: { x: -460, y: 100 },
-          selected: false,
-          positionAbsolute: { x: -460, y: 100 },
         },
         {
-          id: "c_tok_templ",
-          data: {
-            name: "Templos Tokio",
-            botResponse: "• Sensō-ji ⛩️\n• Meiji-jinja 🏯\n• Zojo-ji 🏮",
-          },
+          id: "conv-confirm",
           type: "conversation",
-          width: 320,
-          height: 258,
-          dragging: false,
-          position: { x: 160, y: -60 },
-          selected: false,
-          positionAbsolute: { x: 160, y: -60 },
-        },
-        {
-          id: "c_tok_food",
+          position: { x: 2100, y: 150 },
           data: {
-            name: "Comida Tokio",
-            botResponse: "• Sushi 🍣\n• Ramen 🍜\n• Takoyaki 🐙",
-          },
-          type: "conversation",
-          width: 320,
-          height: 258,
-          dragging: false,
-          position: { x: 160, y: 320 },
-          selected: false,
-          positionAbsolute: { x: 160, y: 320 },
-        },
-        {
-          id: "c_ny",
-          data: {
-            name: "Menú NY",
-            botResponse: "Nueva York 🇺🇸\nElige:",
-            interactiveButtons: [
-              { id: "NY_ATR", type: "reply", title: "Atracciones" },
-              { id: "NY_FOOD", type: "reply", title: "Comida" },
-            ],
-          },
-          type: "conversation",
-          width: 320,
-          height: 332,
-          dragging: false,
-          position: { x: -360, y: 820 },
-          selected: false,
-          positionAbsolute: { x: -360, y: 820 },
-        },
-        {
-          id: "c_ny_atr",
-          data: {
-            name: "Atracciones NY",
+            name: "Confirmar Cita",
             botResponse:
-              "• Estatua de la Libertad 🗽\n• Central Park 🌳\n• Times Square 🌆",
+              "¡Excelente! Tu cita ha sido agendada para el {{horario_elegido}}. Recibirás una invitación en tu calendario. ¡Nos vemos!",
           },
+        },
+      ],
+      edges: [
+        { id: "e1-2", source: "conv-start", target: "capture-day", type: "smoothstep" },
+        { id: "e2-3", source: "capture-day", target: "integration-google-avail", type: "smoothstep" },
+        { id: "e3-4", source: "integration-google-avail", target: "conv-show", type: "smoothstep" },
+        { id: "e4-5", source: "conv-show", target: "capture-choice", type: "smoothstep" },
+        { id: "e5-6", source: "capture-choice", target: "integration-google-book", type: "smoothstep" },
+        { id: "e6-7", source: "integration-google-book", target: "conv-confirm", type: "smoothstep" },
+      ],
+    }),
+  },
+  {
+    id: "whatsapp-sales-wompi",
+    name: "Ventas por WhatsApp (Wompi)",
+    description:
+      "Guía al cliente en una compra y genera un enlace de pago con Wompi.",
+    icon: ShoppingCart,
+    getJson: () => ({
+      nodes: [
+        {
+          id: "conv-offer",
           type: "conversation",
-          width: 320,
-          height: 258,
-          dragging: false,
-          position: { x: 940, y: 520 },
-          selected: false,
-          positionAbsolute: { x: 940, y: 520 },
+          position: { x: 0, y: 100 },
+          data: {
+            name: "Presentar Producto",
+            botResponse:
+              "¡Hola! Veo que te interesan nuestros Zapatos Deportivos X-3000. Cuestan $150.000. ¿Te gustaría comprarlos ahora?",
+            interactiveButtons: [
+              { id: "buy-yes", type: "reply", title: "Sí, comprar" },
+              { id: "buy-no", type: "reply", title: "No, gracias" },
+            ],
+            initialMessage: true,
+          },
         },
         {
-          id: "c_ny_food",
-          data: {
-            name: "Comida NY",
-            botResponse: "• Bagels 🥯\n• Pizza NY 🍕\n• Cheesecake 🍰",
-          },
+          id: "conv-get-email",
           type: "conversation",
-          width: 320,
-          height: 258,
-          dragging: false,
-          position: { x: 940, y: 1120 },
-          selected: true,
-          positionAbsolute: { x: 940, y: 1120 },
+          position: { x: 400, y: 0 },
+          data: {
+            name: "Pedir Correo",
+            botResponse:
+              "¡Genial! Para generar tu enlace de pago, por favor, indícame tu correo electrónico.",
+          },
         },
         {
-          id: "a4eb4e3a-81aa-4458-9de0-5009cf9fea92",
+          id: "capture-email",
+          type: "captureResponse",
+          position: { x: 750, y: 0 },
+          data: { name: "Capturar Correo", variableName: "email_cliente" },
+        },
+        {
+          id: "integration-wompi",
+          type: "integration",
+          position: { x: 1100, y: 0 },
           data: {
-            name: "End Conversation",
-            type: "turnOffAgent",
-            label: "turnOffAgent",
-            message: "Conversation ended.",
-            botResponse: "",
-            userResponse: "",
+            name: "Generar Link de Pago Wompi",
+            integration: "wompi",
+            action: "create-payment-link",
+            input: {
+              amount: 150000,
+              currency: "COP",
+              email: "{{email_cliente}}",
+            },
+            output: "wompi_link",
           },
+        },
+        {
+          id: "conv-send-link",
+          type: "conversation",
+          position: { x: 1450, y: 0 },
+          data: {
+            name: "Enviar Link de Pago",
+            botResponse: "¡Perfecto! Aquí tienes tu enlace para completar la compra de forma segura:",
+          },
+        },
+        {
+          id: "url-wompi",
+          type: "urlButton",
+          position: { x: 1800, y: 0 },
+          data: {
+            name: "Botón de Pago",
+            message: "Pagar ahora con Wompi",
+            url: "{{wompi_link}}",
+          },
+        },
+        {
+          id: "conv-no-thanks",
+          type: "conversation",
+          position: { x: 400, y: 250 },
+          data: {
+            name: "Despedida",
+            botResponse:
+              "Entendido. Si cambias de opinión, no dudes en escribirme. ¡Que tengas un buen día!",
+          },
+        },
+        {
+          id: "turn-off",
           type: "turnOffAgent",
-          width: 256,
-          height: 78,
-          dragging: false,
-          position: { x: 1800, y: 280 },
-          selected: false,
-          positionAbsolute: { x: 1800, y: 280 },
+          position: { x: 750, y: 250 },
+          data: { name: "Finalizar Conversación" },
         },
       ],
       edges: [
         {
-          id: "e0",
-          source: "c_inicio",
-          target: "c_paris",
-          sourceHandle: "PARIS",
-        },
-        {
-          id: "e1",
-          source: "c_inicio",
-          target: "c_tokyo",
-          sourceHandle: "TOKYO",
-        },
-        {
-          id: "e2",
-          source: "c_inicio",
-          target: "c_ny",
-          sourceHandle: "NEWYORK",
-        },
-        {
-          id: "e3",
-          source: "c_paris",
-          target: "c_par_museo",
-          sourceHandle: "PAR_MUSEO",
-        },
-        {
-          id: "e4",
-          source: "c_paris",
-          target: "c_par_gastro",
-          sourceHandle: "PAR_GASTRO",
-        },
-        {
-          id: "e7",
-          source: "c_tokyo",
-          target: "c_tok_templ",
-          sourceHandle: "TOK_TEMPL",
-        },
-        {
-          id: "e8",
-          source: "c_tokyo",
-          target: "c_tok_food",
-          sourceHandle: "TOK_FOOD",
-        },
-        {
-          id: "e11",
-          source: "c_ny",
-          target: "c_ny_atr",
-          sourceHandle: "NY_ATR",
-        },
-        {
-          id: "e12",
-          source: "c_ny",
-          target: "c_ny_food",
-          sourceHandle: "NY_FOOD",
-        },
-        {
-          id: "reactflow__edge-c_par_museodefault-source-a4eb4e3a-81aa-4458-9de0-5009cf9fea92",
+          id: "e-offer-yes",
+          source: "conv-offer",
+          target: "conv-get-email",
+          sourceHandle: "buy-yes",
           type: "smoothstep",
-          style: { stroke: "#6366f1", strokeWidth: 2 },
-          source: "c_par_museo",
-          target: "a4eb4e3a-81aa-4458-9de0-5009cf9fea92",
-          sourceHandle: "default-source",
-          targetHandle: null,
         },
         {
-          id: "reactflow__edge-c_par_gastrodefault-source-a4eb4e3a-81aa-4458-9de0-5009cf9fea92",
+          id: "e-getemail-capture",
+          source: "conv-get-email",
+          target: "capture-email",
           type: "smoothstep",
-          style: { stroke: "#6366f1", strokeWidth: 2 },
-          source: "c_par_gastro",
-          target: "a4eb4e3a-81aa-4458-9de0-5009cf9fea92",
-          sourceHandle: "default-source",
-          targetHandle: null,
         },
         {
-          id: "reactflow__edge-c_ny_atrdefault-source-a4eb4e3a-81aa-4458-9de0-5009cf9fea92",
+          id: "e-capture-wompi",
+          source: "capture-email",
+          target: "integration-wompi",
           type: "smoothstep",
-          style: { stroke: "#6366f1", strokeWidth: 2 },
-          source: "c_ny_atr",
-          target: "a4eb4e3a-81aa-4458-9de0-5009cf9fea92",
-          sourceHandle: "default-source",
-          targetHandle: null,
         },
         {
-          id: "reactflow__edge-c_ny_fooddefault-source-a4eb4e3a-81aa-4458-9de0-5009cf9fea92",
+          id: "e-wompi-sendlink",
+          source: "integration-wompi",
+          target: "conv-send-link",
           type: "smoothstep",
-          style: { stroke: "#6366f1", strokeWidth: 2 },
-          source: "c_ny_food",
-          target: "a4eb4e3a-81aa-4458-9de0-5009cf9fea92",
-          sourceHandle: "default-source",
-          targetHandle: null,
         },
         {
-          id: "reactflow__edge-c_tok_templdefault-source-a4eb4e3a-81aa-4458-9de0-5009cf9fea92",
+          id: "e-sendlink-button",
+          source: "conv-send-link",
+          target: "url-wompi",
           type: "smoothstep",
-          style: { stroke: "#6366f1", strokeWidth: 2 },
-          source: "c_tok_templ",
-          target: "a4eb4e3a-81aa-4458-9de0-5009cf9fea92",
-          sourceHandle: "default-source",
-          targetHandle: null,
         },
         {
-          id: "reactflow__edge-c_tok_fooddefault-source-a4eb4e3a-81aa-4458-9de0-5009cf9fea92",
+          id: "e-offer-no",
+          source: "conv-offer",
+          target: "conv-no-thanks",
+          sourceHandle: "buy-no",
           type: "smoothstep",
-          style: { stroke: "#6366f1", strokeWidth: 2 },
-          source: "c_tok_food",
-          target: "a4eb4e3a-81aa-4458-9de0-5009cf9fea92",
-          sourceHandle: "default-source",
-          targetHandle: null,
+        },
+        {
+          id: "e-nothanks-off",
+          source: "conv-no-thanks",
+          target: "turn-off",
+          type: "smoothstep",
         },
       ],
     }),
@@ -624,7 +564,7 @@ export function ChatWorkflowTable({
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1 text-sm text-gray-600">
-                          <Calendar className="h-3 w-3" />
+                          <CalendarDays className="h-3 w-3" />
                           {formatDate(workflow.createdAt)}
                         </div>
                       </TableCell>
@@ -653,7 +593,7 @@ export function ChatWorkflowTable({
                                 handleRowClick(workflow.id);
                               }}
                             >
-                              <Edit className="h-4 w-4 mr-2" /> Editar Flujo
+                              <Pencil className="h-4 w-4 mr-2" /> Editar Flujo
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={(e) => handleCopyId(e, workflow.id)}
@@ -748,7 +688,12 @@ export function ChatWorkflowTable({
               >
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <WorkflowIcon className="h-5 w-5" /> {tpl.name}
+                    {tpl.icon ? (
+                      <tpl.icon className="h-5 w-5" />
+                    ) : (
+                      <WorkflowIcon className="h-5 w-5" />
+                    )}{" "}
+                    {tpl.name}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
