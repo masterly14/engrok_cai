@@ -34,13 +34,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     }
 }
 
-export async function PUT(request: NextRequest, { params }: { params: { leadId: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ leadId: string }> }) {
     const user = await getAuthenticatedUser(request);
     if (!user) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { leadId } = params;
+    const { leadId } = await params;
 
     try {
         const body = await request.json();
@@ -86,13 +86,13 @@ export async function PUT(request: NextRequest, { params }: { params: { leadId: 
     }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { leadId: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ leadId: string }> }) {
     const user = await getAuthenticatedUser(request);
     if (!user) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { leadId } = params;
+    const { leadId } = await params;
 
     try {
          const lead = await prisma.lead.findFirst({
