@@ -1,4 +1,3 @@
-
 import type { Metadata } from "next";
 import { Raleway } from "next/font/google";
 import "./globals.css";
@@ -6,7 +5,7 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { ThemeProvider } from "@/components/theme-provider";
 import ReactQueryProvider from "@/providers/react-query-providers";
 import { Toaster } from "@/components/ui/sonner";
-import { esES } from "@clerk/localizations";
+import { esES } from "@clerk/nextjs/localizations";
 
 const raleway = Raleway({
   subsets: ["latin"],
