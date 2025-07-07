@@ -7,7 +7,7 @@ import type { Agent } from "@/types/agent"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { LoadingSpinner } from "@/components/loading-spinner"
-import { useAgent } from "@/context/agent-context"
+import { AgentWithTools, useAgent } from "@/context/agent-context"
 import { cn } from "@/lib/utils"
 
 export function Sidebar({ agents: initialAgents }: { agents: Agent[] }) {
@@ -27,7 +27,7 @@ export function Sidebar({ agents: initialAgents }: { agents: Agent[] }) {
   }, [agents, searchTerm])
 
   const handleAgentSelect = (agent: Agent) => {
-    setSelectedAgent(agent)
+    setSelectedAgent(agent as AgentWithTools)
     setIsCreatingNew(false)
   }
 
