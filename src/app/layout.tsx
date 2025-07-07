@@ -5,7 +5,7 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { ThemeProvider } from "@/components/theme-provider";
 import ReactQueryProvider from "@/providers/react-query-providers";
 import { Toaster } from "@/components/ui/sonner";
-import { esES } from "@clerk/nextjs/localizations";
+import { esES } from "@clerk/localizations";
 
 const raleway = Raleway({
   subsets: ["latin"],
@@ -21,7 +21,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider localization={esES}>
+    <ClerkProvider localization={esES as any}>
       <html lang="en">
         <body className={`${raleway.className} antialiased`}>
           <ThemeProvider>
