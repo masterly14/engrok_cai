@@ -65,14 +65,14 @@ model Agent {
   id              String  @id @default(uuid()) @db.Uuid
   userId          String  @db.Uuid
   prompt          String
-  language        String  @default("multi")
   name            String
   backgroundSound String?
   firstMessage    String
   vapiId          String? @unique
   voiceId         String?
+  language        String  @default("multi")
   User            User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tools           Tool[]
+  tools           Tool[]  @relation("AgentToTool")
 }
 
 model PhoneNumber {
@@ -112,6 +112,8 @@ model ChatAgent {
   hasSeenTestWarning        Boolean           @default(false)
   isTestNumber              Boolean           @default(false)
   activeWorkflowId          String?           @db.Uuid
+  mode                      ChatAgentMode     @default(FLOW)
+  prompt                    String?           @default("")
   user                      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   chatContacts              ChatContact[]
   chatSessions              ChatSession[]
@@ -608,8 +610,8 @@ model Tool {
   parameters  Json
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  agents      Agent[]
   provider    String?
+  agents      Agent[]  @relation("AgentToTool")
 }
 
 enum IntegrationProvider {
@@ -692,4 +694,9 @@ enum TemplateCategory {
 enum UsageKind {
   voice
   chat
+}
+
+enum ChatAgentMode {
+  FLOW
+  PROMPT
 }
