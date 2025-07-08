@@ -77,15 +77,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "No se pudo determinar WABA o phoneNumberId" }, { status: 400 });
     }
 
-    // ---- Registrar el número de teléfono para la API de Cloud ----
-    try {
-        console.log(`Registrando el número de teléfono ID: ${finalPhoneNumberId}`);
-        
-        // Generar un PIN aleatorio de 6 dígitos para la verificación en dos pasos.
-        // Esto es requerido por la API de registro.
-        const pin = Math.floor(100000 + Math.random() * 900000).toString();
+    // ---- Registrar el número de teléfono para la API de Cloud con reintentos ----
+    let registrationSuccess = false;
+    let lastError: any = null;
+    const maxRetries = 5; // 1 intento inicial + 4 reintentos
 
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`Intentando registrar el número de teléfono ID: ${finalPhoneNumberId} (Intento ${attempt}/${maxRetries})`);
+        
+        const pin = Math.floor(100000 + Math.random() * 900000).toString();
         const registerUrl = `https://graph.facebook.com/v20.0/${finalPhoneNumberId}/register`;
+        
         const registerResponse = await fetch(registerUrl, {
             method: 'POST',
             headers: {
@@ -100,18 +103,33 @@ export async function POST(request: Request) {
 
         const registerData = await registerResponse.json();
 
-        if (!registerResponse.ok || !registerData.success) {
-            console.error('Error al registrar el número de teléfono:', registerData);
-            // No lanzamos un error fatal, pero lo registramos. 
-            // El número podría ya estar registrado o haber otro problema.
-            // El flujo puede continuar para guardar los datos.
+        if (registerResponse.ok && registerData.success) {
+            console.log('¡Número de teléfono registrado con éxito!');
+            registrationSuccess = true;
+            break; // Salir del bucle si es exitoso
         } else {
-            console.log('Número de teléfono registrado con éxito!');
+            lastError = registerData;
+            console.error(`Intento ${attempt} fallido al registrar el número de teléfono:`, lastError);
+            if (attempt < maxRetries) {
+              const delay = Math.pow(2, attempt) * 1000; // 2s, 4s, 8s, 16s
+              console.log(`Esperando ${delay / 1000}s antes del siguiente reintento...`);
+              await new Promise(resolve => setTimeout(resolve, delay));
+            }
         }
+      } catch (err) {
+          lastError = err;
+          console.error(`Excepción en el intento ${attempt} de registrar el número:`, err);
+          if (attempt < maxRetries) {
+            const delay = Math.pow(2, attempt) * 1000;
+            console.log(`Esperando ${delay / 1000}s antes del siguiente reintento...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+          }
+      }
+    }
 
-    } catch (err) {
-        console.error('Excepción al intentar registrar el número de teléfono:', err);
-        // Tampoco lanzamos un error fatal aquí para permitir que se guarden los datos.
+    if (!registrationSuccess) {
+        console.error('Todos los intentos de registrar el número de teléfono fallaron. Último error:', lastError);
+        // No lanzamos un error fatal, pero lo registramos. El flujo puede continuar para guardar los datos.
     }
     // ----------------------------------------------------------------
 

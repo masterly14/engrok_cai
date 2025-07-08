@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Button } from '@/components/ui/button'; // Suponiendo que usas ShadCN UI
+import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
-import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
-import Link from "next/link"
+import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import Link from "next/link";
 
 // Declara las propiedades de la ventana global para TypeScript
 declare global {
@@ -16,9 +16,12 @@ declare global {
 
 const WhatsAppConnectButton = () => {
   const [sdkLoaded, setSdkLoaded] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isAuthorizing, setIsAuthorizing] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [connectedPhone, setConnectedPhone] = useState<string | null>(null);
+  
+  const isLoading = isAuthorizing || isConnecting;
 
   useEffect(() => {
     if (document.getElementById('facebook-jssdk')) {
@@ -26,7 +29,6 @@ const WhatsAppConnectButton = () => {
       return;
     }
     
-    // Define la función de inicialización del SDK en la ventana global
     window.fbAsyncInit = function () {
       window.FB.init({
         appId: process.env.NEXT_PUBLIC_META_APP_ID,
@@ -37,7 +39,6 @@ const WhatsAppConnectButton = () => {
       setSdkLoaded(true);
     };
     
-    // Carga el SDK de forma asíncrona
     (function (d, s, id) {
       let js, fjs = d.getElementsByTagName(s)[0];
       if (d.getElementById(id)) { return; }
@@ -54,17 +55,16 @@ const WhatsAppConnectButton = () => {
       return;
     }
     
-    setIsLoading(true);
+    setIsAuthorizing(true);
 
     window.FB.login(
       (response: any) => {
+        setIsAuthorizing(false);
         if (response.authResponse && response.authResponse.code) {
           console.log('Código de autorización obtenido:', response.authResponse.code);
-          // Envía el código a tu backend
           exchangeCodeForToken(response.authResponse.code);
         } else {
           console.log('El usuario canceló el login o no autorizó completamente.');
-          setIsLoading(false);
         }
       },
       {
@@ -80,6 +80,7 @@ const WhatsAppConnectButton = () => {
   };
 
   const exchangeCodeForToken = async (code: string) => {
+    setIsConnecting(true);
     try {
       const response = await fetch('/api/meta/whatsapp/exchange-token', {
         method: 'POST',
@@ -100,7 +101,7 @@ const WhatsAppConnectButton = () => {
       console.error('Error al conectar la cuenta:', error);
       alert(`Error: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
-      setIsLoading(false);
+      setIsConnecting(false);
     }
   };
 
@@ -110,9 +111,29 @@ const WhatsAppConnectButton = () => {
         onClick={handleFacebookLogin} 
         disabled={!sdkLoaded || isLoading}
       >
-        {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-        {isLoading ? 'Conectando...' : 'Conectar Cuenta de WhatsApp'}
+        {isAuthorizing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+        {isAuthorizing ? 'Esperando a Meta...' : 'Conectar Cuenta de WhatsApp'}
       </Button>
+      
+      {/* Modal de Carga Durante la Conexión */}
+      <AlertDialog open={isConnecting}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Conectando tu cuenta de WhatsApp...</AlertDialogTitle>
+            <AlertDialogDescription>
+              Estamos verificando tu cuenta con Meta y registrando tu número de teléfono. 
+              Este proceso puede tardar hasta un minuto debido a las verificaciones de seguridad.
+              <br /><br />
+              <strong>Por favor, no cierres ni recargues esta página.</strong>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex justify-center items-center py-4">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Modal de Éxito */}
       <AlertDialog open={showSuccessDialog} onOpenChange={(open) => { if (!open) window.location.reload(); }}>
         <AlertDialogContent>
           <AlertDialogHeader>

@@ -333,6 +333,8 @@ export function ChatWorkflowTable({
   const [workflowToDelete, setWorkflowToDelete] = useState<string | null>(null);
   const [operationLoading, setOperationLoading] = useState<string | null>(null);
   const [templateModalOpen, setTemplateModalOpen] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1);
+  const totalSteps = 3;
 
   // TODO: Replace with dedicated chat hook
   const { deleteWorkflow, duplicateWorkflow } = useWorkflows();
@@ -460,6 +462,12 @@ export function ChatWorkflowTable({
     if (typeof tools === "object") return Object.keys(tools).length;
     return 0;
   };
+
+  const handleNextStep = () => {
+    setCurrentStep(currentStep + 1);
+  };
+
+  const handlePreviousStep = () => {    
 
   return (
     <div className="flex flex-col p-4">
@@ -653,57 +661,134 @@ export function ChatWorkflowTable({
       </AlertDialog>
 
       {/* Template selector modal */}
-      <Dialog open={templateModalOpen} onOpenChange={setTemplateModalOpen}>
+      <Dialog
+        open={templateModalOpen}
+        onOpenChange={(isOpen) => {
+          setTemplateModalOpen(isOpen);
+          if (!isOpen) {
+            setCurrentStep(1); // Reset step on close
+          }
+        }}
+      >
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Crear un nuevo flujo de chat</DialogTitle>
             <DialogDescription>
-              Comienza desde cero o utiliza una de nuestras plantillas para
-              empezar rápidamente.
+              {currentStep === 1 &&
+                "Comienza desde cero o utiliza una de nuestras plantillas para empezar rápidamente."}
+              {currentStep === 2 && "Configura los detalles de tu nuevo flujo."}
+              {currentStep === 3 && "¡Todo listo para empezar!"}
             </DialogDescription>
           </DialogHeader>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
-            <Card
-              className="cursor-pointer hover:border-primary transition-all"
-              onClick={() => !isLoading && createBlankWorkflow()}
-            >
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FilePlus2 className="h-5 w-5" /> Flujo en Blanco
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">
-                  Empieza con un lienzo en blanco y construye tu flujo paso a
-                  paso.
-                </p>
-              </CardContent>
-            </Card>
 
-            {TEMPLATES.map((tpl) => (
+          {/* Stepper progress indicator */}
+          <div className="flex items-center my-4">
+            {Array.from({ length: totalSteps }, (_, i) => (
+              <div key={i} className="flex items-center w-full">
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
+                    currentStep > i
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  {i + 1}
+                </div>
+                {i < totalSteps - 1 && (
+                  <div
+                    className={`flex-1 h-0.5 mx-2 transition-colors ${
+                      currentStep > i + 1 ? "bg-primary" : "bg-muted"
+                    }`}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+
+          {currentStep === 1 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
               <Card
-                key={tpl.id}
                 className="cursor-pointer hover:border-primary transition-all"
-                onClick={() => !isLoading && createWorkflowFromTemplate(tpl)}
+                onClick={() => !isLoading && createBlankWorkflow()}
               >
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    {tpl.icon ? (
-                      <tpl.icon className="h-5 w-5" />
-                    ) : (
-                      <WorkflowIcon className="h-5 w-5" />
-                    )}{" "}
-                    {tpl.name}
+                    <FilePlus2 className="h-5 w-5" /> Flujo en Blanco
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-muted-foreground">
-                    {tpl.description}
+                    Empieza con un lienzo en blanco y construye tu flujo paso a
+                    paso.
                   </p>
                 </CardContent>
               </Card>
-            ))}
-          </div>
+
+              {TEMPLATES.map((tpl) => (
+                <Card
+                  key={tpl.id}
+                  className="cursor-pointer hover:border-primary transition-all"
+                  onClick={() => !isLoading && createWorkflowFromTemplate(tpl)}
+                >
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      {tpl.icon ? (
+                        <tpl.icon className="h-5 w-5" />
+                      ) : (
+                        <WorkflowIcon className="h-5 w-5" />
+                      )}{" "}
+                      {tpl.name}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground">
+                      {tpl.description}
+                    </p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+          {currentStep === 2 && (
+            <div className="py-8 text-center">
+              <h3 className="text-lg font-semibold">Paso 2: Configuración</h3>
+              <p className="text-muted-foreground mt-2">
+                Aquí irá el contenido para configurar el flujo.
+              </p>
+            </div>
+          )}
+          {currentStep === 3 && (
+            <div className="py-8 text-center">
+              <h3 className="text-lg font-semibold">Paso 3: Finalización</h3>
+              <p className="text-muted-foreground mt-2">
+                Este es el último paso del proceso.
+              </p>
+            </div>
+          )}
+
+          <AlertDialogFooter>
+            <div className="flex justify-between w-full">
+              <Button
+                variant="outline"
+                onClick={() => setCurrentStep((s) => Math.max(1, s - 1))}
+                disabled={currentStep === 1}
+              >
+                Anterior
+              </Button>
+              <Button
+                onClick={() => {
+                  if (currentStep < totalSteps) {
+                    setCurrentStep((s) => s + 1);
+                  } else {
+                    // Handle finish
+                    setTemplateModalOpen(false);
+                  }
+                }}
+              >
+                {currentStep < totalSteps ? "Siguiente" : "Finalizar"}
+              </Button>
+            </div>
+          </AlertDialogFooter>
         </DialogContent>
       </Dialog>
     </div>
