@@ -101,7 +101,7 @@ const validateConnection = (
     }
   }
   if (targetNode.data.initialMessage && targetNode.type === "conversation") {
-    if (sourceNode.type !== "trigger") {
+    if (sourceNode.type !== "trigger" && sourceNode.type !== "ai") {
       toast.error(
         "El primer nodo de Conversación solo puede recibir conexiones desde un nodo Trigger.",
       );
