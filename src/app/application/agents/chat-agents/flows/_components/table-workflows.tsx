@@ -467,7 +467,13 @@ export function ChatWorkflowTable({
     setCurrentStep(currentStep + 1);
   };
 
-  const handlePreviousStep = () => {    
+  const handlePreviousStep = () => {
+    setCurrentStep(currentStep - 1);
+  };
+
+  const handleFinish = () => {
+    setTemplateModalOpen(false);
+  };
 
   return (
     <div className="flex flex-col p-4">
