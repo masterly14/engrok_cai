@@ -262,7 +262,9 @@ const NumberAgentsClient = () => {
                   setSelectedAgent={setSelectedAgent}
                   selectedWorkflow={selectedWorkflow}
                   setSelectedWorkflow={setSelectedWorkflow}
-                  workflowsData={Array.isArray(workflowsData) ? workflowsData : []}
+                  workflowsData={
+                    Array.isArray(workflowsData) ? workflowsData : []
+                  }
                 />
               </div>
             )}

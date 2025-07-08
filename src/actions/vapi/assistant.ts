@@ -1,4 +1,4 @@
-"use server"
+"use server";
 
 import { VapiClient } from "@vapi-ai/server-sdk";
 import { db } from "@/utils";
@@ -10,8 +10,9 @@ const client = new VapiClient({
 });
 
 export async function createAssistantAction(formData: FormData) {
-  console.log('formData', formData)
-  let backgroundSound = (formData.get("backgroundSound") as string) || undefined;
+  console.log("formData", formData);
+  let backgroundSound =
+    (formData.get("backgroundSound") as string) || undefined;
   if (backgroundSound !== "office" && backgroundSound !== "off") {
     backgroundSound = "off";
   }
@@ -65,7 +66,8 @@ export async function createAssistantAction(formData: FormData) {
     };
   }
 
-  const vapiAssistant: any = (assistantResponse as any).assistant || assistantResponse;
+  const vapiAssistant: any =
+    (assistantResponse as any).assistant || assistantResponse;
   const vapiAssistantId = vapiAssistant?.id;
 
   if (!vapiAssistantId) {
@@ -99,7 +101,7 @@ export async function createAssistantAction(formData: FormData) {
   }
 
   // Revalidar la caché para reflejar el nuevo agente
-  revalidateTag("agents")
+  revalidateTag("agents");
 
   return {
     status: 201,
@@ -108,7 +110,10 @@ export async function createAssistantAction(formData: FormData) {
   };
 }
 
-export async function updateAssistantAction(formData: FormData, vapiId: string) {
+export async function updateAssistantAction(
+  formData: FormData,
+  vapiId: string,
+) {
   const assistantResponse = await client.assistants.update(vapiId, {
     name: formData.get("name") as string,
     firstMessage: formData.get("firstMessage") as string,
@@ -119,7 +124,7 @@ export async function updateAssistantAction(formData: FormData, vapiId: string) 
         {
           role: "system",
           content: formData.get("prompt") as string,
-        }
+        },
       ],
       emotionRecognitionEnabled: true,
       knowledgeBaseId: (formData.get("knowledgeBaseId") as string) || undefined,
@@ -140,13 +145,13 @@ export async function updateAssistantAction(formData: FormData, vapiId: string) 
       voiceSeconds: 0.2,
     },
     silenceTimeoutSeconds: 10,
-  })
+  });
 
   if (!assistantResponse) {
     return {
-      status: 500, 
+      status: 500,
       message: "Error al actualizar el asistente en Vapi",
-    }
+    };
   }
 
   const updateDb = await db.agent.update({
@@ -159,22 +164,22 @@ export async function updateAssistantAction(formData: FormData, vapiId: string) 
       prompt: formData.get("prompt") as string,
       backgroundSound: (formData.get("backgroundSound") as string) || null,
       voiceId: (formData.get("voiceId") as string) || null,
-    }
-  })
+    },
+  });
 
   if (!updateDb) {
     return {
       status: 500,
       message: "Error al actualizar el agente en la base de datos",
-    }
+    };
   }
 
   // Revalidar la caché para que las consultas obtengan los datos actualizados
-  revalidateTag("agents")
+  revalidateTag("agents");
 
   return {
     status: 201,
     message: "Asistente y agente actualizados correctamente",
     data: updateDb,
-  }
+  };
 }

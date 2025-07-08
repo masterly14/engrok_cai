@@ -1,28 +1,46 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Badge } from "@/components/ui/badge"
-import { X } from "lucide-react"
-import type { Lead, Tag, Stage } from "@/lib/data"
-import { v4 as uuidv4 } from 'uuid';
+import { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { X } from "lucide-react";
+import type { Lead, Tag, Stage } from "@/lib/data";
+import { v4 as uuidv4 } from "uuid";
 
 interface AddLeadModalProps {
-  open: boolean
-  tags: Tag[]
-  stages: Stage[]
-  onClose: () => void
-  onAdd: (lead: Lead) => void
+  open: boolean;
+  tags: Tag[];
+  stages: Stage[];
+  onClose: () => void;
+  onAdd: (lead: Lead) => void;
 }
 
-export function AddLeadModal({ open, tags, stages, onClose, onAdd }: AddLeadModalProps) {
+export function AddLeadModal({
+  open,
+  tags,
+  stages,
+  onClose,
+  onAdd,
+}: AddLeadModalProps) {
   const [newLead, setNewLead] = useState<Partial<Lead>>({
     name: "",
     company: "",
@@ -32,36 +50,39 @@ export function AddLeadModal({ open, tags, stages, onClose, onAdd }: AddLeadModa
     tags: [],
     notes: "",
     lastContact: new Date().toISOString(),
-  })
+  });
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target
-    setNewLead({ ...newLead, [name]: value })
-  }
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+  ) => {
+    const { name, value } = e.target;
+    setNewLead({ ...newLead, [name]: value });
+  };
 
   const handleSelectChange = (value: string) => {
-    setNewLead({ ...newLead, status: value })
-  }
+    setNewLead({ ...newLead, status: value });
+  };
 
   const handleTagSelect = (tagName: string) => {
     if (!newLead.tags?.includes(tagName)) {
-      setNewLead({ ...newLead, tags: [...(newLead.tags || []), tagName] })
+      setNewLead({ ...newLead, tags: [...(newLead.tags || []), tagName] });
     }
-  }
+  };
 
   const handleTagRemove = (tag: string) => {
-    setNewLead({ ...newLead, tags: newLead.tags?.filter((t) => t !== tag) })
-  }
+    setNewLead({ ...newLead, tags: newLead.tags?.filter((t) => t !== tag) });
+  };
 
   const handleValueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value === "" ? undefined : Number.parseFloat(e.target.value)
-    setNewLead({ ...newLead, value })
-  }
+    const value =
+      e.target.value === "" ? undefined : Number.parseFloat(e.target.value);
+    setNewLead({ ...newLead, value });
+  };
 
   const handleSubmit = () => {
     // Validate required fields
     if (!newLead.name || !newLead.company || !newLead.email) {
-      return // Add proper validation feedback in a real app
+      return; // Add proper validation feedback in a real app
     }
 
     const lead: Lead = {
@@ -75,9 +96,9 @@ export function AddLeadModal({ open, tags, stages, onClose, onAdd }: AddLeadModa
       notes: newLead.notes || "",
       lastContact: newLead.lastContact || new Date().toISOString(),
       value: newLead.value,
-    }
+    };
 
-    onAdd(lead)
+    onAdd(lead);
 
     // Reset form
     setNewLead({
@@ -89,8 +110,8 @@ export function AddLeadModal({ open, tags, stages, onClose, onAdd }: AddLeadModa
       tags: [],
       notes: "",
       lastContact: new Date().toISOString(),
-    })
-  }
+    });
+  };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -103,11 +124,23 @@ export function AddLeadModal({ open, tags, stages, onClose, onAdd }: AddLeadModa
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="name">Nombre *</Label>
-              <Input id="name" name="name" value={newLead.name || ""} onChange={handleInputChange} required />
+              <Input
+                id="name"
+                name="name"
+                value={newLead.name || ""}
+                onChange={handleInputChange}
+                required
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="company">Empresa *</Label>
-              <Input id="company" name="company" value={newLead.company || ""} onChange={handleInputChange} required />
+              <Input
+                id="company"
+                name="company"
+                value={newLead.company || ""}
+                onChange={handleInputChange}
+                required
+              />
             </div>
           </div>
 
@@ -125,14 +158,23 @@ export function AddLeadModal({ open, tags, stages, onClose, onAdd }: AddLeadModa
             </div>
             <div className="space-y-2">
               <Label htmlFor="phone">Teléfono</Label>
-              <Input id="phone" name="phone" value={newLead.phone || ""} onChange={handleInputChange} />
+              <Input
+                id="phone"
+                name="phone"
+                value={newLead.phone || ""}
+                onChange={handleInputChange}
+              />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="status">Etapa</Label>
-              <Select value={newLead.status || ""} onValueChange={handleSelectChange} defaultValue={stages[0]?.id || "new"}>
+              <Select
+                value={newLead.status || ""}
+                onValueChange={handleSelectChange}
+                defaultValue={stages[0]?.id || "new"}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccionar etapa" />
                 </SelectTrigger>
@@ -140,7 +182,10 @@ export function AddLeadModal({ open, tags, stages, onClose, onAdd }: AddLeadModa
                   {stages.map((stage) => (
                     <SelectItem key={stage.id} value={stage.id}>
                       <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: stage.color }} />
+                        <div
+                          className="w-2 h-2 rounded-full"
+                          style={{ backgroundColor: stage.color }}
+                        />
                         {stage.name}
                       </div>
                     </SelectItem>
@@ -150,7 +195,13 @@ export function AddLeadModal({ open, tags, stages, onClose, onAdd }: AddLeadModa
             </div>
             <div className="space-y-2">
               <Label htmlFor="value">Valor ($)</Label>
-              <Input id="value" name="value" type="number" value={newLead.value || ""} onChange={handleValueChange} />
+              <Input
+                id="value"
+                name="value"
+                type="number"
+                value={newLead.value || ""}
+                onChange={handleValueChange}
+              />
             </div>
           </div>
 
@@ -158,7 +209,7 @@ export function AddLeadModal({ open, tags, stages, onClose, onAdd }: AddLeadModa
             <Label>Etiquetas</Label>
             <div className="flex flex-wrap gap-2 mb-2">
               {newLead.tags?.map((tagName) => {
-                const tagData = tags.find((t) => t.name === tagName)
+                const tagData = tags.find((t) => t.name === tagName);
                 return (
                   <Badge
                     key={tagName}
@@ -170,9 +221,12 @@ export function AddLeadModal({ open, tags, stages, onClose, onAdd }: AddLeadModa
                     }}
                   >
                     {tagName}
-                    <X className="h-3 w-3 cursor-pointer" onClick={() => handleTagRemove(tagName)} />
+                    <X
+                      className="h-3 w-3 cursor-pointer"
+                      onClick={() => handleTagRemove(tagName)}
+                    />
                   </Badge>
-                )
+                );
               })}
             </div>
             <Select onValueChange={handleTagSelect}>
@@ -185,7 +239,10 @@ export function AddLeadModal({ open, tags, stages, onClose, onAdd }: AddLeadModa
                   .map((tag) => (
                     <SelectItem key={tag.name} value={tag.name}>
                       <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: tag.color }} />
+                        <div
+                          className="w-2 h-2 rounded-full"
+                          style={{ backgroundColor: tag.color }}
+                        />
                         {tag.name}
                       </div>
                     </SelectItem>
@@ -215,5 +272,5 @@ export function AddLeadModal({ open, tags, stages, onClose, onAdd }: AddLeadModa
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

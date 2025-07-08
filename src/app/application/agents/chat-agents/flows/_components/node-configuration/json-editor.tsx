@@ -1,37 +1,61 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState, useEffect, useRef, useCallback } from "react"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Button } from "@/components/ui/button"
-import { TooltipProvider, Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { RefreshCcw, Check, AlertCircle, FileText, ChevronDown, Lightbulb, Copy, Trash2 } from "lucide-react"
-import { toast } from "sonner"
+import { useState, useEffect, useRef, useCallback } from "react";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import {
+  TooltipProvider,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  RefreshCcw,
+  Check,
+  AlertCircle,
+  FileText,
+  ChevronDown,
+  Lightbulb,
+  Copy,
+  Trash2,
+} from "lucide-react";
+import { toast } from "sonner";
 
 interface JsonTemplate {
-  name: string
-  description: string
-  content: object
+  name: string;
+  description: string;
+  content: object;
 }
 
-export const parseJsonSafely = (jsonString: string | object, fallback: object = {}) => {
+export const parseJsonSafely = (
+  jsonString: string | object,
+  fallback: object = {},
+) => {
   try {
-    return typeof jsonString === "string" ? JSON.parse(jsonString) : jsonString || fallback
+    return typeof jsonString === "string"
+      ? JSON.parse(jsonString)
+      : jsonString || fallback;
   } catch {
-    return fallback
+    return fallback;
   }
-}
+};
 
 export const stringifyJsonSafely = (obj: any) => {
   try {
-    return JSON.stringify(obj)
+    return JSON.stringify(obj);
   } catch {
-    return "{}"
+    return "{}";
   }
-}
+};
 
 const commonTemplates: JsonTemplate[] = [
   {
@@ -69,7 +93,7 @@ const commonTemplates: JsonTemplate[] = [
       code: "{{error.code}}",
     },
   },
-]
+];
 
 export function JsonEditorField({
   id,
@@ -81,224 +105,248 @@ export function JsonEditorField({
   description,
   disabled = false,
 }: {
-  id: string
-  label: string
-  value: object | string | undefined
-  onChange: (value: object | undefined) => void
-  placeholder?: string
-  rows?: number
-  description?: string
-  disabled?: boolean
+  id: string;
+  label: string;
+  value: object | string | undefined;
+  onChange: (value: object | undefined) => void;
+  placeholder?: string;
+  rows?: number;
+  description?: string;
+  disabled?: boolean;
 }) {
-  const [internalValue, setInternalValue] = useState("")
-  const [isValidJson, setIsValidJson] = useState(true)
-  const [wasFormatted, setWasFormatted] = useState(false)
-  const [isTyping, setIsTyping] = useState(false)
-  const [validationError, setValidationError] = useState<string>("")
-  const [showSuggestions, setShowSuggestions] = useState(false)
+  const [internalValue, setInternalValue] = useState("");
+  const [isValidJson, setIsValidJson] = useState(true);
+  const [wasFormatted, setWasFormatted] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
+  const [validationError, setValidationError] = useState<string>("");
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     try {
-      const formatted = typeof value === "object" ? JSON.stringify(value, null, 2) : value || ""
-      setInternalValue(formatted)
-      setIsValidJson(true)
-      setValidationError("")
+      const formatted =
+        typeof value === "object"
+          ? JSON.stringify(value, null, 2)
+          : value || "";
+      setInternalValue(formatted);
+      setIsValidJson(true);
+      setValidationError("");
     } catch {
-      setInternalValue(String(value || ""))
+      setInternalValue(String(value || ""));
     }
-  }, [value])
+  }, [value]);
 
   const validateJson = useCallback((text: string) => {
     if (text.trim() === "") {
-      setIsValidJson(true)
-      setValidationError("")
-      return true
+      setIsValidJson(true);
+      setValidationError("");
+      return true;
     }
 
     // Reemplaza variables con placeholders válidos
-    const tempText = text.replace(/{{\s*[\w.]+\s*}}/g, '"__PLACEHOLDER__"')
+    const tempText = text.replace(/{{\s*[\w.]+\s*}}/g, '"__PLACEHOLDER__"');
 
     try {
-      JSON.parse(tempText)
-      setIsValidJson(true)
-      setValidationError("")
-      return true
+      JSON.parse(tempText);
+      setIsValidJson(true);
+      setValidationError("");
+      return true;
     } catch (error) {
-      setIsValidJson(false)
-      setValidationError(error instanceof Error ? error.message : "JSON inválido")
-      return false
+      setIsValidJson(false);
+      setValidationError(
+        error instanceof Error ? error.message : "JSON inválido",
+      );
+      return false;
     }
-  }, [])
+  }, []);
 
   const handleChange = (text: string) => {
-    setInternalValue(text)
-    setIsTyping(true)
+    setInternalValue(text);
+    setIsTyping(true);
 
     // Limpiar timeout anterior
     if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current)
+      clearTimeout(typingTimeoutRef.current);
     }
 
     // Validar después de que el usuario deje de escribir
     typingTimeoutRef.current = setTimeout(() => {
-      setIsTyping(false)
-      const isValid = validateJson(text)
+      setIsTyping(false);
+      const isValid = validateJson(text);
 
       if (isValid) {
         try {
           if (text.trim() === "") {
-            onChange(undefined)
-            return
+            onChange(undefined);
+            return;
           }
 
-          const tempText = text.replace(/{{\s*[\w.]+\s*}}/g, '"__PLACEHOLDER__"')
-          const parsed = JSON.parse(tempText)
+          const tempText = text.replace(
+            /{{\s*[\w.]+\s*}}/g,
+            '"__PLACEHOLDER__"',
+          );
+          const parsed = JSON.parse(tempText);
 
           // Restaurar variables en el objeto parseado
-          const jsonString = JSON.stringify(parsed)
-          let i = 0
-          const matches = [...text.matchAll(/{{\s*[\w.]+\s*}}/g)]
-          const restoredString = jsonString.replace(/"__PLACEHOLDER__"/g, () => {
-            const match = matches[i++]
-            return match ? `"${match[0]}"` : '"__PLACEHOLDER__"'
-          })
+          const jsonString = JSON.stringify(parsed);
+          let i = 0;
+          const matches = [...text.matchAll(/{{\s*[\w.]+\s*}}/g)];
+          const restoredString = jsonString.replace(
+            /"__PLACEHOLDER__"/g,
+            () => {
+              const match = matches[i++];
+              return match ? `"${match[0]}"` : '"__PLACEHOLDER__"';
+            },
+          );
 
-          onChange(JSON.parse(restoredString))
+          onChange(JSON.parse(restoredString));
         } catch {
           // Si falla la restauración, usar el objeto parseado simple
-          const tempText = text.replace(/{{\s*[\w.]+\s*}}/g, '"__PLACEHOLDER__"')
+          const tempText = text.replace(
+            /{{\s*[\w.]+\s*}}/g,
+            '"__PLACEHOLDER__"',
+          );
           try {
-            const parsed = JSON.parse(tempText)
-            onChange(parsed)
+            const parsed = JSON.parse(tempText);
+            onChange(parsed);
           } catch {
             // No hacer nada si no se puede parsear
           }
         }
       }
-    }, 500) // Esperar 500ms después de que el usuario deje de escribir
-  }
+    }, 500); // Esperar 500ms después de que el usuario deje de escribir
+  };
 
   const formatJson = () => {
     try {
-      const tempText = internalValue.replace(/{{\s*[\w.]+\s*}}/g, '"__PLACEHOLDER__"')
-      const parsed = JSON.parse(tempText)
-      const formatted = JSON.stringify(parsed, null, 2)
+      const tempText = internalValue.replace(
+        /{{\s*[\w.]+\s*}}/g,
+        '"__PLACEHOLDER__"',
+      );
+      const parsed = JSON.parse(tempText);
+      const formatted = JSON.stringify(parsed, null, 2);
 
       // Restaurar variables originales
-      let i = 0
-      const matches = [...internalValue.matchAll(/{{\s*[\w.]+\s*}}/g)]
-      const restored = formatted.replace(/"__PLACEHOLDER__"/g, () => matches[i++]?.[0] || '"__PLACEHOLDER__"')
+      let i = 0;
+      const matches = [...internalValue.matchAll(/{{\s*[\w.]+\s*}}/g)];
+      const restored = formatted.replace(
+        /"__PLACEHOLDER__"/g,
+        () => matches[i++]?.[0] || '"__PLACEHOLDER__"',
+      );
 
-      setInternalValue(restored)
-      setIsValidJson(true)
-      setValidationError("")
-      setWasFormatted(true)
-      setTimeout(() => setWasFormatted(false), 1500)
-      toast.success("JSON formateado correctamente")
+      setInternalValue(restored);
+      setIsValidJson(true);
+      setValidationError("");
+      setWasFormatted(true);
+      setTimeout(() => setWasFormatted(false), 1500);
+      toast.success("JSON formateado correctamente");
     } catch (error) {
-      toast.error("No se pudo formatear: JSON inválido")
+      toast.error("No se pudo formatear: JSON inválido");
     }
-  }
+  };
 
   const insertTemplate = (template: JsonTemplate) => {
-    const formattedContent = JSON.stringify(template.content, null, 2)
-    setInternalValue(formattedContent)
-    handleChange(formattedContent)
-    toast.success(`Plantilla "${template.name}" insertada`)
-  }
+    const formattedContent = JSON.stringify(template.content, null, 2);
+    setInternalValue(formattedContent);
+    handleChange(formattedContent);
+    toast.success(`Plantilla "${template.name}" insertada`);
+  };
 
   const clearContent = () => {
-    setInternalValue("")
-    onChange(undefined)
-    setIsValidJson(true)
-    setValidationError("")
-    toast.success("Contenido limpiado")
-  }
+    setInternalValue("");
+    onChange(undefined);
+    setIsValidJson(true);
+    setValidationError("");
+    toast.success("Contenido limpiado");
+  };
 
   const copyContent = async () => {
     try {
-      await navigator.clipboard.writeText(internalValue)
-      toast.success("Contenido copiado al portapapeles")
+      await navigator.clipboard.writeText(internalValue);
+      toast.success("Contenido copiado al portapapeles");
     } catch {
-      toast.error("No se pudo copiar el contenido")
+      toast.error("No se pudo copiar el contenido");
     }
-  }
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    const textarea = e.currentTarget
-    const { selectionStart, selectionEnd } = textarea
+    const textarea = e.currentTarget;
+    const { selectionStart, selectionEnd } = textarea;
 
     // Auto-completar llaves y corchetes
     if (e.key === "{") {
-      e.preventDefault()
-      const before = internalValue.substring(0, selectionStart)
-      const after = internalValue.substring(selectionEnd)
-      const newValue = before + "{}" + after
-      setInternalValue(newValue)
-      handleChange(newValue)
+      e.preventDefault();
+      const before = internalValue.substring(0, selectionStart);
+      const after = internalValue.substring(selectionEnd);
+      const newValue = before + "{}" + after;
+      setInternalValue(newValue);
+      handleChange(newValue);
 
       // Posicionar cursor entre las llaves
       setTimeout(() => {
-        textarea.setSelectionRange(selectionStart + 1, selectionStart + 1)
-      }, 0)
+        textarea.setSelectionRange(selectionStart + 1, selectionStart + 1);
+      }, 0);
     } else if (e.key === "[") {
-      e.preventDefault()
-      const before = internalValue.substring(0, selectionStart)
-      const after = internalValue.substring(selectionEnd)
-      const newValue = before + "[]" + after
-      setInternalValue(newValue)
-      handleChange(newValue)
+      e.preventDefault();
+      const before = internalValue.substring(0, selectionStart);
+      const after = internalValue.substring(selectionEnd);
+      const newValue = before + "[]" + after;
+      setInternalValue(newValue);
+      handleChange(newValue);
 
       setTimeout(() => {
-        textarea.setSelectionRange(selectionStart + 1, selectionStart + 1)
-      }, 0)
+        textarea.setSelectionRange(selectionStart + 1, selectionStart + 1);
+      }, 0);
     } else if (e.key === '"') {
-      e.preventDefault()
-      const before = internalValue.substring(0, selectionStart)
-      const after = internalValue.substring(selectionEnd)
-      const newValue = before + '""' + after
-      setInternalValue(newValue)
-      handleChange(newValue)
+      e.preventDefault();
+      const before = internalValue.substring(0, selectionStart);
+      const after = internalValue.substring(selectionEnd);
+      const newValue = before + '""' + after;
+      setInternalValue(newValue);
+      handleChange(newValue);
 
       setTimeout(() => {
-        textarea.setSelectionRange(selectionStart + 1, selectionStart + 1)
-      }, 0)
+        textarea.setSelectionRange(selectionStart + 1, selectionStart + 1);
+      }, 0);
     }
     // Formatear con Ctrl+Shift+F
     else if (e.ctrlKey && e.shiftKey && e.key === "F") {
-      e.preventDefault()
-      formatJson()
+      e.preventDefault();
+      formatJson();
     }
     // Insertar variable con Ctrl+Shift+V
     else if (e.ctrlKey && e.shiftKey && e.key === "V") {
-      e.preventDefault()
-      const before = internalValue.substring(0, selectionStart)
-      const after = internalValue.substring(selectionEnd)
-      const newValue = before + "{{variable}}" + after
-      setInternalValue(newValue)
-      handleChange(newValue)
+      e.preventDefault();
+      const before = internalValue.substring(0, selectionStart);
+      const after = internalValue.substring(selectionEnd);
+      const newValue = before + "{{variable}}" + after;
+      setInternalValue(newValue);
+      handleChange(newValue);
 
       setTimeout(() => {
-        textarea.setSelectionRange(selectionStart + 2, selectionStart + 10) // Seleccionar "variable"
-      }, 0)
+        textarea.setSelectionRange(selectionStart + 2, selectionStart + 10); // Seleccionar "variable"
+      }, 0);
     }
-  }
+  };
 
   const getStatusColor = () => {
-    if (isTyping) return "border-yellow-300"
-    if (!isValidJson) return "border-red-500"
-    return "border-gray-300 focus:border-blue-500"
-  }
+    if (isTyping) return "border-yellow-300";
+    if (!isValidJson) return "border-red-500";
+    return "border-gray-300 focus:border-blue-500";
+  };
 
   const getStatusIcon = () => {
-    if (isTyping) return <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse" />
-    if (!isValidJson) return <AlertCircle className="w-4 h-4 text-red-500" />
-    if (isValidJson && internalValue.trim()) return <Check className="w-4 h-4 text-green-500" />
-    return null
-  }
+    if (isTyping)
+      return (
+        <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse" />
+      );
+    if (!isValidJson) return <AlertCircle className="w-4 h-4 text-red-500" />;
+    if (isValidJson && internalValue.trim())
+      return <Check className="w-4 h-4 text-green-500" />;
+    return null;
+  };
 
   return (
     <TooltipProvider>
@@ -315,7 +363,13 @@ export function JsonEditorField({
             {/* Plantillas */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button type="button" size="sm" variant="outline" disabled={disabled} className="h-8 px-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={disabled}
+                  className="h-8 px-2"
+                >
                   <FileText className="w-3 h-3 mr-1" />
                   Plantillas
                   <ChevronDown className="w-3 h-3 ml-1" />
@@ -329,7 +383,9 @@ export function JsonEditorField({
                     className="flex flex-col items-start p-3"
                   >
                     <div className="font-medium text-sm">{template.name}</div>
-                    <div className="text-xs text-gray-500 mt-1">{template.description}</div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      {template.description}
+                    </div>
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
@@ -380,10 +436,16 @@ export function JsonEditorField({
                   disabled={disabled || !internalValue.trim()}
                   className="h-8 px-2"
                 >
-                  {wasFormatted ? <Check className="w-3 h-3 text-green-500" /> : <RefreshCcw className="w-3 h-3" />}
+                  {wasFormatted ? (
+                    <Check className="w-3 h-3 text-green-500" />
+                  ) : (
+                    <RefreshCcw className="w-3 h-3" />
+                  )}
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="top">Formatear JSON (Ctrl+Shift+F)</TooltipContent>
+              <TooltipContent side="top">
+                Formatear JSON (Ctrl+Shift+F)
+              </TooltipContent>
             </Tooltip>
           </div>
         </div>
@@ -395,7 +457,10 @@ export function JsonEditorField({
             value={internalValue}
             onChange={(e) => handleChange(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={placeholder || 'Ej: {\n  "nombre": "{{user.name}}",\n  "email": "{{user.email}}"\n}'}
+            placeholder={
+              placeholder ||
+              'Ej: {\n  "nombre": "{{user.name}}",\n  "email": "{{user.email}}"\n}'
+            }
             rows={rows}
             className={`font-mono text-xs transition-all resize-none ${getStatusColor()} focus:ring-blue-500/30`}
             disabled={disabled}
@@ -403,7 +468,11 @@ export function JsonEditorField({
 
           {/* Indicador de estado en la esquina */}
           <div className="absolute top-2 right-2 flex items-center gap-1">
-            {isTyping && <div className="text-xs text-yellow-600 bg-yellow-50 px-2 py-1 rounded">Escribiendo...</div>}
+            {isTyping && (
+              <div className="text-xs text-yellow-600 bg-yellow-50 px-2 py-1 rounded">
+                Escribiendo...
+              </div>
+            )}
           </div>
         </div>
 
@@ -420,7 +489,9 @@ export function JsonEditorField({
 
         {/* Ayuda y descripción */}
         <div className="space-y-2">
-          {description && <p className="text-xs text-gray-500">{description}</p>}
+          {description && (
+            <p className="text-xs text-gray-500">{description}</p>
+          )}
 
           <div className="flex items-start gap-2 p-2 bg-blue-50 border border-blue-200 rounded-md">
             <Lightbulb className="w-3 h-3 text-blue-500 mt-0.5 flex-shrink-0" />
@@ -428,20 +499,35 @@ export function JsonEditorField({
               <p className="font-medium mb-1">Consejos:</p>
               <ul className="space-y-0.5 text-blue-600">
                 <li>
-                  • Usa <code className="bg-blue-100 px-1 rounded">{"{{variable}}"}</code> para variables dinámicas
+                  • Usa{" "}
+                  <code className="bg-blue-100 px-1 rounded">
+                    {"{{variable}}"}
+                  </code>{" "}
+                  para variables dinámicas
                 </li>
                 <li>
-                  • <kbd className="bg-blue-100 px-1 rounded text-xs">Ctrl+Shift+F</kbd> para formatear
+                  •{" "}
+                  <kbd className="bg-blue-100 px-1 rounded text-xs">
+                    Ctrl+Shift+F
+                  </kbd>{" "}
+                  para formatear
                 </li>
                 <li>
-                  • <kbd className="bg-blue-100 px-1 rounded text-xs">Ctrl+Shift+V</kbd> para insertar variable
+                  •{" "}
+                  <kbd className="bg-blue-100 px-1 rounded text-xs">
+                    Ctrl+Shift+V
+                  </kbd>{" "}
+                  para insertar variable
                 </li>
-                <li>• Las llaves, corchetes y comillas se completan automáticamente</li>
+                <li>
+                  • Las llaves, corchetes y comillas se completan
+                  automáticamente
+                </li>
               </ul>
             </div>
           </div>
         </div>
       </div>
     </TooltipProvider>
-  )
+  );
 }

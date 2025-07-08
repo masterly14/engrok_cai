@@ -1,107 +1,138 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { type Node } from "reactflow"
-import { toast } from "sonner"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Label } from "@/components/ui/label"
+import { useState, useEffect } from "react";
+import { type Node } from "reactflow";
+import { toast } from "sonner";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Loader2, Save } from "lucide-react"
-import { Separator } from "@/components/ui/separator"
-import { Textarea } from "@/components/ui/textarea"
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Loader2, Save } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 
 type Props = {
-  selectedNode: Node
-  updateNode: (nodeId: string, updates: any) => void
-}
+  selectedNode: Node;
+  updateNode: (nodeId: string, updates: any) => void;
+};
 
 type Calendar = {
-  id: string
-  summary: string
-}
+  id: string;
+  summary: string;
+};
 
 const timeOptions = Array.from({ length: 24 * 2 }, (_, i) => {
-  const hour = Math.floor(i / 2)
-  const minute = i % 2 === 0 ? "00" : "30"
-  const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour
-  const ampm = hour < 12 ? "AM" : "PM"
-  const time = `${String(hour).padStart(2, "0")}:${minute}`
-  const display = `${displayHour}:${minute} ${ampm}`
-  return { value: time, label: display }
-})
+  const hour = Math.floor(i / 2);
+  const minute = i % 2 === 0 ? "00" : "30";
+  const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+  const ampm = hour < 12 ? "AM" : "PM";
+  const time = `${String(hour).padStart(2, "0")}:${minute}`;
+  const display = `${displayHour}:${minute} ${ampm}`;
+  return { value: time, label: display };
+});
 
-export const GoogleCalendarActionConfig = ({ selectedNode, updateNode }: Props) => {
-  const [action, setAction] = useState(selectedNode.data.action || "")
-  const [calendars, setCalendars] = useState<Calendar[]>([])
-  const [isLoadingCalendars, setIsLoadingCalendars] = useState(false)
+export const GoogleCalendarActionConfig = ({
+  selectedNode,
+  updateNode,
+}: Props) => {
+  const [action, setAction] = useState(selectedNode.data.action || "");
+  const [calendars, setCalendars] = useState<Calendar[]>([]);
+  const [isLoadingCalendars, setIsLoadingCalendars] = useState(false);
 
   // State for GET_AVAILABILITY
-  const [calendarId, setCalendarId] = useState(selectedNode.data.fields?.calendarId || "")
-  const [daysToCheck, setDaysToCheck] = useState(selectedNode.data.fields?.daysToCheck || "15")
-  const [startTime, setStartTime] = useState(selectedNode.data.fields?.startTime || "09:00")
-  const [endTime, setEndTime] = useState(selectedNode.data.fields?.endTime || "17:00")
+  const [calendarId, setCalendarId] = useState(
+    selectedNode.data.fields?.calendarId || "",
+  );
+  const [daysToCheck, setDaysToCheck] = useState(
+    selectedNode.data.fields?.daysToCheck || "15",
+  );
+  const [startTime, setStartTime] = useState(
+    selectedNode.data.fields?.startTime || "09:00",
+  );
+  const [endTime, setEndTime] = useState(
+    selectedNode.data.fields?.endTime || "17:00",
+  );
 
   // State for CREATE_EVENT
-  const [eventTitle, setEventTitle] = useState(selectedNode.data.fields?.title || "Cita con {{contact.name}}")
+  const [eventTitle, setEventTitle] = useState(
+    selectedNode.data.fields?.title || "Cita con {{contact.name}}",
+  );
   const [eventDescription, setEventDescription] = useState(
-    selectedNode.data.fields?.description || "Detalles de la cita agendada a través de Karolai."
-  )
-  const [eventStartTimeVar, setEventStartTimeVar] = useState(selectedNode.data.fields?.startTimeVar || "user_selected_slot")
-  const [eventDurationMinutes, setEventDurationMinutes] = useState(selectedNode.data.fields?.eventDurationMinutes || "30")
-  const [attendeesVar, setAttendeesVar] = useState(selectedNode.data.fields?.attendeesVar || "contact.email")
+    selectedNode.data.fields?.description ||
+      "Detalles de la cita agendada a través de Karolai.",
+  );
+  const [eventStartTimeVar, setEventStartTimeVar] = useState(
+    selectedNode.data.fields?.startTimeVar || "user_selected_slot",
+  );
+  const [eventDurationMinutes, setEventDurationMinutes] = useState(
+    selectedNode.data.fields?.eventDurationMinutes || "30",
+  );
+  const [attendeesVar, setAttendeesVar] = useState(
+    selectedNode.data.fields?.attendeesVar || "contact.email",
+  );
 
   // Generic state
-  const [saveResponseTo, setSaveResponseTo] = useState<string>(selectedNode.data.saveResponseTo || "")
+  const [saveResponseTo, setSaveResponseTo] = useState<string>(
+    selectedNode.data.saveResponseTo || "",
+  );
 
   useEffect(() => {
     const fetchCalendars = async () => {
-      setIsLoadingCalendars(true)
+      setIsLoadingCalendars(true);
       try {
-        const res = await fetch("/api/integrations/calendar/calendars")
+        const res = await fetch("/api/integrations/calendar/calendars");
         if (!res.ok) {
-          const errorData = await res.json()
-          throw new Error(errorData.error || "Failed to fetch calendars")
+          const errorData = await res.json();
+          throw new Error(errorData.error || "Failed to fetch calendars");
         }
-        const data = await res.json()
-        setCalendars(data.calendars)
+        const data = await res.json();
+        setCalendars(data.calendars);
         // Set default calendar if not already set
         if (!calendarId && data.calendars.length > 0) {
-          const primaryCalendar = data.calendars.find((c: any) => c.primary) || data.calendars[0]
-          setCalendarId(primaryCalendar.id)
+          const primaryCalendar =
+            data.calendars.find((c: any) => c.primary) || data.calendars[0];
+          setCalendarId(primaryCalendar.id);
         }
       } catch (error: any) {
-        toast.error("Error al cargar calendarios", { description: error.message })
-        console.error(error)
+        toast.error("Error al cargar calendarios", {
+          description: error.message,
+        });
+        console.error(error);
       } finally {
-        setIsLoadingCalendars(false)
+        setIsLoadingCalendars(false);
       }
-    }
+    };
     if (action === "GET_AVAILABILITY" || action === "CREATE_EVENT") {
-      fetchCalendars()
+      fetchCalendars();
     }
-  }, [action])
+  }, [action]);
 
   const handleSave = () => {
     if (!action) {
-      toast.error("Por favor, selecciona una acción.")
-      return
+      toast.error("Por favor, selecciona una acción.");
+      return;
     }
 
-    let fields = {}
-    let nodeName = "Google Calendar"
+    let fields = {};
+    let nodeName = "Google Calendar";
 
     if (action === "GET_AVAILABILITY") {
       if (!calendarId || !daysToCheck || !startTime || !endTime) {
-        toast.error("Completa todos los campos para ver disponibilidad.")
-        return
+        toast.error("Completa todos los campos para ver disponibilidad.");
+        return;
       }
       fields = {
         connectionId: selectedNode.data.fields?.connectionId,
@@ -110,16 +141,23 @@ export const GoogleCalendarActionConfig = ({ selectedNode, updateNode }: Props) 
         startTime,
         endTime,
         eventDurationMinutes: parseInt(eventDurationMinutes, 10),
-      }
-      nodeName = "Ver Disponibilidad (GCal)"
+      };
+      nodeName = "Ver Disponibilidad (GCal)";
     }
 
     if (action === "CREATE_EVENT") {
-      if (!calendarId || !eventTitle || !eventStartTimeVar || !eventDurationMinutes) {
-        toast.error("Completa todos los campos obligatorios para crear el evento.")
-        return
+      if (
+        !calendarId ||
+        !eventTitle ||
+        !eventStartTimeVar ||
+        !eventDurationMinutes
+      ) {
+        toast.error(
+          "Completa todos los campos obligatorios para crear el evento.",
+        );
+        return;
       }
-      nodeName = "Crear Evento (GCal)"
+      nodeName = "Crear Evento (GCal)";
       fields = {
         connectionId: selectedNode.data.fields?.connectionId,
         calendarId: calendarId,
@@ -128,7 +166,7 @@ export const GoogleCalendarActionConfig = ({ selectedNode, updateNode }: Props) 
         startTimeVar: eventStartTimeVar,
         eventDurationMinutes: parseInt(eventDurationMinutes, 10),
         attendeesVar: attendeesVar,
-      }
+      };
     }
 
     updateNode(selectedNode.id, {
@@ -140,16 +178,21 @@ export const GoogleCalendarActionConfig = ({ selectedNode, updateNode }: Props) 
         fields: fields,
         saveResponseTo: saveResponseTo,
       },
-    })
-    const varMessage = saveResponseTo ? ` El resultado se guardará en la variable {{${saveResponseTo}}}.` : ""
-    toast.success(`Configuración de Google Calendar guardada.${varMessage}`)
-  }
+    });
+    const varMessage = saveResponseTo
+      ? ` El resultado se guardará en la variable {{${saveResponseTo}}}.`
+      : "";
+    toast.success(`Configuración de Google Calendar guardada.${varMessage}`);
+  };
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Configurar Acción de Google Calendar</CardTitle>
-        <CardDescription>Selecciona qué quieres hacer con Google Calendar en este paso del flujo.</CardDescription>
+        <CardDescription>
+          Selecciona qué quieres hacer con Google Calendar en este paso del
+          flujo.
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-2">
@@ -159,7 +202,9 @@ export const GoogleCalendarActionConfig = ({ selectedNode, updateNode }: Props) 
               <SelectValue placeholder="Selecciona una acción..." />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="GET_AVAILABILITY">Ver disponibilidad</SelectItem>
+              <SelectItem value="GET_AVAILABILITY">
+                Ver disponibilidad
+              </SelectItem>
               <SelectItem value="CREATE_EVENT">Crear evento</SelectItem>
             </SelectContent>
           </Select>
@@ -167,12 +212,24 @@ export const GoogleCalendarActionConfig = ({ selectedNode, updateNode }: Props) 
 
         {action === "GET_AVAILABILITY" && (
           <div className="space-y-4 p-4 border rounded-md animate-in fade-in-50">
-            <h4 className="font-medium text-center">Opciones de Disponibilidad</h4>
+            <h4 className="font-medium text-center">
+              Opciones de Disponibilidad
+            </h4>
             <div className="space-y-2">
               <Label>Calendario de Google</Label>
-              <Select value={calendarId} onValueChange={setCalendarId} disabled={isLoadingCalendars}>
+              <Select
+                value={calendarId}
+                onValueChange={setCalendarId}
+                disabled={isLoadingCalendars}
+              >
                 <SelectTrigger>
-                  <SelectValue placeholder={isLoadingCalendars ? "Cargando calendarios..." : "Selecciona un calendario..."} />
+                  <SelectValue
+                    placeholder={
+                      isLoadingCalendars
+                        ? "Cargando calendarios..."
+                        : "Selecciona un calendario..."
+                    }
+                  />
                 </SelectTrigger>
                 <SelectContent>
                   {isLoadingCalendars ? (
@@ -193,7 +250,12 @@ export const GoogleCalendarActionConfig = ({ selectedNode, updateNode }: Props) 
 
             <div className="space-y-2">
               <Label>Ver disponibilidad para los próximos (días)</Label>
-              <Input type="number" value={daysToCheck} onChange={(e) => setDaysToCheck(e.target.value)} placeholder="Ej: 30" />
+              <Input
+                type="number"
+                value={daysToCheck}
+                onChange={(e) => setDaysToCheck(e.target.value)}
+                placeholder="Ej: 30"
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -240,7 +302,9 @@ export const GoogleCalendarActionConfig = ({ selectedNode, updateNode }: Props) 
             </div>
             <Separator />
             <div className="space-y-2">
-              <Label htmlFor="saveResponseTo">Guardar disponibilidad en la variable</Label>
+              <Label htmlFor="saveResponseTo">
+                Guardar disponibilidad en la variable
+              </Label>
               <Input
                 id="saveResponseTo"
                 placeholder="disponibilidad"
@@ -253,12 +317,24 @@ export const GoogleCalendarActionConfig = ({ selectedNode, updateNode }: Props) 
 
         {action === "CREATE_EVENT" && (
           <div className="space-y-4 p-4 border rounded-md animate-in fade-in-50">
-            <h4 className="font-medium text-center">Opciones para Crear Evento</h4>
+            <h4 className="font-medium text-center">
+              Opciones para Crear Evento
+            </h4>
             <div className="space-y-2">
               <Label>Calendario de Google</Label>
-              <Select value={calendarId} onValueChange={setCalendarId} disabled={isLoadingCalendars}>
+              <Select
+                value={calendarId}
+                onValueChange={setCalendarId}
+                disabled={isLoadingCalendars}
+              >
                 <SelectTrigger>
-                  <SelectValue placeholder={isLoadingCalendars ? "Cargando calendarios..." : "Selecciona un calendario..."} />
+                  <SelectValue
+                    placeholder={
+                      isLoadingCalendars
+                        ? "Cargando calendarios..."
+                        : "Selecciona un calendario..."
+                    }
+                  />
                 </SelectTrigger>
                 <SelectContent>
                   {isLoadingCalendars ? (
@@ -284,7 +360,9 @@ export const GoogleCalendarActionConfig = ({ selectedNode, updateNode }: Props) 
                 value={eventTitle}
                 onChange={(e) => setEventTitle(e.target.value)}
               />
-              <p className="text-xs text-muted-foreground">{"Puedes usar variables como `{{contact.name}}`."}</p>
+              <p className="text-xs text-muted-foreground">
+                {"Puedes usar variables como `{{contact.name}}`."}
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="eventDescription">Descripción del Evento</Label>
@@ -297,7 +375,9 @@ export const GoogleCalendarActionConfig = ({ selectedNode, updateNode }: Props) 
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="eventStartTimeVar">Variable de Hora de Inicio</Label>
+                <Label htmlFor="eventStartTimeVar">
+                  Variable de Hora de Inicio
+                </Label>
                 <Input
                   id="eventStartTimeVar"
                   placeholder="Ej: user_selected_slot"
@@ -305,7 +385,9 @@ export const GoogleCalendarActionConfig = ({ selectedNode, updateNode }: Props) 
                   onChange={(e) => setEventStartTimeVar(e.target.value)}
                 />
                 <p className="text-xs text-muted-foreground">
-                  {"La variable debe contener una fecha/hora en formato ISO (ej: `2024-08-15T10:00:00-05:00`)."}
+                  {
+                    "La variable debe contener una fecha/hora en formato ISO (ej: `2024-08-15T10:00:00-05:00`)."
+                  }
                 </p>
               </div>
               <div className="space-y-2">
@@ -319,18 +401,24 @@ export const GoogleCalendarActionConfig = ({ selectedNode, updateNode }: Props) 
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="attendeesVar">Variables de Invitados (emails)</Label>
+              <Label htmlFor="attendeesVar">
+                Variables de Invitados (emails)
+              </Label>
               <Input
                 id="attendeesVar"
                 placeholder="Ej: contact.email, {{some_other_email_var}}"
                 value={attendeesVar}
                 onChange={(e) => setAttendeesVar(e.target.value)}
               />
-              <p className="text-xs text-muted-foreground">{"Separa las variables o emails con comas."}</p>
+              <p className="text-xs text-muted-foreground">
+                {"Separa las variables o emails con comas."}
+              </p>
             </div>
             <Separator />
             <div className="space-y-2">
-              <Label htmlFor="saveResponseTo">Guardar ID del evento en la variable (opcional)</Label>
+              <Label htmlFor="saveResponseTo">
+                Guardar ID del evento en la variable (opcional)
+              </Label>
               <Input
                 id="saveResponseTo"
                 placeholder="google_event_id"
@@ -349,5 +437,5 @@ export const GoogleCalendarActionConfig = ({ selectedNode, updateNode }: Props) 
         )}
       </CardContent>
     </Card>
-  )
-} 
+  );
+};

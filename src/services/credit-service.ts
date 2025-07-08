@@ -14,7 +14,7 @@ export class CreditService {
     userId: string,
     delta: number,
     type: CreditLedgerType,
-    meta?: LedgerMeta
+    meta?: LedgerMeta,
   ) {
     return db.$transaction(async (tx) => {
       const sub = await tx.subscription.findFirst({
@@ -67,4 +67,4 @@ export class CreditService {
       throw new Error("NO_CREDITS");
     }
   }
-} 
+}

@@ -1,40 +1,62 @@
-"use client"
+"use client";
 
-import type { Node } from "reactflow"
-import { ConfigField } from "../shared-config-components"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Globe, Settings, MessageSquare, Code, Bot, GitBranch } from "lucide-react"
-import { JsonEditorField } from "./json-editor"
+import type { Node } from "reactflow";
+import { ConfigField } from "../shared-config-components";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  Globe,
+  Settings,
+  MessageSquare,
+  Code,
+  Bot,
+  GitBranch,
+} from "lucide-react";
+import { JsonEditorField } from "./json-editor";
 
 interface ApiRequestNodeConfigProps {
-  selectedNode: Node
-  updateNode: (nodeId: string, updates: any) => void
+  selectedNode: Node;
+  updateNode: (nodeId: string, updates: any) => void;
 }
 
-export function ApiRequestNodeConfig({ selectedNode, updateNode }: ApiRequestNodeConfigProps) {
-  const data = selectedNode.data || {}
+export function ApiRequestNodeConfig({
+  selectedNode,
+  updateNode,
+}: ApiRequestNodeConfigProps) {
+  const data = selectedNode.data || {};
 
   const handleChange = (field: string, value: any) => {
-    updateNode(selectedNode.id, { data: { ...data, [field]: value } })
-  }
+    updateNode(selectedNode.id, { data: { ...data, [field]: value } });
+  };
 
   const getMethodColor = (method: string) => {
     switch (method) {
       case "GET":
-        return "bg-green-100 text-green-800"
+        return "bg-green-100 text-green-800";
       case "POST":
-        return "bg-blue-100 text-blue-800"
+        return "bg-blue-100 text-blue-800";
       case "PUT":
-        return "bg-yellow-100 text-yellow-800"
+        return "bg-yellow-100 text-yellow-800";
       case "DELETE":
-        return "bg-red-100 text-red-800"
+        return "bg-red-100 text-red-800";
       default:
-        return "bg-gray-100 text-gray-800"
+        return "bg-gray-100 text-gray-800";
     }
-  }
+  };
 
   return (
     <div className="space-y-6 p-1">
@@ -48,10 +70,14 @@ export function ApiRequestNodeConfig({ selectedNode, updateNode }: ApiRequestNod
               </div>
               <div>
                 <CardTitle className="text-lg">Nodo de API Request</CardTitle>
-                <CardDescription>Configura una petición HTTP a una API externa</CardDescription>
+                <CardDescription>
+                  Configura una petición HTTP a una API externa
+                </CardDescription>
               </div>
             </div>
-            <Badge className={getMethodColor(data.method || "GET")}>{data.method || "GET"}</Badge>
+            <Badge className={getMethodColor(data.method || "GET")}>
+              {data.method || "GET"}
+            </Badge>
           </div>
         </CardHeader>
         <CardContent className="pt-0">
@@ -72,7 +98,9 @@ export function ApiRequestNodeConfig({ selectedNode, updateNode }: ApiRequestNod
             <Settings className="w-4 h-4" />
             Configuración de la petición
           </CardTitle>
-          <CardDescription>Define los parámetros básicos de la petición HTTP</CardDescription>
+          <CardDescription>
+            Define los parámetros básicos de la petición HTTP
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <ConfigField
@@ -86,10 +114,16 @@ export function ApiRequestNodeConfig({ selectedNode, updateNode }: ApiRequestNod
           />
 
           <div className="space-y-1.5">
-            <Label htmlFor="method" className="font-medium text-sm text-gray-700">
+            <Label
+              htmlFor="method"
+              className="font-medium text-sm text-gray-700"
+            >
               Método HTTP
             </Label>
-            <Select value={data.method || "GET"} onValueChange={(val: any) => handleChange("method", val)}>
+            <Select
+              value={data.method || "GET"}
+              onValueChange={(val: any) => handleChange("method", val)}
+            >
               <SelectTrigger
                 id="method"
                 className="bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-500/30"
@@ -99,25 +133,33 @@ export function ApiRequestNodeConfig({ selectedNode, updateNode }: ApiRequestNod
               <SelectContent>
                 <SelectItem value="GET">
                   <div className="flex items-center gap-2">
-                    <Badge className="bg-green-100 text-green-800 text-xs">GET</Badge>
+                    <Badge className="bg-green-100 text-green-800 text-xs">
+                      GET
+                    </Badge>
                     <span>Obtener datos</span>
                   </div>
                 </SelectItem>
                 <SelectItem value="POST">
                   <div className="flex items-center gap-2">
-                    <Badge className="bg-blue-100 text-blue-800 text-xs">POST</Badge>
+                    <Badge className="bg-blue-100 text-blue-800 text-xs">
+                      POST
+                    </Badge>
                     <span>Crear recurso</span>
                   </div>
                 </SelectItem>
                 <SelectItem value="PUT">
                   <div className="flex items-center gap-2">
-                    <Badge className="bg-yellow-100 text-yellow-800 text-xs">PUT</Badge>
+                    <Badge className="bg-yellow-100 text-yellow-800 text-xs">
+                      PUT
+                    </Badge>
                     <span>Actualizar recurso</span>
                   </div>
                 </SelectItem>
                 <SelectItem value="DELETE">
                   <div className="flex items-center gap-2">
-                    <Badge className="bg-red-100 text-red-800 text-xs">DELETE</Badge>
+                    <Badge className="bg-red-100 text-red-800 text-xs">
+                      DELETE
+                    </Badge>
                     <span>Eliminar recurso</span>
                   </div>
                 </SelectItem>
@@ -134,7 +176,9 @@ export function ApiRequestNodeConfig({ selectedNode, updateNode }: ApiRequestNod
             <Code className="w-4 h-4" />
             Headers HTTP
           </CardTitle>
-          <CardDescription>Configura los headers que se enviarán con la petición</CardDescription>
+          <CardDescription>
+            Configura los headers que se enviarán con la petición
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <JsonEditorField
@@ -150,14 +194,18 @@ export function ApiRequestNodeConfig({ selectedNode, updateNode }: ApiRequestNod
       </Card>
 
       {/* Body Configuration */}
-      {(data.method === "POST" || data.method === "PUT" || data.method === "PATCH") && (
+      {(data.method === "POST" ||
+        data.method === "PUT" ||
+        data.method === "PATCH") && (
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <Code className="w-4 h-4" />
               Cuerpo de la petición
             </CardTitle>
-            <CardDescription>Datos que se enviarán en el cuerpo de la petición {data.method}</CardDescription>
+            <CardDescription>
+              Datos que se enviarán en el cuerpo de la petición {data.method}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <JsonEditorField
@@ -180,7 +228,9 @@ export function ApiRequestNodeConfig({ selectedNode, updateNode }: ApiRequestNod
             <MessageSquare className="w-4 h-4" />
             Configuración del disparador
           </CardTitle>
-          <CardDescription>Define cuándo se ejecutará esta petición API</CardDescription>
+          <CardDescription>
+            Define cuándo se ejecutará esta petición API
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <ConfigField
@@ -205,7 +255,8 @@ export function ApiRequestNodeConfig({ selectedNode, updateNode }: ApiRequestNod
             Manejo de la Respuesta
           </CardTitle>
           <CardDescription>
-            Define qué hacer con la respuesta de la API y cómo ramificar el flujo.
+            Define qué hacer con la respuesta de la API y cómo ramificar el
+            flujo.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -261,7 +312,9 @@ export function ApiRequestNodeConfig({ selectedNode, updateNode }: ApiRequestNod
               <Globe className="w-4 h-4 text-purple-600" />
             </div>
             <div className="flex-1">
-              <h4 className="font-medium text-purple-900 mb-2">Resumen de la petición</h4>
+              <h4 className="font-medium text-purple-900 mb-2">
+                Resumen de la petición
+              </h4>
               <div className="space-y-1 text-sm text-purple-700">
                 <p>
                   <strong>Método:</strong> {data.method || "GET"}
@@ -275,21 +328,27 @@ export function ApiRequestNodeConfig({ selectedNode, updateNode }: ApiRequestNod
                   </p>
                 )}
                 <p>
-                  <strong>Headers:</strong> {data.headers ? "Configurados" : "Ninguno"}
+                  <strong>Headers:</strong>{" "}
+                  {data.headers ? "Configurados" : "Ninguno"}
                 </p>
-                {(data.method === "POST" || data.method === "PUT" || data.method === "PATCH") && (
+                {(data.method === "POST" ||
+                  data.method === "PUT" ||
+                  data.method === "PATCH") && (
                   <p>
                     <strong>Body:</strong> {data.body ? "Configurado" : "Vacío"}
                   </p>
                 )}
                 <p>
-                  <strong>Guarda respuesta en:</strong> {data.agentResponse || "No especificado"}
+                  <strong>Guarda respuesta en:</strong>{" "}
+                  {data.agentResponse || "No especificado"}
                 </p>
                 <p>
-                  <strong>Ruta de datos:</strong> {data.dataPath || "Raíz del objeto"}
+                  <strong>Ruta de datos:</strong>{" "}
+                  {data.dataPath || "Raíz del objeto"}
                 </p>
                 <p>
-                  <strong>Mensaje post-llamada:</strong> {data.botResponse ? "Configurado" : "Ninguno"}
+                  <strong>Mensaje post-llamada:</strong>{" "}
+                  {data.botResponse ? "Configurado" : "Ninguno"}
                 </p>
               </div>
             </div>
@@ -297,5 +356,5 @@ export function ApiRequestNodeConfig({ selectedNode, updateNode }: ApiRequestNod
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

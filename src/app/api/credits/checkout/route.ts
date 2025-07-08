@@ -4,7 +4,8 @@ import { generateCreditCheckout } from "@/actions/credits";
 
 export async function POST(request: NextRequest) {
   const user = await onBoardUser();
-  if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!user)
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const body = await request.json();
   const credits = Number(body.credits);
@@ -23,4 +24,4 @@ export async function POST(request: NextRequest) {
     console.error("generate checkout error", e);
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
-} 
+}

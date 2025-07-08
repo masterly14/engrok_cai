@@ -1,5 +1,5 @@
-import type { Node } from "reactflow"
-import { VapiVoice } from "../../types"
+import type { Node } from "reactflow";
+import { VapiVoice } from "../../types";
 
 export type Variable = {
   id: string;
@@ -22,11 +22,11 @@ export type TransferDestination = {
 };
 
 export interface NodeConfigurationProps {
-  selectedNode: Node
-  updateNode: (nodeId: string, updates: any) => void
-  globalVoice: VapiVoice
-  setGlobalVoice?: (voice: VapiVoice) => void
-  isFirstConversation?: boolean
+  selectedNode: Node;
+  updateNode: (nodeId: string, updates: any) => void;
+  globalVoice: VapiVoice;
+  setGlobalVoice?: (voice: VapiVoice) => void;
+  isFirstConversation?: boolean;
 }
 
 export interface VariableManagementProps {
@@ -35,4 +35,4 @@ export interface VariableManagementProps {
   onAddVariable: () => void;
   onUpdateVariable: (variableId: string, updates: Partial<Variable>) => void;
   onDeleteVariable: (variableId: string) => void;
-} 
+}

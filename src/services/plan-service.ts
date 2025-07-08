@@ -47,4 +47,4 @@ export class PlanService {
       await this.resetCycleForSubscription(s.id);
     }
   }
-} 
+}

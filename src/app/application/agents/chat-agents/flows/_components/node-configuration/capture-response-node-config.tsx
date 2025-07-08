@@ -1,19 +1,22 @@
-"use client"
+"use client";
 
-import type { Node } from "reactflow"
-import { ConfigField } from "../shared-config-components"
+import type { Node } from "reactflow";
+import { ConfigField } from "../shared-config-components";
 
 interface captureResponseNodeConfigProps {
-  selectedNode: Node
-  updateNode: (nodeId: string, updates: any) => void
+  selectedNode: Node;
+  updateNode: (nodeId: string, updates: any) => void;
 }
 
-export function CaptureResponseNodeConfig({ selectedNode, updateNode }: captureResponseNodeConfigProps) {
-  const data = selectedNode.data || {}
+export function CaptureResponseNodeConfig({
+  selectedNode,
+  updateNode,
+}: captureResponseNodeConfigProps) {
+  const data = selectedNode.data || {};
 
   const handleChange = (field: string, value: any) => {
-    updateNode(selectedNode.id, { data: { ...data, [field]: value } })
-  }
+    updateNode(selectedNode.id, { data: { ...data, [field]: value } });
+  };
 
   return (
     <div className="space-y-6">
@@ -33,5 +36,5 @@ export function CaptureResponseNodeConfig({ selectedNode, updateNode }: captureR
         description="El nombre de la variable donde se capturará la respuesta del usuario."
       />
     </div>
-  )
+  );
 }

@@ -40,14 +40,16 @@ export function ConversationNode({
         </div>
         {data.variables?.length > 0 && (
           <div className="mt-2 pt-2 border-t border-gray-100">
-            <div className="text-xs text-gray-500 font-medium mb-1">Variables:</div>
+            <div className="text-xs text-gray-500 font-medium mb-1">
+              Variables:
+            </div>
             <div className="flex flex-wrap gap-1">
               {data.variables.map((variable: Variable, index: number) => (
                 <span
                   key={variable.id || index}
                   className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded-md font-mono"
                 >
-                  {`{{${variable.name || 'sin_nombre'}}}`}
+                  {`{{${variable.name || "sin_nombre"}}}`}
                 </span>
               ))}
             </div>

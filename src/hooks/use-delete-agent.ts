@@ -6,7 +6,13 @@ export function useDeleteAgent() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ agentId, vapiId }: { agentId: string; vapiId: string }) => {
+    mutationFn: async ({
+      agentId,
+      vapiId,
+    }: {
+      agentId: string;
+      vapiId: string;
+    }) => {
       return await deleteAgents(agentId, vapiId);
     },
     onSuccess: () => {
@@ -19,4 +25,4 @@ export function useDeleteAgent() {
       toast.error("Error al eliminar el agente");
     },
   });
-} 
+}

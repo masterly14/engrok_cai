@@ -4,33 +4,39 @@ const features = [
   {
     icon: Bot,
     title: "Agentes de Voz y WhatsApp",
-    description: "Crea y personaliza agentes de IA para automatizar conversaciones en los canales que tus clientes prefieren.",
+    description:
+      "Crea y personaliza agentes de IA para automatizar conversaciones en los canales que tus clientes prefieren.",
   },
   {
     icon: GitBranch,
-    title: "Constructor de Flujos Visual", 
-    description: "Diseña flujos de conversación complejos sin código. Arrastra, suelta y conecta nodos para crear la lógica perfecta.",
+    title: "Constructor de Flujos Visual",
+    description:
+      "Diseña flujos de conversación complejos sin código. Arrastra, suelta y conecta nodos para crear la lógica perfecta.",
   },
   {
     icon: Mic,
     title: "Voces Humanas y Multilenguaje",
-    description: "Elige entre una variedad de voces ultra-realistas y configura tus agentes para que hablen en múltiples idiomas.",
+    description:
+      "Elige entre una variedad de voces ultra-realistas y configura tus agentes para que hablen en múltiples idiomas.",
   },
   {
     icon: Plug,
     title: "Integraciones Poderosas",
-    description: "Conecta con Google Calendar, Sheets, Hubspot y más. Envía y recibe datos para enriquecer cada conversación.",
+    description:
+      "Conecta con Google Calendar, Sheets, Hubspot y más. Envía y recibe datos para enriquecer cada conversación.",
   },
   {
     icon: BarChart,
     title: "Analítica y Chat en Vivo",
-    description: "Monitorea el rendimiento de tus agentes con analíticas detalladas y toma el control de las conversaciones cuando lo necesites.",
+    description:
+      "Monitorea el rendimiento de tus agentes con analíticas detalladas y toma el control de las conversaciones cuando lo necesites.",
   },
   {
     icon: Voicemail,
     title: "Widget de Voz Web",
-    description: "Añade un botón de llamada inteligente a tu sitio web y captura leads de forma instantánea.",
-  }
+    description:
+      "Añade un botón de llamada inteligente a tu sitio web y captura leads de forma instantánea.",
+  },
 ];
 
 const FeaturesSection = () => {
@@ -56,7 +62,8 @@ const FeaturesSection = () => {
           </div>
           <div className="lg:col-span-5 lg:col-start-8 flex items-end">
             <p className="text-lg font-light leading-relaxed tracking-wide text-black/60">
-              Todas las herramientas que necesitas para automatizar la comunicación con tus clientes, de manera eficiente y escalable.
+              Todas las herramientas que necesitas para automatizar la
+              comunicación con tus clientes, de manera eficiente y escalable.
             </p>
           </div>
         </div>
@@ -64,23 +71,23 @@ const FeaturesSection = () => {
         {/* Features Grid - Asymmetric Layout */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {features.map((feature, index) => (
-            <div 
-              key={index} 
+            <div
+              key={index}
               className="group relative bg-black/[0.015] backdrop-blur-sm border border-black/8 rounded-2xl p-8 hover:bg-black/[0.025] hover:border-black/15 transition-all duration-500 hover:-translate-y-2"
-              style={{animationDelay: `${index * 0.1}s`}}
+              style={{ animationDelay: `${index * 0.1}s` }}
             >
               {/* Subtle glow effect on hover */}
               <div className="absolute inset-0 bg-gradient-to-br from-cyan-400/2 via-transparent to-purple-500/2 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-              
+
               <div className="relative z-10">
                 <div className="w-12 h-12 bg-gradient-to-br from-cyan-400/12 to-purple-500/12 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
                   <feature.icon className="h-6 w-6 text-cyan-500" />
                 </div>
-                
+
                 <h3 className="font-light text-xl mb-4 tracking-wide text-black">
                   {feature.title}
                 </h3>
-                
+
                 <p className="leading-relaxed font-light text-sm tracking-wide text-black/60">
                   {feature.description}
                 </p>

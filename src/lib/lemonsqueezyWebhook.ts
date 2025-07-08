@@ -38,4 +38,4 @@ export function verifyLemonSqueezySignature(
 
   console.log("Successfully verified Lemon Squeezy webhook signature.");
   return true;
-} 
+}

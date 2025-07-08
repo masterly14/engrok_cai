@@ -1,30 +1,30 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Sparkles, Zap, Brain, LucideIcon } from "lucide-react"
+import { useState } from "react";
+import { Sparkles, Zap, Brain, LucideIcon } from "lucide-react";
 
 interface AIButtonProps {
-  variant?: "primary" | "secondary" | "neural"
-  children: React.ReactNode
-  icon?: LucideIcon
-  label?: string
+  variant?: "primary" | "secondary" | "neural";
+  children: React.ReactNode;
+  icon?: LucideIcon;
+  label?: string;
 }
 
-export function AIButton({ 
-  variant = "primary", 
-  children, 
+export function AIButton({
+  variant = "primary",
+  children,
   icon,
-  label 
+  label,
 }: AIButtonProps) {
-  const [isHovered, setIsHovered] = useState(false)
-  const [isClicked, setIsClicked] = useState(false)
+  const [isHovered, setIsHovered] = useState(false);
+  const [isClicked, setIsClicked] = useState(false);
 
   const handleClick = () => {
-    setIsClicked(true)
-    setTimeout(() => setIsClicked(false), 200)
+    setIsClicked(true);
+    setTimeout(() => setIsClicked(false), 200);
     // Aquí puedes agregar la lógica del botón
-    console.log("AI Button clicked!")
-  }
+    console.log("AI Button clicked!");
+  };
 
   const variants = {
     primary: {
@@ -66,11 +66,11 @@ export function AIButton({
       defaultIcon: Brain,
       defaultLabel: "Neural Network",
     },
-  }
+  };
 
-  const currentVariant = variants[variant]
-  const Icon = icon || currentVariant.defaultIcon
-  const buttonLabel = label || currentVariant.defaultLabel
+  const currentVariant = variants[variant];
+  const Icon = icon || currentVariant.defaultIcon;
+  const buttonLabel = label || currentVariant.defaultLabel;
 
   return (
     <button
@@ -127,7 +127,9 @@ export function AIButton({
             ${isHovered ? "rotate-12 scale-110" : ""}
           `}
         />
-        <span className={`${currentVariant.text} relative z-10`}>{buttonLabel}</span>
+        <span className={`${currentVariant.text} relative z-10`}>
+          {buttonLabel}
+        </span>
 
         {/* Efecto de carga AI */}
         <div
@@ -149,5 +151,5 @@ export function AIButton({
       `}
       />
     </button>
-  )
+  );
 }

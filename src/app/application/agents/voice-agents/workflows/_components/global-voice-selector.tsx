@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import {
   Select,
@@ -6,80 +6,84 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { getElevenLabsVoices } from "@/actions/elevenlabs"
-import type { ElevenLabsVoice } from "@/types/agent"
-import { useEffect, useState, useRef } from "react"
-import { Label } from "@/components/ui/label"
-import { VapiVoice } from "../types"
-import { Loader2, Play, Pause } from "lucide-react"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
+} from "@/components/ui/select";
+import { getElevenLabsVoices } from "@/actions/elevenlabs";
+import type { ElevenLabsVoice } from "@/types/agent";
+import { useEffect, useState, useRef } from "react";
+import { Label } from "@/components/ui/label";
+import { VapiVoice } from "../types";
+import { Loader2, Play, Pause } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 interface GlobalVoiceSelectorProps {
-  globalVoice: VapiVoice
-  setGlobalVoice: (voice: VapiVoice) => void
+  globalVoice: VapiVoice;
+  setGlobalVoice: (voice: VapiVoice) => void;
 }
 
-export function GlobalVoiceSelector({ globalVoice, setGlobalVoice }: GlobalVoiceSelectorProps) {
-  const [voices, setVoices] = useState<ElevenLabsVoice[]>([])
-  const [loadingVoices, setLoadingVoices] = useState<boolean>(false)
-  const [voiceFilter, setVoiceFilter] = useState<string>("")
-  const [playingVoice, setPlayingVoice] = useState<string | null>(null)
-  const audioRef = useRef<HTMLAudioElement | null>(null)
+export function GlobalVoiceSelector({
+  globalVoice,
+  setGlobalVoice,
+}: GlobalVoiceSelectorProps) {
+  const [voices, setVoices] = useState<ElevenLabsVoice[]>([]);
+  const [loadingVoices, setLoadingVoices] = useState<boolean>(false);
+  const [voiceFilter, setVoiceFilter] = useState<string>("");
+  const [playingVoice, setPlayingVoice] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     const fetchVoices = async () => {
       try {
-        setLoadingVoices(true)
-        const voicesData = await getElevenLabsVoices()
+        setLoadingVoices(true);
+        const voicesData = await getElevenLabsVoices();
         if (voicesData?.voices) {
-          setVoices(voicesData.voices as ElevenLabsVoice[])
+          setVoices(voicesData.voices as ElevenLabsVoice[]);
         }
       } catch (error) {
-        console.error("Error fetching ElevenLabs voices:", error)
+        console.error("Error fetching ElevenLabs voices:", error);
       } finally {
-        setLoadingVoices(false)
+        setLoadingVoices(false);
       }
-    }
-    fetchVoices()
-  }, [])
+    };
+    fetchVoices();
+  }, []);
 
   const filteredVoices = voices.filter((voice) => {
     return (
       voice.name.toLowerCase().includes(voiceFilter.toLowerCase()) ||
       voice.description?.toLowerCase().includes(voiceFilter.toLowerCase())
-    )
-  })
+    );
+  });
 
   const handleVoicePreview = async (voiceId: string, previewUrl: string) => {
     if (playingVoice === voiceId) {
       if (audioRef.current) {
-        audioRef.current.pause()
-        setPlayingVoice(null)
+        audioRef.current.pause();
+        setPlayingVoice(null);
       }
-      return
+      return;
     }
 
     if (audioRef.current) {
-      audioRef.current.pause()
+      audioRef.current.pause();
     }
 
-    const audio = new Audio(previewUrl)
-    audioRef.current = audio
-    setPlayingVoice(voiceId)
-    audio.onended = () => setPlayingVoice(null)
-    audio.onerror = () => setPlayingVoice(null)
+    const audio = new Audio(previewUrl);
+    audioRef.current = audio;
+    setPlayingVoice(voiceId);
+    audio.onended = () => setPlayingVoice(null);
+    audio.onerror = () => setPlayingVoice(null);
     try {
-      await audio.play()
+      await audio.play();
     } catch (error) {
-      setPlayingVoice(null)
-      console.error("Error playing voice preview:", error)
+      setPlayingVoice(null);
+      console.error("Error playing voice preview:", error);
     }
-  }
+  };
 
   const selectedVoiceName =
-    voices.find((v) => v.voice_id === globalVoice.voiceId)?.name || globalVoice.voiceId
+    voices.find((v) => v.voice_id === globalVoice.voiceId)?.name ||
+    globalVoice.voiceId;
 
   return (
     <div className="space-y-2">
@@ -91,7 +95,9 @@ export function GlobalVoiceSelector({ globalVoice, setGlobalVoice }: GlobalVoice
       ) : (
         <Select
           value={globalVoice?.voiceId || ""}
-          onValueChange={(value) => setGlobalVoice({ provider: "11labs", voiceId: value })}
+          onValueChange={(value) =>
+            setGlobalVoice({ provider: "11labs", voiceId: value })
+          }
         >
           <SelectTrigger>
             <SelectValue placeholder="Selecciona una voz global">
@@ -125,7 +131,9 @@ export function GlobalVoiceSelector({ globalVoice, setGlobalVoice }: GlobalVoice
                       <div className="flex flex-col items-start">
                         <span className="font-medium">{voice.name}</span>
                         {voice.description && (
-                          <p className="text-xs text-muted-foreground mt-1">{voice.description}</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {voice.description}
+                          </p>
                         )}
                       </div>
                       {voice.preview_url && (
@@ -133,8 +141,11 @@ export function GlobalVoiceSelector({ globalVoice, setGlobalVoice }: GlobalVoice
                           variant="ghost"
                           size="sm"
                           onClick={(e) => {
-                            e.stopPropagation()
-                            handleVoicePreview(voice.voice_id, voice.preview_url)
+                            e.stopPropagation();
+                            handleVoicePreview(
+                              voice.voice_id,
+                              voice.preview_url,
+                            );
                           }}
                         >
                           {playingVoice === voice.voice_id ? (
@@ -153,5 +164,5 @@ export function GlobalVoiceSelector({ globalVoice, setGlobalVoice }: GlobalVoice
         </Select>
       )}
     </div>
-  )
-} 
+  );
+}

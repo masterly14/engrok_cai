@@ -23,9 +23,10 @@ export function EndCallNodeConfig({
           className="h-24 mt-1"
         />
         <p className="text-xs text-gray-500 mt-1">
-          Este mensaje se reproducirá antes de terminar la llamada automáticamente.
+          Este mensaje se reproducirá antes de terminar la llamada
+          automáticamente.
         </p>
       </div>
     </div>
   );
-} 
+}

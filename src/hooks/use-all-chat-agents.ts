@@ -1,4 +1,8 @@
-import { createChatAgent, updateChatAgent, deleteChatAgent } from "@/actions/chat-agents";
+import {
+  createChatAgent,
+  updateChatAgent,
+  deleteChatAgent,
+} from "@/actions/chat-agents";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getChatAgents } from "@/actions/chat-agents";
 
@@ -47,4 +51,3 @@ export function useDeleteChatAgent() {
     },
   });
 }
-

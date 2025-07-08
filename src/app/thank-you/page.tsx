@@ -1,7 +1,7 @@
-import { CheckCircle, Mail, ArrowRight } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import Link from "next/link"
+import { CheckCircle, Mail, ArrowRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import Link from "next/link";
 
 export default function ThankYouPage() {
   return (
@@ -21,18 +21,21 @@ export default function ThankYouPage() {
 
             {/* Main Content */}
             <div className="space-y-3">
-              <h1 className="text-2xl font-bold text-slate-900">Gracias por suscribirte!</h1>
+              <h1 className="text-2xl font-bold text-slate-900">
+                Gracias por suscribirte!
+              </h1>
               <p className="text-slate-600 leading-relaxed">
-                Gracias por suscribirte. Tu cuenta ha sido creada y ya puedes empezar a usar nuestra plataforma.
+                Gracias por suscribirte. Tu cuenta ha sido creada y ya puedes
+                empezar a usar nuestra plataforma.
               </p>
             </div>
 
             {/* Action Button */}
             <Link href="/application/dashboard">
-            <Button className="w-full bg-slate-900 hover:bg-slate-800 text-white font-medium py-3 rounded-lg transition-all duration-200 group">
-              Empezar
-              <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-            </Button>
+              <Button className="w-full bg-slate-900 hover:bg-slate-800 text-white font-medium py-3 rounded-lg transition-all duration-200 group">
+                Empezar
+                <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+              </Button>
             </Link>
             {/* Support Contact - Subtle */}
             <div className="pt-4 border-t border-slate-100">
@@ -58,5 +61,5 @@ export default function ThankYouPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }

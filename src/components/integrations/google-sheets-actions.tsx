@@ -69,7 +69,7 @@ const GoogleSheetsActions = ({ data, onDataChange, userId }: Props) => {
       try {
         setIsLoading(true);
         const res = await fetch(
-          `/api/integrations/sheets?userId=${userId}&action=listSpreadsheets`
+          `/api/integrations/sheets?userId=${userId}&action=listSpreadsheets`,
         );
         if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         const result = await res.json();
@@ -91,7 +91,7 @@ const GoogleSheetsActions = ({ data, onDataChange, userId }: Props) => {
       try {
         setIsLoading(true);
         const res = await fetch(
-          `/api/integrations/sheets?userId=${userId}&action=listSheets&spreadsheetId=${data.spreadsheetId}`
+          `/api/integrations/sheets?userId=${userId}&action=listSheets&spreadsheetId=${data.spreadsheetId}`,
         );
         if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         const result = await res.json();
@@ -106,79 +106,93 @@ const GoogleSheetsActions = ({ data, onDataChange, userId }: Props) => {
     fetchSheets();
   }, [data.spreadsheetId, userId]);
 
-
   return (
     <div className="space-y-6">
-        {/* Spreadsheet selection */}
+      {/* Spreadsheet selection */}
+      <div className="space-y-3">
+        <Label className="text-sm font-medium text-gray-700">
+          Hoja de cálculo
+        </Label>
+        <Select
+          onValueChange={(value) => onDataChange({ spreadsheetId: value })}
+          value={data.spreadsheetId || ""}
+        >
+          <SelectTrigger className="w-full border-emerald-200">
+            <SelectValue placeholder="Selecciona un documento" />
+          </SelectTrigger>
+          <SelectContent>
+            {spreadsheets.map((s) => (
+              <SelectItem key={s.id} value={s.id}>
+                {s.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Sheet selection */}
+      {data.spreadsheetId && (
         <div className="space-y-3">
-          <Label className="text-sm font-medium text-gray-700">
-            Hoja de cálculo
-          </Label>
-          <Select onValueChange={(value) => onDataChange({ spreadsheetId: value })} value={data.spreadsheetId || ''}>
+          <Label className="text-sm font-medium text-gray-700">Pestaña</Label>
+          <Select
+            onValueChange={(value) => onDataChange({ sheetName: value })}
+            value={data.sheetName || ""}
+          >
             <SelectTrigger className="w-full border-emerald-200">
-              <SelectValue placeholder="Selecciona un documento" />
+              <SelectValue placeholder="Selecciona una pestaña" />
             </SelectTrigger>
             <SelectContent>
-              {spreadsheets.map((s) => (
-                <SelectItem key={s.id} value={s.id}>
-                  {s.name}
+              {sheets.map((sh) => (
+                <SelectItem
+                  key={sh.properties.title}
+                  value={sh.properties.title}
+                >
+                  {sh.properties.title}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
+      )}
 
-        {/* Sheet selection */}
-        {data.spreadsheetId && (
+      {/* Column and value */}
+      {data.sheetName && (
+        <>
           <div className="space-y-3">
-            <Label className="text-sm font-medium text-gray-700">Pestaña</Label>
-            <Select onValueChange={(value) => onDataChange({ sheetName: value })} value={data.sheetName || ''}>
-              <SelectTrigger className="w-full border-emerald-200">
-                <SelectValue placeholder="Selecciona una pestaña" />
-              </SelectTrigger>
-              <SelectContent>
-                {sheets.map((sh) => (
-                  <SelectItem key={sh.properties.title} value={sh.properties.title}>
-                    {sh.properties.title}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label className="text-sm font-medium text-gray-700">
+              Columna (ej. A, B, C)
+            </Label>
+            <input
+              type="text"
+              value={data.column || "A"}
+              onChange={(e) =>
+                onDataChange({ column: e.target.value.toUpperCase() })
+              }
+              maxLength={2}
+              className="border rounded px-2 py-1 text-sm w-20"
+            />
           </div>
-        )}
 
-        {/* Column and value */}
-        {data.sheetName && (
-          <>
-            <div className="space-y-3">
-              <Label className="text-sm font-medium text-gray-700">Columna (ej. A, B, C)</Label>
+          <div className="space-y-2">
+            <Label className="text-sm font-medium text-gray-700">
+              Valor a insertar
+            </Label>
+            <div className="flex items-center gap-2">
               <input
                 type="text"
-                value={data.column || "A"}
-                onChange={(e) => onDataChange({ column: e.target.value.toUpperCase() })}
-                maxLength={2}
-                className="border rounded px-2 py-1 text-sm w-20"
+                value={data.value || ""}
+                onChange={(e) => onDataChange({ value: e.target.value })}
+                className="border rounded px-2 py-1 text-sm flex-1"
+              />
+              <VariableSelect
+                onSelect={(v) => onDataChange({ value: `{{${v}}}` })}
               />
             </div>
-
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-gray-700">
-                Valor a insertar
-              </Label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={data.value || ''}
-                  onChange={(e) => onDataChange({ value: e.target.value })}
-                  className="border rounded px-2 py-1 text-sm flex-1"
-                />
-                <VariableSelect onSelect={(v) => onDataChange({ value: `{{${v}}}` })} />
-              </div>
-            </div>
-          </>
-        )}
-      </div>
+          </div>
+        </>
+      )}
+    </div>
   );
 };
 
-export default GoogleSheetsActions; 
+export default GoogleSheetsActions;

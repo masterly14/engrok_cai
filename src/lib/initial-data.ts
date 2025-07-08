@@ -1,6 +1,5 @@
-import type { Edge, Node } from "reactflow"
-import { MarkerType } from 'reactflow';
-
+import type { Edge, Node } from "reactflow";
+import { MarkerType } from "reactflow";
 
 export const initialNodes: Node[] = [
   {
@@ -27,7 +26,7 @@ export const initialNodes: Node[] = [
     position: { x: 400, y: 400 },
     data: { label: "Send Notification" },
   },
-]
+];
 
 export const initialEdges: Edge[] = [
   {
@@ -36,7 +35,7 @@ export const initialEdges: Edge[] = [
     target: "2",
     style: { stroke: "#94a3b8", strokeWidth: 1.5 },
     markerEnd: {
-        type: MarkerType.ArrowClosed,
+      type: MarkerType.ArrowClosed,
       color: "#94a3b8",
       width: 15,
       height: 15,
@@ -76,4 +75,4 @@ export const initialEdges: Edge[] = [
       height: 15,
     },
   },
-]
+];

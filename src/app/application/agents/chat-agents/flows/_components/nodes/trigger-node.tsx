@@ -18,4 +18,4 @@ export default function TriggerNode({ data }: any) {
       <Handle type="source" position={Position.Bottom} id="default" />
     </div>
   );
-} 
+}

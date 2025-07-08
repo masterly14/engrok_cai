@@ -8,6 +8,9 @@ export async function GET() {
     return NextResponse.json({ ok: true });
   } catch (e) {
     console.error("Cron reset credits error", e);
-    return NextResponse.json({ ok: false, error: (e as Error).message }, { status: 500 });
+    return NextResponse.json(
+      { ok: false, error: (e as Error).message },
+      { status: 500 },
+    );
   }
-} 
+}

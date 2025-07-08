@@ -3,19 +3,22 @@ import axios from "axios";
 // ── LOG GLOBAL DE AXIOS ────────────────────────────────────────────────
 if (process.env.NODE_ENV !== "production") {
   // Petición saliente
-  axios.interceptors.request.use(req => {
+  axios.interceptors.request.use((req) => {
     const { method, url, params, data } = req;
-    console.log("[Axios][Request]", method?.toUpperCase(), url, { params, data });
+    console.log("[Axios][Request]", method?.toUpperCase(), url, {
+      params,
+      data,
+    });
     return req;
   });
 
   // Respuesta o error
   axios.interceptors.response.use(
-    res => {
+    (res) => {
       console.log("[Axios][Response]", res.status, res.config.url);
       return res;
     },
-    err => {
+    (err) => {
       console.error(
         "[Axios][Error]",
         err.config?.url,

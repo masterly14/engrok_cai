@@ -1,9 +1,9 @@
 "use client";
 
-import Image from "next/image"
-import Link from "next/link"
-import { ArrowLeft, Sparkles } from "lucide-react"
-import { SignUp } from "@clerk/nextjs"
+import Image from "next/image";
+import Link from "next/link";
+import { ArrowLeft, Sparkles } from "lucide-react";
+import { SignUp } from "@clerk/nextjs";
 
 export default function SignUpPage() {
   // La redirección después del registro siempre será a /validate.
@@ -47,13 +47,19 @@ export default function SignUpPage() {
 
           <div className="text-center space-y-4 relative z-10 flex flex-col items-center justify-center">
             {/* Logo */}
-            <Image src="/logo-karolai.jpg" alt="KarolAI" width={500} height={500} className="rounded-full" />
+            <Image
+              src="/logo-karolai.jpg"
+              alt="KarolAI"
+              width={500}
+              height={500}
+              className="rounded-full"
+            />
 
             {/* Company Name */}
-              <p className="text-lg text-black/60 font-light max-w-md leading-relaxed">
-                Bienvenido de vuelta. Accede a tu cuenta para continuar con tu
-                experiencia de IA de próxima generación.
-              </p>
+            <p className="text-lg text-black/60 font-light max-w-md leading-relaxed">
+              Bienvenido de vuelta. Accede a tu cuenta para continuar con tu
+              experiencia de IA de próxima generación.
+            </p>
 
             {/* Testimonial */}
             <div className="bg-black/[0.015] backdrop-blur-xl border border-black/8 rounded-2xl p-8 max-w-md mx-auto">
@@ -96,9 +102,7 @@ export default function SignUpPage() {
           <div className="w-full flex flex-col items-center justify-center flex-1">
             <div className="glass-effect border-black/10 rounded-2xl p-8 space-y-6 w-full max-w-md mx-auto">
               <div className="text-center space-y-2">
-                <h2 className="text-2xl font-light text-black">
-                  Registrarse
-                </h2>
+                <h2 className="text-2xl font-light text-black">Registrarse</h2>
                 <p className="text-black/60 text-sm font-light">
                   Crea una cuenta para continuar
                 </p>
@@ -121,8 +125,7 @@ export default function SignUpPage() {
                             "bg-gradient-to-r from-cyan-400 to-purple-500 hover:from-cyan-500 hover:to-purple-600 text-white font-light transition-all duration-300 hover:scale-[1.02] hover:shadow-xl rounded-md",
                           footerAction: "text-sm font-light",
                           formFieldLabel: "text-black/80 font-light",
-                          formFieldInput:
-                            "glass-effect  rounded-md",
+                          formFieldInput: "glass-effect  rounded-md",
                           socialButtonsBlockButton:
                             "glass-effect border-black/10 hover:border-black/20 text-black font-light",
                           dividerLine: "bg-black/10",

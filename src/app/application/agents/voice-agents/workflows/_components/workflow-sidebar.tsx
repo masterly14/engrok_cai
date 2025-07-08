@@ -1,8 +1,18 @@
-"use client"
+"use client";
 
-import { MessageSquare, Phone, PhoneOff, Zap, Workflow, Sparkles, Plus, Layers, Settings } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
-import { TemplateSelector, type WorkflowTemplate } from "./template-selector"
+import {
+  MessageSquare,
+  Phone,
+  PhoneOff,
+  Zap,
+  Workflow,
+  Sparkles,
+  Plus,
+  Layers,
+  Settings,
+} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { TemplateSelector, type WorkflowTemplate } from "./template-selector";
 
 const nodeTypes = [
   {
@@ -52,15 +62,15 @@ const nodeTypes = [
     icon: Zap,
     color: "bg-orange-500",
     category: "advanced",
-  }
-]
+  },
+];
 
 interface WorkflowSidebarProps {
-  onAddNode: (nodeType: string) => void
-  onSelectTemplate: (template: WorkflowTemplate) => void
-  hasNodes: boolean
-  isOpen: boolean
-  onAddTrigger: () => void
+  onAddNode: (nodeType: string) => void;
+  onSelectTemplate: (template: WorkflowTemplate) => void;
+  hasNodes: boolean;
+  isOpen: boolean;
+  onAddTrigger: () => void;
 }
 
 export function WorkflowSidebar({
@@ -70,10 +80,12 @@ export function WorkflowSidebar({
   isOpen,
   onAddTrigger,
 }: WorkflowSidebarProps) {
-  const coreNodes = nodeTypes.filter((node) => node.category === "core")
-  const advancedNodes = nodeTypes.filter((node) => node.category === "advanced")
+  const coreNodes = nodeTypes.filter((node) => node.category === "core");
+  const advancedNodes = nodeTypes.filter(
+    (node) => node.category === "advanced",
+  );
 
-  if (!isOpen) return null
+  if (!isOpen) return null;
 
   return (
     <div className="h-full flex flex-col">
@@ -84,8 +96,12 @@ export function WorkflowSidebar({
             <Workflow className="h-5 w-5 text-white" />
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-gray-900">Workflow Builder</h2>
-            <p className="text-sm text-gray-500">Construye tu flujo de trabajo</p>
+            <h2 className="text-lg font-semibold text-gray-900">
+              Workflow Builder
+            </h2>
+            <p className="text-sm text-gray-500">
+              Construye tu flujo de trabajo
+            </p>
           </div>
         </div>
       </div>
@@ -117,15 +133,21 @@ export function WorkflowSidebar({
                 onClick={() => onAddNode(nodeType.id)}
                 className="group flex h-auto w-full items-start gap-3 rounded-lg border border-gray-200 bg-white p-3 text-left hover:border-gray-300 hover:bg-gray-50 hover:shadow-sm transition-all duration-200"
               >
-                <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md ${nodeType.color}`}>
+                <div
+                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md ${nodeType.color}`}
+                >
                   <nodeType.icon className="h-4 w-4 text-white" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="font-medium text-gray-900 text-sm">{nodeType.label}</span>
+                    <span className="font-medium text-gray-900 text-sm">
+                      {nodeType.label}
+                    </span>
                     <Plus className="h-3 w-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
-                  <p className="text-xs text-gray-500 mt-1 line-clamp-2">{nodeType.description}</p>
+                  <p className="text-xs text-gray-500 mt-1 line-clamp-2">
+                    {nodeType.description}
+                  </p>
                 </div>
               </button>
             ))}
@@ -148,32 +170,46 @@ export function WorkflowSidebar({
                 key={nodeType.id}
                 onClick={() => {
                   if (nodeType.id === "trigger") {
-                    onAddTrigger()
+                    onAddTrigger();
                   } else {
-                    onAddNode(nodeType.id)
+                    onAddNode(nodeType.id);
                   }
                 }}
                 className="group flex h-auto w-full items-start gap-3 rounded-lg border border-gray-200 bg-white p-3 text-left hover:border-gray-300 hover:bg-gray-50 hover:shadow-sm transition-all duration-200"
               >
-                <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md ${nodeType.color}`}>
+                <div
+                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md ${nodeType.color}`}
+                >
                   <nodeType.icon className="h-4 w-4 text-white" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="font-medium text-gray-900 text-sm">{nodeType.label}</span>
+                    <span className="font-medium text-gray-900 text-sm">
+                      {nodeType.label}
+                    </span>
                     <Plus className="h-3 w-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
-                  <p className="text-xs text-gray-500 mt-1 line-clamp-2">{nodeType.description}</p>
+                  <p className="text-xs text-gray-500 mt-1 line-clamp-2">
+                    {nodeType.description}
+                  </p>
                 </div>
               </button>
             ))}
           </div>
           <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-800">
-            <h4 className="font-semibold mb-1 flex items-center gap-1.5"><Zap className="h-3.5 w-3.5"/> ¿Cómo funcionan los Triggers?</h4>
-            <p>El nodo Trigger te permite generar una URL de webhook única. Cuando un servicio externo (como tu CRM) envía una petición a esa URL, este workflow se activará y realizará una llamada telefónica al número que venga en la petición, usando el número que hayas asociado a este workflow.</p>
+            <h4 className="font-semibold mb-1 flex items-center gap-1.5">
+              <Zap className="h-3.5 w-3.5" /> ¿Cómo funcionan los Triggers?
+            </h4>
+            <p>
+              El nodo Trigger te permite generar una URL de webhook única.
+              Cuando un servicio externo (como tu CRM) envía una petición a esa
+              URL, este workflow se activará y realizará una llamada telefónica
+              al número que venga en la petición, usando el número que hayas
+              asociado a este workflow.
+            </p>
           </div>
         </div>
       </div>
     </div>
-  )
+  );
 }

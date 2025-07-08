@@ -72,7 +72,9 @@ const OutboundSettingsCard: React.FC<Props> = ({
                       <span className="font-medium text-slate-900 gap-x-4">
                         {agent.name}
                       </span>
-                      <span className="text-slate-400 text-xs">({agent.id})</span>
+                      <span className="text-slate-400 text-xs">
+                        ({agent.id})
+                      </span>
                     </div>
                   </SelectItem>
                 ))}
@@ -81,7 +83,9 @@ const OutboundSettingsCard: React.FC<Props> = ({
         </div>
         <Separator orientation="horizontal" />
         <div className="space-y-2">
-          <p className="text-sm font-medium text-slate-900">Escuadron de agentes</p>
+          <p className="text-sm font-medium text-slate-900">
+            Escuadron de agentes
+          </p>
           <Select
             value={formData.squadId}
             onValueChange={(value) => handleInputChange("squadId", value)}
@@ -115,7 +119,9 @@ const OutboundSettingsCard: React.FC<Props> = ({
         </div>
         <Separator orientation="horizontal" />
         <div className="space-y-2">
-          <p className="text-sm font-medium text-slate-900">Destino alternativo</p>
+          <p className="text-sm font-medium text-slate-900">
+            Destino alternativo
+          </p>
           <p className="text-xs text-slate-600">
             Establezca un destino respaldo para llamadas entrantes cuando el
             asistente o el escuadrón no esté disponible.
@@ -134,4 +140,4 @@ const OutboundSettingsCard: React.FC<Props> = ({
   );
 };
 
-export default OutboundSettingsCard; 
+export default OutboundSettingsCard;

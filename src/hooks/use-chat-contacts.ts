@@ -14,4 +14,4 @@ export const useChatContacts = () => {
   });
 
   return { contacts, isLoading, isError, error, refetch };
-}; 
+};

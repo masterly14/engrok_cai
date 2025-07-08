@@ -5,4 +5,4 @@ export async function GET() {
   const plans = await getPublicPlans();
   console.log(plans);
   return NextResponse.json(plans);
-} 
+}

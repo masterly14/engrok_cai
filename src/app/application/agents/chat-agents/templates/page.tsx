@@ -1,11 +1,11 @@
-import WhatsAppTemplateBuilder from "@/components/application/whatsapp-template-builder"
+import WhatsAppTemplateBuilder from "@/components/application/whatsapp-template-builder";
 
 const TemplatesPage = () => {
   return (
     <div>
       <WhatsAppTemplateBuilder />
     </div>
-  )
-}
+  );
+};
 
-export default TemplatesPage
+export default TemplatesPage;

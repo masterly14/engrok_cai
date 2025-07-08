@@ -77,6 +77,7 @@ Sigue estos pasos para poner en marcha el proyecto en tu entorno de desarrollo l
 ### 2. Instalación
 
 1.  **Clona el repositorio:**
+
     ```bash
     git clone https://github.com/tu-usuario/karolai.git
     cd karolai
@@ -90,6 +91,7 @@ Sigue estos pasos para poner en marcha el proyecto en tu entorno de desarrollo l
 ### 3. Configuración del Entorno
 
 1.  Crea un archivo `.env` en la raíz del proyecto copiando el ejemplo:
+
     ```bash
     cp .env.example .env
     ```

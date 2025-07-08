@@ -1,13 +1,22 @@
-"use client"
+"use client";
 
 import type { NodeConfigurationProps } from "./types";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { JsonEditorField } from "@/app/application/agents/chat-agents/flows/_components/shared-config-components";
 import type { ApiRequestNodeData } from "../../types";
 
-export function ApiRequestNodeConfig({ selectedNode, updateNode }: NodeConfigurationProps) {
+export function ApiRequestNodeConfig({
+  selectedNode,
+  updateNode,
+}: NodeConfigurationProps) {
   const nodeData = selectedNode.data as ApiRequestNodeData;
 
   const handleChange = (field: keyof ApiRequestNodeData, value: any) => {
@@ -17,7 +26,9 @@ export function ApiRequestNodeConfig({ selectedNode, updateNode }: NodeConfigura
   return (
     <div className="flex flex-col gap-6 p-6 bg-gray-50/50 rounded-lg">
       <div className="space-y-2">
-        <h3 className="text-lg font-semibold text-gray-900">Configuración API Request</h3>
+        <h3 className="text-lg font-semibold text-gray-900">
+          Configuración API Request
+        </h3>
         <p className="text-sm text-gray-600 leading-relaxed">
           Define la URL, método y cuerpo de la petición HTTP.
         </p>
@@ -37,7 +48,9 @@ export function ApiRequestNodeConfig({ selectedNode, updateNode }: NodeConfigura
           <Label>Método HTTP</Label>
           <Select
             value={nodeData.method}
-            onValueChange={(v) => handleChange("method", v as ApiRequestNodeData["method"])}
+            onValueChange={(v) =>
+              handleChange("method", v as ApiRequestNodeData["method"])
+            }
           >
             <SelectTrigger>
               <SelectValue placeholder="Método" />
@@ -73,4 +86,4 @@ export function ApiRequestNodeConfig({ selectedNode, updateNode }: NodeConfigura
       </div>
     </div>
   );
-} 
+}

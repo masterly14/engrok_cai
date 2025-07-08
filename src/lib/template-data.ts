@@ -1,12 +1,12 @@
-import { type Node, type Edge, MarkerType } from "reactflow"
+import { type Node, type Edge, MarkerType } from "reactflow";
 
 export interface Template {
-  id: string
-  title: string
-  description: string
-  thumbnail: string
-  nodes: Node[]
-  edges: Edge[]
+  id: string;
+  title: string;
+  description: string;
+  thumbnail: string;
+  nodes: Node[];
+  edges: Edge[];
 }
 
 export const templates: Template[] = [
@@ -690,4 +690,4 @@ export const templates: Template[] = [
       },
     ],
   },
-]
+];

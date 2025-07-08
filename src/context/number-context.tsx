@@ -1,21 +1,23 @@
-"use client"
+"use client";
 
-import type React from "react"
-import { createContext, useContext, useState, useEffect } from "react"
-import { PhoneNumber } from "@prisma/client"
+import type React from "react";
+import { createContext, useContext, useState, useEffect } from "react";
+import { PhoneNumber } from "@prisma/client";
 
 interface PhoneNumberContextType {
-  selectedPhoneNumber: PhoneNumber | null
-  setSelectedPhoneNumber: (phoneNumber: PhoneNumber | null) => void
-  formData: any
-  setFormData: (data: any) => void
-  hasChanges: boolean
-  resetForm: () => void
-  isCreatingNew: boolean
-  setIsCreatingNew: (creating: boolean) => void
+  selectedPhoneNumber: PhoneNumber | null;
+  setSelectedPhoneNumber: (phoneNumber: PhoneNumber | null) => void;
+  formData: any;
+  setFormData: (data: any) => void;
+  hasChanges: boolean;
+  resetForm: () => void;
+  isCreatingNew: boolean;
+  setIsCreatingNew: (creating: boolean) => void;
 }
 
-const PhoneNumberContext = createContext<PhoneNumberContextType | undefined>(undefined)
+const PhoneNumberContext = createContext<PhoneNumberContextType | undefined>(
+  undefined,
+);
 
 const defaultFormData = {
   provider: "",
@@ -33,16 +35,22 @@ const defaultFormData = {
   vapiSipUsername: "",
   vapiSipPassword: "",
   extension: "",
-}
+};
 
-export function PhoneNumberProvider({ children }: { children: React.ReactNode }) {
-  const [selectedPhoneNumber, setSelectedPhoneNumber] = useState<any | null>(null)
-  const [formData, setFormData] = useState<any>(defaultFormData)
-  const [originalData, setOriginalData] = useState<any>(defaultFormData)
-  const [isCreatingNew, setIsCreatingNew] = useState(false)
+export function PhoneNumberProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const [selectedPhoneNumber, setSelectedPhoneNumber] = useState<any | null>(
+    null,
+  );
+  const [formData, setFormData] = useState<any>(defaultFormData);
+  const [originalData, setOriginalData] = useState<any>(defaultFormData);
+  const [isCreatingNew, setIsCreatingNew] = useState(false);
 
   // Detectar si hay cambios comparando con los datos originales
-  const hasChanges = JSON.stringify(formData) !== JSON.stringify(originalData)
+  const hasChanges = JSON.stringify(formData) !== JSON.stringify(originalData);
 
   // Cuando se selecciona un agente, cargar sus datos en el formulario
   useEffect(() => {
@@ -60,16 +68,16 @@ export function PhoneNumberProvider({ children }: { children: React.ReactNode })
         vonageApiKey: selectedPhoneNumber.vonageApiKey,
         vonageApiSecret: selectedPhoneNumber.vonageApiSecret,
         callType: selectedPhoneNumber.callType,
-      }
-      setFormData(phoneNumberFormData)
-      setOriginalData(phoneNumberFormData)
-      setIsCreatingNew(false) // Si se selecciona un agente, no estamos creando uno nuevo
+      };
+      setFormData(phoneNumberFormData);
+      setOriginalData(phoneNumberFormData);
+      setIsCreatingNew(false); // Si se selecciona un agente, no estamos creando uno nuevo
     } else if (isCreatingNew) {
       // Solo resetear el formulario si estamos explícitamente creando uno nuevo
-      setFormData(defaultFormData)
-      setOriginalData(defaultFormData)
+      setFormData(defaultFormData);
+      setOriginalData(defaultFormData);
     }
-  }, [selectedPhoneNumber, isCreatingNew])
+  }, [selectedPhoneNumber, isCreatingNew]);
 
   const resetForm = () => {
     if (selectedPhoneNumber) {
@@ -87,16 +95,16 @@ export function PhoneNumberProvider({ children }: { children: React.ReactNode })
         callType: selectedPhoneNumber.callType,
         extension: selectedPhoneNumber.extension,
         vapiId: selectedPhoneNumber.vapiId,
-      }
+      };
 
-      setFormData(phoneNumberFormData)
-      setOriginalData(phoneNumberFormData)
+      setFormData(phoneNumberFormData);
+      setOriginalData(phoneNumberFormData);
     } else {
-      setFormData(defaultFormData)
-      setOriginalData(defaultFormData)
+      setFormData(defaultFormData);
+      setOriginalData(defaultFormData);
     }
-    setIsCreatingNew(false) // Al resetear, ya no estamos creando
-  }
+    setIsCreatingNew(false); // Al resetear, ya no estamos creando
+  };
 
   return (
     <PhoneNumberContext.Provider
@@ -113,13 +121,13 @@ export function PhoneNumberProvider({ children }: { children: React.ReactNode })
     >
       {children}
     </PhoneNumberContext.Provider>
-  )
+  );
 }
 
 export function usePhoneNumber() {
-  const context = useContext(PhoneNumberContext)
+  const context = useContext(PhoneNumberContext);
   if (context === undefined) {
-    throw new Error("usePhoneNumber must be used within a PhoneNumberProvider")
+    throw new Error("usePhoneNumber must be used within a PhoneNumberProvider");
   }
-  return context
+  return context;
 }

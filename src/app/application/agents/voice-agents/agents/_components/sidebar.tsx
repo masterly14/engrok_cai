@@ -1,54 +1,56 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { User, Plus, Search, Bot, Sparkles, Users } from "lucide-react"
-import type { Agent } from "@/types/agent"
+import * as React from "react";
+import { User, Plus, Search, Bot, Sparkles, Users } from "lucide-react";
+import type { Agent } from "@/types/agent";
 
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { LoadingSpinner } from "@/components/loading-spinner"
-import { AgentWithTools, useAgent } from "@/context/agent-context"
-import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { LoadingSpinner } from "@/components/loading-spinner";
+import { AgentWithTools, useAgent } from "@/context/agent-context";
+import { cn } from "@/lib/utils";
 
 export function Sidebar({ agents: initialAgents }: { agents: Agent[] }) {
-  const { selectedAgent, setSelectedAgent, setIsCreatingNew } = useAgent()
-  const [searchTerm, setSearchTerm] = React.useState("")
-  const [agents, setAgents] = React.useState<Agent[]>(initialAgents)
+  const { selectedAgent, setSelectedAgent, setIsCreatingNew } = useAgent();
+  const [searchTerm, setSearchTerm] = React.useState("");
+  const [agents, setAgents] = React.useState<Agent[]>(initialAgents);
 
   // Actualizar los agentes cuando cambien los initialAgents
   React.useEffect(() => {
-    setAgents(initialAgents)
-  }, [initialAgents])
+    setAgents(initialAgents);
+  }, [initialAgents]);
 
   // Filtrar agentes basado en el término de búsqueda
   const filteredAgents = React.useMemo(() => {
-    if (!Array.isArray(agents)) return []
-    return agents.filter((agent) => agent.name.toLowerCase().includes(searchTerm.toLowerCase()))
-  }, [agents, searchTerm])
+    if (!Array.isArray(agents)) return [];
+    return agents.filter((agent) =>
+      agent.name.toLowerCase().includes(searchTerm.toLowerCase()),
+    );
+  }, [agents, searchTerm]);
 
   const handleAgentSelect = (agent: Agent) => {
-    setSelectedAgent(agent as AgentWithTools)
-    setIsCreatingNew(false)
-  }
+    setSelectedAgent(agent as AgentWithTools);
+    setIsCreatingNew(false);
+  };
 
   const handleNewAgent = () => {
-    setSelectedAgent(null)
-    setIsCreatingNew(true)
+    setSelectedAgent(null);
+    setIsCreatingNew(true);
     if (typeof window !== "undefined" && window.openVoiceAgentTemplateDialog) {
-      window.openVoiceAgentTemplateDialog()
+      window.openVoiceAgentTemplateDialog();
     }
-  }
+  };
 
   // Suscribirse a los cambios del agente seleccionado
   React.useEffect(() => {
     if (selectedAgent) {
-      setAgents(prevAgents => 
-        prevAgents.map(agent => 
-          agent.id === selectedAgent.id ? selectedAgent : agent
-        )
-      )
+      setAgents((prevAgents) =>
+        prevAgents.map((agent) =>
+          agent.id === selectedAgent.id ? selectedAgent : agent,
+        ),
+      );
     }
-  }, [selectedAgent])
+  }, [selectedAgent]);
 
   return (
     <div className="h-screen w-[280px] border-r border-slate-300 shadow-xl">
@@ -61,7 +63,9 @@ export function Sidebar({ agents: initialAgents }: { agents: Agent[] }) {
             </div>
             <div className="flex-1">
               <h2 className="text-base font-semibold">Agentes de Voz</h2>
-              <p className="text-xs text-slate-400">Gestiona tus asistentes IA</p>
+              <p className="text-xs text-slate-400">
+                Gestiona tus asistentes IA
+              </p>
             </div>
           </div>
 
@@ -106,16 +110,22 @@ export function Sidebar({ agents: initialAgents }: { agents: Agent[] }) {
                 <div className="flex items-center justify-center py-12">
                   <div className="text-center">
                     <LoadingSpinner />
-                    <p className="text-sm text-slate-400 mt-3">Cargando agentes...</p>
+                    <p className="text-sm text-slate-400 mt-3">
+                      Cargando agentes...
+                    </p>
                   </div>
                 </div>
               ) : filteredAgents.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 px-4">
                   <p className="text-sm font-medium text-slate-600 text-center mb-2">
-                    {searchTerm ? "No se encontraron agentes" : "No tienes agentes aún"}
+                    {searchTerm
+                      ? "No se encontraron agentes"
+                      : "No tienes agentes aún"}
                   </p>
                   <p className="text-xs text-slate-400 text-center mb-4">
-                    {searchTerm ? "Intenta con otro término de búsqueda" : "Crea tu primer agente de voz para comenzar"}
+                    {searchTerm
+                      ? "Intenta con otro término de búsqueda"
+                      : "Crea tu primer agente de voz para comenzar"}
                   </p>
                 </div>
               ) : (
@@ -142,7 +152,9 @@ export function Sidebar({ agents: initialAgents }: { agents: Agent[] }) {
                         <Sparkles
                           className={cn(
                             "h-5 w-5 transition-colors",
-                            selectedAgent?.id === agent.id ? "text-white" : "text-slate-300",
+                            selectedAgent?.id === agent.id
+                              ? "text-white"
+                              : "text-slate-300",
                           )}
                         />
                       </div>
@@ -157,7 +169,9 @@ export function Sidebar({ agents: initialAgents }: { agents: Agent[] }) {
                         <p
                           className={cn(
                             "text-xs truncate transition-colors",
-                            selectedAgent?.id === agent.id ? "text-slate-300" : "text-slate-400",
+                            selectedAgent?.id === agent.id
+                              ? "text-slate-300"
+                              : "text-slate-400",
                           )}
                         >
                           ID: {agent.id}
@@ -175,5 +189,5 @@ export function Sidebar({ agents: initialAgents }: { agents: Agent[] }) {
         </div>
       </div>
     </div>
-  )
+  );
 }

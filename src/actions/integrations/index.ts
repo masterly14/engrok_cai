@@ -44,7 +44,7 @@ export const connectIntegrationAccount = async (
   provider: string,
   userId: string,
   workflowId: string,
-  waitingRequest: boolean = false
+  waitingRequest: boolean = false,
 ) => {
   const toolset = new OpenAIToolSet({
     apiKey: process.env.COMPOSIO_API_KEY,
@@ -54,10 +54,9 @@ export const connectIntegrationAccount = async (
   if (provider === "GOOGLE_CALENDAR") {
     const googleIntegrationId = "1ff936bb-1aa4-4a57-9934-6befd557d4f6";
 
-
     console.log(
       "Initiating Google Calendar integration. Waiting mode:",
-      waitingRequest
+      waitingRequest,
     );
 
     const connectionRequest = await toolset.connectedAccounts.initiate({
@@ -93,7 +92,7 @@ export const connectIntegrationAccount = async (
     if (connectionRequest.redirectUrl) {
       console.log(
         "Redirecting to Google Calendar",
-        connectionRequest.redirectUrl
+        connectionRequest.redirectUrl,
       );
       return {
         redirectUrl: connectionRequest.redirectUrl,
@@ -101,7 +100,7 @@ export const connectIntegrationAccount = async (
     }
 
     console.error(
-      "Could not get a redirectUrl from Composio and not in waiting mode."
+      "Could not get a redirectUrl from Composio and not in waiting mode.",
     );
     return {
       isConnected: false,
@@ -113,39 +112,38 @@ export const connectIntegrationAccount = async (
   return { isConnected: false, userId, provider };
 };
 
-
 export const validateWompiIntegrationUser = async () => {
-    const user = await onBoardUser();
+  const user = await onBoardUser();
 
-    if (!user) {
-        throw new Error("User not found");
-    }
+  if (!user) {
+    throw new Error("User not found");
+  }
 
-    const wompiIntegration = await db.wompiIntegration.findUnique({
-      where: {
-        userId: user?.data?.id
-      }
-    })
+  const wompiIntegration = await db.wompiIntegration.findUnique({
+    where: {
+      userId: user?.data?.id,
+    },
+  });
 
-    if (!wompiIntegration) {
-      return {
-        isConnected: false,
-        userId: user?.data?.id,
-        provider: "WOMPI",
-      };
-    }
-
+  if (!wompiIntegration) {
     return {
-      isConnected: true,
+      isConnected: false,
       userId: user?.data?.id,
       provider: "WOMPI",
-    }
-}
+    };
+  }
+
+  return {
+    isConnected: true,
+    userId: user?.data?.id,
+    provider: "WOMPI",
+  };
+};
 
 export const validateAndSaveWompiCredentials = async (
   publicKey: string,
   privateKey: string,
-  eventsSecret: string
+  eventsSecret: string,
 ) => {
   "use server";
 
@@ -169,14 +167,17 @@ export const validateAndSaveWompiCredentials = async (
     if (response.status === 401) {
       return {
         success: false,
-        error: "Credenciales inválidas. Verifica tu Llave Pública y Llave Privada de Wompi.",
+        error:
+          "Credenciales inválidas. Verifica tu Llave Pública y Llave Privada de Wompi.",
       } as const;
     }
 
     const errorJson = await response.json().catch(() => undefined);
     return {
       success: false,
-      error: errorJson?.error?.message ?? "Error al validar las credenciales con Wompi.",
+      error:
+        errorJson?.error?.message ??
+        "Error al validar las credenciales con Wompi.",
     } as const;
   }
 
@@ -245,7 +246,9 @@ export const generateWompiPaymentLink = async ({
   const { publicKey, privateKey } = wompiIntegration;
 
   const isTest = publicKey.startsWith("pub_test_");
-  const baseUrl = isTest ? "https://sandbox.wompi.co" : "https://production.wompi.co";
+  const baseUrl = isTest
+    ? "https://sandbox.wompi.co"
+    : "https://production.wompi.co";
 
   const payload: Record<string, any> = {
     name,
@@ -288,14 +291,14 @@ export const generateWompiPaymentLink = async ({
 };
 
 export async function getGoogleCalendars() {
-  const { userId: clerkId } = await auth()
+  const { userId: clerkId } = await auth();
   if (!clerkId) {
-    throw new Error("User not authenticated")
+    throw new Error("User not authenticated");
   }
 
-  const user = await prisma.user.findUnique({ where: { clerkId } })
+  const user = await prisma.user.findUnique({ where: { clerkId } });
   if (!user) {
-    throw new Error("User not found in DB")
+    throw new Error("User not found in DB");
   }
 
   const connection = await prisma.connection.findFirst({
@@ -303,10 +306,10 @@ export async function getGoogleCalendars() {
       userId: user.id,
       providerConfigKey: "google-calendar",
     },
-  })
+  });
 
   if (!connection?.connectionId) {
-    throw new Error("Google Calendar connection not found for this user.")
+    throw new Error("Google Calendar connection not found for this user.");
   }
 
   try {
@@ -316,19 +319,19 @@ export async function getGoogleCalendars() {
       method: "GET",
       endpoint: "/calendar/v3/users/me/calendarList",
       retries: 3,
-    })
+    });
 
     const calendars =
       calendarListResponse.data?.items?.map((cal: any) => ({
         id: cal.id,
         summary: cal.summary,
         primary: cal.primary || false,
-      })) || []
+      })) || [];
 
-    return { calendars }
+    return { calendars };
   } catch (error) {
-    console.error("Error fetching google calendars via Nango proxy:", error)
-    throw new Error("Failed to fetch calendars from Google API.")
+    console.error("Error fetching google calendars via Nango proxy:", error);
+    throw new Error("Failed to fetch calendars from Google API.");
   }
 }
 
@@ -337,14 +340,17 @@ export async function getIntegrationAccessToken(
 ): Promise<string> {
   // providerConfigKey primero, luego connectionId
   const conn = await nango.getConnection(
-    'google-calendar',
+    "google-calendar",
     connectionId,
-    false,  // forceRefresh
-    true    // refreshToken
+    false, // forceRefresh
+    true, // refreshToken
   );
 
   // Type guard to ensure we have OAuth2 credentials
-  if ('access_token' in conn.credentials && typeof conn.credentials.access_token === 'string') {
+  if (
+    "access_token" in conn.credentials &&
+    typeof conn.credentials.access_token === "string"
+  ) {
     return conn.credentials.access_token;
   }
 

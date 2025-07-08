@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
       console.error("CSV parse errors:", parsed.errors);
       return NextResponse.json(
         { error: parsed.errors[0].message || "CSV parse error" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
     console.error("parse-csv error", error);
     return NextResponse.json(
       { error: error.message || "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
-} 
+}

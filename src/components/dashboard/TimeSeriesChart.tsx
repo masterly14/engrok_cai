@@ -23,7 +23,7 @@ ChartJS.register(
   Title,
   Tooltip,
   Legend,
-  Filler
+  Filler,
 );
 
 interface Props {
@@ -34,9 +34,9 @@ export default function TimeSeriesChart({ data }: Props) {
   const chartData = useMemo(() => {
     const labels = data.map((d) => {
       const date = new Date(d.date);
-      return date.toLocaleDateString('es-ES', { 
-        month: 'short', 
-        day: 'numeric' 
+      return date.toLocaleDateString("es-ES", {
+        month: "short",
+        day: "numeric",
       });
     });
 
@@ -80,7 +80,7 @@ export default function TimeSeriesChart({ data }: Props) {
       responsive: true,
       maintainAspectRatio: false,
       interaction: {
-        mode: 'index' as const,
+        mode: "index" as const,
         intersect: false,
       },
       plugins: {
@@ -91,40 +91,40 @@ export default function TimeSeriesChart({ data }: Props) {
               size: 12,
               weight: 400,
             },
-            color: '#64748b',
+            color: "#64748b",
             usePointStyle: true,
-            pointStyle: 'circle',
+            pointStyle: "circle",
             padding: 16,
           },
         },
         tooltip: {
-          backgroundColor: 'rgba(255, 255, 255, 0.98)',
-          titleColor: '#1e293b',
-          bodyColor: '#64748b',
-          borderColor: '#e2e8f0',
+          backgroundColor: "rgba(255, 255, 255, 0.98)",
+          titleColor: "#1e293b",
+          bodyColor: "#64748b",
+          borderColor: "#e2e8f0",
           borderWidth: 1,
           cornerRadius: 6,
           padding: 10,
           displayColors: true,
           callbacks: {
-            title: function(context: any) {
+            title: function (context: any) {
               return `${context[0].label}`;
             },
-            label: function(context: any) {
+            label: function (context: any) {
               return `${context.dataset.label}: ${context.parsed.y}`;
-            }
-          }
+            },
+          },
         },
       },
       scales: {
         x: {
           grid: {
             display: true,
-            color: 'rgba(148, 163, 184, 0.1)',
+            color: "rgba(148, 163, 184, 0.1)",
             drawBorder: false,
           },
           ticks: {
-            color: '#94a3b8',
+            color: "#94a3b8",
             font: {
               size: 11,
             },
@@ -137,16 +137,16 @@ export default function TimeSeriesChart({ data }: Props) {
           beginAtZero: true,
           grid: {
             display: true,
-            color: 'rgba(148, 163, 184, 0.1)',
+            color: "rgba(148, 163, 184, 0.1)",
             drawBorder: false,
           },
           ticks: {
-            color: '#94a3b8',
+            color: "#94a3b8",
             font: {
               size: 11,
             },
-            callback: function(value: any) {
-              return Number.isInteger(value) ? value : '';
+            callback: function (value: any) {
+              return Number.isInteger(value) ? value : "";
             },
           },
           border: {
@@ -156,14 +156,14 @@ export default function TimeSeriesChart({ data }: Props) {
       },
       elements: {
         line: {
-          borderJoinStyle: 'round' as const,
+          borderJoinStyle: "round" as const,
         },
         point: {
           hoverBorderWidth: 2,
         },
       },
     }),
-    []
+    [],
   );
 
   return (

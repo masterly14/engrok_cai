@@ -12,12 +12,12 @@ export default function AppTour() {
   useEffect(() => {
     const alreadyDone = localStorage.getItem("app_tour_completed") === "true";
     if (alreadyDone) return;
-  
+
     // Mostrar mensaje de bienvenida después de un breve delay
     const timer = setTimeout(() => {
       setShowWelcome(true);
     }, 1000);
-  
+
     return () => clearTimeout(timer);
   }, []);
 
@@ -45,17 +45,10 @@ export default function AppTour() {
           empezar a usar la plataforma.
         </p>
         <div className="flex gap-3">
-          <Button
-            variant="outline"
-            onClick={handleSkip}
-            className="flex-1"
-          >
+          <Button variant="outline" onClick={handleSkip} className="flex-1">
             Saltar
           </Button>
-          <Button
-            onClick={handleStart}
-            className="flex-1"
-          >
+          <Button onClick={handleStart} className="flex-1">
             Crear mi primer agente de voz
           </Button>
         </div>

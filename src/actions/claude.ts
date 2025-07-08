@@ -49,12 +49,10 @@ Write everything in fluent English or Spanish depending on the purpose context, 
 
 Do not explain your reasoning. Just return the full agent prompt as requested.
 
-Purpose: ${purpose}`
-
+Purpose: ${purpose}`;
 
     // Create a message from the user's prompt
     const message = new HumanMessage(prompt);
-
 
     // Generate response
     const response = await model.invoke([message]);

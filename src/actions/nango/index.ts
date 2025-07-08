@@ -8,7 +8,7 @@ const nango = new Nango({ secretKey: process.env.NANGO_SECRET_KEY! });
 const generateConnectSessionToken = async (
   userId: string,
   email: string,
-  name: string | null
+  name: string | null,
 ) => {
   const { data } = await nango.createConnectSession({
     end_user: {
@@ -71,7 +71,7 @@ export const getSessionToken = async (userId: string) => {
     const { token } = await generateConnectSessionToken(
       userId,
       user.email,
-      user.name
+      user.name,
     );
     return {
       token,
@@ -115,7 +115,7 @@ export const createConnection = async ({
 
 export const ConnectionExists = async (
   userId: string,
-  providerConfigKey: string
+  providerConfigKey: string,
 ) => {
   const user = await db.user.findUnique({
     where: {
@@ -146,7 +146,10 @@ export const ConnectionExists = async (
   };
 };
 
-export const getAccessToken = async (connectionId: string, provider: string = "google-calendar") => {
+export const getAccessToken = async (
+  connectionId: string,
+  provider: string = "google-calendar",
+) => {
   try {
     const token = await nango.getToken(provider, connectionId);
     console.log(token);
@@ -171,14 +174,17 @@ export const getGoogleCalendarCalendarsList = async (userId: string) => {
   }
 
   try {
-    const accessToken = await getAccessToken(connection.connectionId, "google-calendar");
+    const accessToken = await getAccessToken(
+      connection.connectionId,
+      "google-calendar",
+    );
     const response = await axios.get(
       "https://www.googleapis.com/calendar/v3/users/me/calendarList",
       {
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },
-      }
+      },
     );
     console.log(response.data);
     return response.data.items;
@@ -204,7 +210,8 @@ export const createOrUpdateSync = async (params: {
     webhookUrl,
   } = params;
 
-  const nangoBase = process.env.NANGO_API_BASE_URL || "https://api.nango.dev/v1";
+  const nangoBase =
+    process.env.NANGO_API_BASE_URL || "https://api.nango.dev/v1";
   console.log("createOrUpdateSync payload", params);
   try {
     await axios.post(
@@ -219,7 +226,7 @@ export const createOrUpdateSync = async (params: {
           Authorization: `Bearer ${process.env.NANGO_SECRET_KEY!}`,
           "Content-Type": "application/json",
         },
-      }
+      },
     );
   } catch (err: any) {
     // Si el sync ya está iniciado, Nango devuelve 400/409; lo ignoramos

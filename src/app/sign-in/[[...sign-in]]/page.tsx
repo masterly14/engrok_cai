@@ -53,13 +53,19 @@ export default function SignInPage() {
 
           <div className="text-center space-y-4 relative z-10 flex flex-col items-center justify-center">
             {/* Logo */}
-            <Image src="/logo-karolai.jpg" alt="KarolAI" width={500} height={500} className="rounded-full" />
+            <Image
+              src="/logo-karolai.jpg"
+              alt="KarolAI"
+              width={500}
+              height={500}
+              className="rounded-full"
+            />
 
             {/* Company Name */}
-              <p className="text-lg text-black/60 font-light max-w-md leading-relaxed">
-                Bienvenido de vuelta. Accede a tu cuenta para continuar con tu
-                experiencia de IA de próxima generación.
-              </p>
+            <p className="text-lg text-black/60 font-light max-w-md leading-relaxed">
+              Bienvenido de vuelta. Accede a tu cuenta para continuar con tu
+              experiencia de IA de próxima generación.
+            </p>
 
             {/* Testimonial */}
             <div className="bg-black/[0.015] backdrop-blur-xl border border-black/8 rounded-2xl p-8 max-w-md mx-auto">
@@ -127,8 +133,7 @@ export default function SignInPage() {
                             "bg-gradient-to-r from-cyan-400 to-purple-500 hover:from-cyan-500 hover:to-purple-600 text-white font-light transition-all duration-300 hover:scale-[1.02] hover:shadow-xl rounded-md",
                           footerAction: "text-sm font-light",
                           formFieldLabel: "text-black/80 font-light",
-                          formFieldInput:
-                            "glass-effect  rounded-md",
+                          formFieldInput: "glass-effect  rounded-md",
                           socialButtonsBlockButton:
                             "glass-effect border-black/10 hover:border-black/20 text-black font-light",
                           dividerLine: "bg-black/10",

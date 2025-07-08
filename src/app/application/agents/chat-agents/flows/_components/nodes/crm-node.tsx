@@ -1,6 +1,6 @@
-import { memo } from "react"
-import { Handle, Position, type NodeProps } from "reactflow"
-import { Database } from "lucide-react"
+import { memo } from "react";
+import { Handle, Position, type NodeProps } from "reactflow";
+import { Database } from "lucide-react";
 
 const CrmNode = ({ data }: NodeProps) => {
   return (
@@ -11,12 +11,23 @@ const CrmNode = ({ data }: NodeProps) => {
           {data.name || "CRM Action"}
         </strong>
       </div>
-      <p className="text-xs opacity-80 truncate" title={data.name || "Configure CRM action..."}>
+      <p
+        className="text-xs opacity-80 truncate"
+        title={data.name || "Configure CRM action..."}
+      >
         Action: {data.name || "Configure..."}
       </p>
-      <Handle type="target" position={Position.Left} className="w-3 h-3 !bg-gray-300" />
-      <Handle type="source" position={Position.Right} className="w-3 h-3 !bg-gray-300" />
+      <Handle
+        type="target"
+        position={Position.Left}
+        className="w-3 h-3 !bg-gray-300"
+      />
+      <Handle
+        type="source"
+        position={Position.Right}
+        className="w-3 h-3 !bg-gray-300"
+      />
     </div>
-  )
-}
-export default memo(CrmNode)
+  );
+};
+export default memo(CrmNode);

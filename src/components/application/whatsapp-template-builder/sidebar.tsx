@@ -1,21 +1,31 @@
-"use client"
-import { ChevronsUpDown, HelpCircle, LayoutGrid } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Label } from "@/components/ui/label"
-import Link from "next/link"
-import { SUPPORTED_LANGUAGES, type Language } from "./types"
-import type { ChatAgentWithWorkflows } from "@/types/agent"
+"use client";
+import { ChevronsUpDown, HelpCircle, LayoutGrid } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import Link from "next/link";
+import { SUPPORTED_LANGUAGES, type Language } from "./types";
+import type { ChatAgentWithWorkflows } from "@/types/agent";
 
 interface SidebarProps {
-  agents: ChatAgentWithWorkflows[]
-  selectedWabaId: string
-  onWabaChange: (wabaId: string) => void
-  selectedLanguage: string
-  onLanguageChange: (languageCode: string) => void
-  templateQuotaUsed: number
-  templateQuotaMax: number
+  agents: ChatAgentWithWorkflows[];
+  selectedWabaId: string;
+  onWabaChange: (wabaId: string) => void;
+  selectedLanguage: string;
+  onLanguageChange: (languageCode: string) => void;
+  templateQuotaUsed: number;
+  templateQuotaMax: number;
 }
 
 export default function TemplateBuilderSidebar({
@@ -29,7 +39,7 @@ export default function TemplateBuilderSidebar({
 }: SidebarProps) {
   const wabaAccounts = agents
     .filter((a) => a.whatsappBusinessAccountId)
-    .map((a) => ({ id: a.whatsappBusinessAccountId as string, name: a.name }))
+    .map((a) => ({ id: a.whatsappBusinessAccountId as string, name: a.name }));
 
   return (
     <aside className="w-80 border-r bg-muted/40 p-6 flex flex-col gap-6 fixed h-full">
@@ -73,7 +83,9 @@ export default function TemplateBuilderSidebar({
         <div className="w-full bg-muted rounded-full h-2.5 mt-1">
           <div
             className="bg-primary h-2.5 rounded-full"
-            style={{ width: `${(templateQuotaUsed / templateQuotaMax) * 100}%` }}
+            style={{
+              width: `${(templateQuotaUsed / templateQuotaMax) * 100}%`,
+            }}
           />
         </div>
       </div>
@@ -113,10 +125,13 @@ export default function TemplateBuilderSidebar({
         </CollapsibleContent>
       </Collapsible>
 
-      <Button variant="outline" className="mt-auto bg-background text-foreground">
+      <Button
+        variant="outline"
+        className="mt-auto bg-background text-foreground"
+      >
         <LayoutGrid className="mr-2 h-4 w-4" />
         Ver Mis Plantillas
       </Button>
     </aside>
-  )
+  );
 }

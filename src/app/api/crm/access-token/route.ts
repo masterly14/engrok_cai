@@ -13,7 +13,10 @@ export async function GET(_req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    console.log("[CRM Access Token] Looking for existing token for user:", user.data.id);
+    console.log(
+      "[CRM Access Token] Looking for existing token for user:",
+      user.data.id,
+    );
     let accessTokenRecord = await db.accessToken.findFirst({
       where: {
         userId: user.data.id,
@@ -21,7 +24,10 @@ export async function GET(_req: NextRequest) {
       },
     });
 
-    console.log("[CRM Access Token] Existing token found:", !!accessTokenRecord);
+    console.log(
+      "[CRM Access Token] Existing token found:",
+      !!accessTokenRecord,
+    );
 
     // Si no existe, crearlo
     if (!accessTokenRecord) {
@@ -39,11 +45,17 @@ export async function GET(_req: NextRequest) {
           updatedAt: now,
         },
       });
-      console.log("[CRM Access Token] Record created successfully:", accessTokenRecord);
+      console.log(
+        "[CRM Access Token] Record created successfully:",
+        accessTokenRecord,
+      );
     }
     console.log("accessTokenRecord", accessTokenRecord);
 
-    console.log("[CRM Access Token] Returning response with token:", accessTokenRecord.accessToken);
+    console.log(
+      "[CRM Access Token] Returning response with token:",
+      accessTokenRecord.accessToken,
+    );
     return NextResponse.json({ accessToken: accessTokenRecord.accessToken });
   } catch (error: any) {
     console.error("[CRM Access Token] Detailed error:", {
@@ -59,4 +71,4 @@ export async function GET(_req: NextRequest) {
       { status: 500 },
     );
   }
-} 
+}

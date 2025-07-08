@@ -1,6 +1,6 @@
-import { memo } from "react"
-import { Handle, Position, type NodeProps } from "reactflow"
-import { Link } from "lucide-react"
+import { memo } from "react";
+import { Handle, Position, type NodeProps } from "reactflow";
+import { Link } from "lucide-react";
 
 const UrlButtonNode = ({ data }: NodeProps) => {
   return (
@@ -11,15 +11,29 @@ const UrlButtonNode = ({ data }: NodeProps) => {
           {data.name || "URL Button"}
         </strong>
       </div>
-      <p className="text-xs opacity-80 truncate" title={data.message || "Configure message..."}>
+      <p
+        className="text-xs opacity-80 truncate"
+        title={data.message || "Configure message..."}
+      >
         Msg: {data.message || "Configure..."}
       </p>
-      <p className="text-xs opacity-70 mt-1 truncate" title={data.url || "Configure URL..."}>
+      <p
+        className="text-xs opacity-70 mt-1 truncate"
+        title={data.url || "Configure URL..."}
+      >
         URL: {data.url || "Configure..."}
       </p>
-      <Handle type="target" position={Position.Top} className="w-3 h-3 !bg-gray-300" />
-      <Handle type="source" position={Position.Bottom} className="w-3 h-3 !bg-gray-300" />
+      <Handle
+        type="target"
+        position={Position.Top}
+        className="w-3 h-3 !bg-gray-300"
+      />
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        className="w-3 h-3 !bg-gray-300"
+      />
     </div>
-  )
-}
-export default memo(UrlButtonNode)
+  );
+};
+export default memo(UrlButtonNode);

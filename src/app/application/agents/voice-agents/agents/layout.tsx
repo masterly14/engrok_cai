@@ -9,7 +9,7 @@ type Props = {
 
 export default async function VoiceAgentsLayout(props: Props) {
   const response = await getAllAgents();
-  const agents = 'error' in response ? [] : response;
+  const agents = "error" in response ? [] : response;
   return (
     <AgentProvider>
       <div className="flex h-screen border-t border-gray-200">

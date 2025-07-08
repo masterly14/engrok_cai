@@ -74,14 +74,20 @@ const InboundSettingsCard: React.FC<Props> = ({
       setSelectedAgent(formData.assistantId);
       setSelectedWorkflow(null);
     }
-  }, [formData.assistantId, formData.workflowId, setSelectedAgent, setSelectedWorkflow]);
+  }, [
+    formData.assistantId,
+    formData.workflowId,
+    setSelectedAgent,
+    setSelectedWorkflow,
+  ]);
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Configuración de llamadas entrantes</CardTitle>
         <CardDescription>
-          Asigna un asistente de voz o un flujo de trabajo a este número de teléfono.
+          Asigna un asistente de voz o un flujo de trabajo a este número de
+          teléfono.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6 w-full">
@@ -178,7 +184,11 @@ const InboundSettingsCard: React.FC<Props> = ({
               <SelectContent className="border-slate-200 w-full">
                 {Array.isArray(workflowsData) && workflowsData.length > 0 ? (
                   workflowsData.map((workflow) => (
-                    <SelectItem key={workflow.id} value={workflow.id} className="py-3">
+                    <SelectItem
+                      key={workflow.id}
+                      value={workflow.id}
+                      className="py-3"
+                    >
                       {workflow.name}
                     </SelectItem>
                   ))

@@ -13,11 +13,16 @@ export async function GET(request: NextRequest) {
   // 2. Params
   const agentId = request.nextUrl.searchParams.get("agentId");
   if (!agentId) {
-    return NextResponse.json({ error: "agentId param is required" }, { status: 400 });
+    return NextResponse.json(
+      { error: "agentId param is required" },
+      { status: 400 },
+    );
   }
 
   // 3. Ensure agent belongs to the user
-  const agent = await db.chatAgent.findFirst({ where: { id: agentId, userId } });
+  const agent = await db.chatAgent.findFirst({
+    where: { id: agentId, userId },
+  });
   if (!agent) {
     return NextResponse.json({ error: "agent not found" }, { status: 404 });
   }
@@ -35,4 +40,4 @@ export async function GET(request: NextRequest) {
   });
 
   return NextResponse.json({ data: contacts });
-} 
+}

@@ -32,7 +32,7 @@ const GoogleActions = ({ data, onDataChange, userId }: Props) => {
   const [isFetchingAvailability, setIsFetchingAvailability] =
     useState<boolean>(false);
   const [action, setAction] = useState<"availability" | "createEvent" | null>(
-    (data.calendarAction as "availability" | "createEvent") || null
+    (data.calendarAction as "availability" | "createEvent") || null,
   );
 
   const reactFlowInstance = useReactFlow();
@@ -94,7 +94,7 @@ const GoogleActions = ({ data, onDataChange, userId }: Props) => {
     try {
       setIsFetchingAvailability(true);
       const res = await fetch(
-        `/api/integrations/calendar?userId=${userId}&calendarId=${data.calendarId}&rangeDays=${rangeDays}`
+        `/api/integrations/calendar?userId=${userId}&calendarId=${data.calendarId}&rangeDays=${rangeDays}`,
       );
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const calendarsJson = await res.json();
@@ -114,19 +114,21 @@ const GoogleActions = ({ data, onDataChange, userId }: Props) => {
   return (
     <div className="space-y-6">
       <div className="space-y-2 mt-7">
-        <Label className="font-medium">Selecciona la acción que realizara el agente.</Label>
-      <Select
-        value={action || ""}
-        onValueChange={(value) => {
-          setAction(value as "availability" | "createEvent");
-          onDataChange({ calendarAction: value as any });
-        }}
-      >
-        <SelectTrigger>
-          <SelectValue placeholder="Selecciona una acción" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="availability">Ver disponibilidad</SelectItem>
+        <Label className="font-medium">
+          Selecciona la acción que realizara el agente.
+        </Label>
+        <Select
+          value={action || ""}
+          onValueChange={(value) => {
+            setAction(value as "availability" | "createEvent");
+            onDataChange({ calendarAction: value as any });
+          }}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Selecciona una acción" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="availability">Ver disponibilidad</SelectItem>
             <SelectItem value="createEvent">Crear evento</SelectItem>
           </SelectContent>
         </Select>
@@ -318,7 +320,8 @@ const GoogleActions = ({ data, onDataChange, userId }: Props) => {
             <ul className="mt-3 max-h-40 overflow-y-auto space-y-1 text-sm">
               {availability.map((slot, idx) => (
                 <li key={idx} className="border rounded p-2 bg-emerald-50">
-                  {new Date(slot.start).toLocaleString()} - {new Date(slot.end).toLocaleString()}
+                  {new Date(slot.start).toLocaleString()} -{" "}
+                  {new Date(slot.end).toLocaleString()}
                 </li>
               ))}
             </ul>

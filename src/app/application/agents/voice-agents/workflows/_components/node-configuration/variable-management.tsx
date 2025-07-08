@@ -36,7 +36,9 @@ const VariableCard = ({
         </div>
 
         <div>
-          <Label className="text-xs font-medium text-gray-700">Descripción</Label>
+          <Label className="text-xs font-medium text-gray-700">
+            Descripción
+          </Label>
           <Textarea
             placeholder="Describe qué información almacena esta variable..."
             value={variable.description}
@@ -84,7 +86,8 @@ export function VariableManagement({
         </Button>
       </div>
       <p className="text-xs text-gray-500 -mt-2">
-        Define los datos que quieres que el asistente extraiga de la conversación.
+        Define los datos que quieres que el asistente extraiga de la
+        conversación.
       </p>
       <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
         {variables?.map((variable: Variable) => (
@@ -96,11 +99,11 @@ export function VariableManagement({
           />
         ))}
         {variables.length === 0 && (
-            <div className="text-center py-6 text-sm text-gray-400 border border-dashed rounded-lg">
-                No hay variables definidas.
-            </div>
+          <div className="text-center py-6 text-sm text-gray-400 border border-dashed rounded-lg">
+            No hay variables definidas.
+          </div>
         )}
       </div>
     </div>
   );
-} 
+}

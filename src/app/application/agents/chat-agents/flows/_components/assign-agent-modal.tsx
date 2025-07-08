@@ -1,5 +1,11 @@
 import type { ChatAgentWithWorkflows } from "@/types/agent";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -7,7 +13,10 @@ import { Check, RefreshCw, ArrowRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { toast } from "sonner";
-import { useAllChatAgents, useUpdateChatAgent } from "@/hooks/use-all-chat-agents";
+import {
+  useAllChatAgents,
+  useUpdateChatAgent,
+} from "@/hooks/use-all-chat-agents";
 import type { ChatAgentFormData } from "@/context/chat-agent-context";
 
 interface AssignAgentModalProps {
@@ -17,7 +26,12 @@ interface AssignAgentModalProps {
   onAgentAssigned?: (agentId: string) => void;
 }
 
-export const AssignAgentModal = ({ open, onOpenChange, workflowId, onAgentAssigned }: AssignAgentModalProps) => {
+export const AssignAgentModal = ({
+  open,
+  onOpenChange,
+  workflowId,
+  onAgentAssigned,
+}: AssignAgentModalProps) => {
   const router = useRouter();
   const { data: agentsQuery, isLoading } = useAllChatAgents();
   const updateAgent = useUpdateChatAgent();
@@ -27,7 +41,9 @@ export const AssignAgentModal = ({ open, onOpenChange, workflowId, onAgentAssign
   // Si el usuario no tiene agentes, redirigimos para que cree uno
   useEffect(() => {
     if (open && !isLoading && agents.length === 0) {
-      toast.info("No tienes agentes de chat aún. Crea uno para poder asignarlo.");
+      toast.info(
+        "No tienes agentes de chat aún. Crea uno para poder asignarlo.",
+      );
       router.push("/application/agents/chat-agents/agents");
     }
   }, [open, isLoading, agents.length, router]);
@@ -58,7 +74,7 @@ export const AssignAgentModal = ({ open, onOpenChange, workflowId, onAgentAssign
         onError: () => {
           toast.error("Error al asignar el agente. Intenta de nuevo.");
         },
-      }
+      },
     );
   };
 
@@ -74,7 +90,9 @@ export const AssignAgentModal = ({ open, onOpenChange, workflowId, onAgentAssign
               <p className="text-sm text-gray-500">Cargando agentes...</p>
             ) : (
               agents.map((agent) => {
-                const assignedWorkflow = agent.workflows.find((w) => w.agentId === agent.id);
+                const assignedWorkflow = agent.workflows.find(
+                  (w) => w.agentId === agent.id,
+                );
                 const isAssignedToCurrent = assignedWorkflow?.id === workflowId;
                 const isBusy = !!assignedWorkflow && !isAssignedToCurrent;
 
@@ -84,12 +102,19 @@ export const AssignAgentModal = ({ open, onOpenChange, workflowId, onAgentAssign
                     className="flex items-center justify-between rounded-md border p-3 hover:bg-gray-50"
                   >
                     <div className="flex flex-col">
-                      <span className="font-medium text-gray-900">{agent.name}</span>
-                      <span className="text-xs text-gray-500 font-mono">{agent.id.slice(0, 8)}...</span>
+                      <span className="font-medium text-gray-900">
+                        {agent.name}
+                      </span>
+                      <span className="text-xs text-gray-500 font-mono">
+                        {agent.id.slice(0, 8)}...
+                      </span>
                     </div>
                     <div className="flex items-center gap-2">
                       {isAssignedToCurrent ? (
-                        <Badge variant="secondary" className="flex items-center gap-1">
+                        <Badge
+                          variant="secondary"
+                          className="flex items-center gap-1"
+                        >
                           <Check className="h-3 w-3" /> Asignado
                         </Badge>
                       ) : isBusy ? (
@@ -127,4 +152,4 @@ export const AssignAgentModal = ({ open, onOpenChange, workflowId, onAgentAssign
       </DialogContent>
     </Dialog>
   );
-}; 
+};

@@ -4,7 +4,7 @@ import { db } from "@/utils";
 import { checkUserSubscription } from "@/utils/checkSubscription";
 import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { v4 as uuidv4 } from 'uuid';
+import { v4 as uuidv4 } from "uuid";
 
 export const onCurrentUser = async () => {
   const user = await currentUser();
@@ -12,7 +12,7 @@ export const onCurrentUser = async () => {
     console.log("No hay user");
     throw new Error("User not authenticated on server.");
   }
-  
+
   // Devolver solo los datos serializables necesarios
   return {
     id: user.id,
@@ -27,7 +27,12 @@ export const onBoardUser = async (variantId?: string) => {
   try {
     const userExists = await db.user.findUnique({
       where: { clerkId: user.id },
-      select: { id: true, temporalVariantId: true, createdAt: true, updatedAt: true },
+      select: {
+        id: true,
+        temporalVariantId: true,
+        createdAt: true,
+        updatedAt: true,
+      },
     });
 
     let wasJustCreated = false;
@@ -35,7 +40,7 @@ export const onBoardUser = async (variantId?: string) => {
 
     if (!userExists) {
       try {
-        console.log('Creando usuario');
+        console.log("Creando usuario");
         finalUser = await db.user.create({
           data: {
             id: uuidv4(),
@@ -49,17 +54,17 @@ export const onBoardUser = async (variantId?: string) => {
         });
         wasJustCreated = true;
       } catch (error: any) {
-        if (error.code === 'P2002') {
-          console.log('Usuario ya existe');
+        if (error.code === "P2002") {
+          console.log("Usuario ya existe");
           // Race condition: another request created the user. We can proceed as if it existed.
         } else {
           throw error;
         }
       }
     }
-    
+
     if (wasJustCreated && finalUser) {
-      console.log('Creando datos iniciales para el nuevo usuario');
+      console.log("Creando datos iniciales para el nuevo usuario");
 
       const initialTags = [
         { name: "Tecnología", color: "#3b82f6", userId: finalUser.id },
@@ -68,7 +73,11 @@ export const onBoardUser = async (variantId?: string) => {
         { name: "Salud", color: "#ec4899", userId: finalUser.id },
         { name: "Manufactura", color: "#8b5cf6", userId: finalUser.id },
         { name: "Biotecnología", color: "#06b6d4", userId: finalUser.id },
-        { name: "Inteligencia Artificial", color: "#f43f5e", userId: finalUser.id },
+        {
+          name: "Inteligencia Artificial",
+          color: "#f43f5e",
+          userId: finalUser.id,
+        },
         { name: "Negocios", color: "#6366f1", userId: finalUser.id },
         { name: "Educación ", color: "#84cc16", userId: finalUser.id },
         { name: "Servicios", color: "#ef4444", userId: finalUser.id },
@@ -83,9 +92,24 @@ export const onBoardUser = async (variantId?: string) => {
 
       const initialStages = [
         { id: "new", name: "Nuevo", color: "#3b82f6", userId: finalUser.id },
-        { id: "qualified", name: "Calificado", color: "#10b981", userId: finalUser.id },
-        { id: "negotiation", name: "Negociación", color: "#f59e0b", userId: finalUser.id },
-        { id: "closed", name: "Cerrado", color: "#8b5cf6", userId: finalUser.id },
+        {
+          id: "qualified",
+          name: "Calificado",
+          color: "#10b981",
+          userId: finalUser.id,
+        },
+        {
+          id: "negotiation",
+          name: "Negociación",
+          color: "#f59e0b",
+          userId: finalUser.id,
+        },
+        {
+          id: "closed",
+          name: "Cerrado",
+          color: "#8b5cf6",
+          userId: finalUser.id,
+        },
       ];
       console.log("Creando las stages del CRM");
       for (const stage of initialStages) {
@@ -129,11 +153,13 @@ export const onBoardUser = async (variantId?: string) => {
       agents: fullUser.agents,
     };
   } catch (error: any) {
-    console.error("Error during database operation in onBoardUser:", error.message);
+    console.error(
+      "Error during database operation in onBoardUser:",
+      error.message,
+    );
     throw error;
   }
 };
-
 
 export async function getUserSubscription() {
   const user = await onBoardUser();
@@ -155,15 +181,15 @@ export const getUserCredits = async () => {
     select: {
       id: true, // Este es el UUID que necesitamos
       initialAmountCredits: true,
-    }
+    },
   });
 
   if (!internalUser) {
     // Esto no debería pasar si el usuario ha pasado por onBoardUser
     return {
       initialAmountCredits: 0,
-      amountCredits: 0
-    }
+      amountCredits: 0,
+    };
   }
 
   // Ahora, usamos el internalUser.id (UUID) para buscar la suscripción
@@ -171,11 +197,11 @@ export const getUserCredits = async () => {
     where: {
       userId: internalUser.id, // Usamos el ID de nuestra tabla, no el de Clerk
       status: "ACTIVE",
-    }
-  })
+    },
+  });
 
   return {
     initialAmountCredits: internalUser.initialAmountCredits,
-    amountCredits: subscription?.currentCredits ?? 0 // Devuelve 0 si no hay suscripción
-  }
-}
+    amountCredits: subscription?.currentCredits ?? 0, // Devuelve 0 si no hay suscripción
+  };
+};

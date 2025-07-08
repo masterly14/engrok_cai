@@ -24,7 +24,8 @@ export function useContactMessages(contactId: string | undefined) {
     },
     initialPageParam: 1,
     getNextPageParam: (lastPage: MessageResponse) => {
-      if (!lastPage.data || lastPage.data.length < MESSAGES_PER_PAGE) return undefined;
+      if (!lastPage.data || lastPage.data.length < MESSAGES_PER_PAGE)
+        return undefined;
       return lastPage.nextPage;
     },
     enabled: !!contactId,
@@ -36,16 +37,17 @@ export function useContactMessages(contactId: string | undefined) {
 
   // Concatenamos todas las páginas en orden correcto
   // Las páginas más recientes van al final del array
-  const allMessages = (messagesData as any)?.pages?.flatMap((page: any) => 
-    page.status === 200 ? page.data : []
-  ) ?? [];
+  const allMessages =
+    (messagesData as any)?.pages?.flatMap((page: any) =>
+      page.status === 200 ? page.data : [],
+    ) ?? [];
 
-  return { 
+  return {
     messagesData: { data: allMessages },
     messagesLoading,
     messagesError,
     fetchNextPage,
     hasNextPage,
-    isFetchingNextPage
+    isFetchingNextPage,
   };
-} 
+}

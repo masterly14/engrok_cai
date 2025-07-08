@@ -16,7 +16,7 @@ export async function GET() {
     });
 
     console.log("[API] Knowledge bases fetched", knowledgeBases);
-    
+
     return NextResponse.json(knowledgeBases);
   } catch (err) {
     console.error("[API] Error fetching knowledge bases", err);
@@ -25,4 +25,4 @@ export async function GET() {
       { status: 500 },
     );
   }
-} 
+}

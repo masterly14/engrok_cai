@@ -65,7 +65,6 @@ export default function FileUploader({ onUploaded }: FileUploaderProps) {
       // Limpieza
       setSelectedFiles([]);
       if (inputRef.current) inputRef.current.value = "";
-
     } catch (err: any) {
       console.error(err);
       toast(err.message || "Error desconocido", {
@@ -98,9 +97,7 @@ export default function FileUploader({ onUploaded }: FileUploaderProps) {
         </ul>
       )}
 
-      {isUploading && (
-        <Progress value={progress} className="w-full max-w-md" />
-      )}
+      {isUploading && <Progress value={progress} className="w-full max-w-md" />}
 
       <Button
         onClick={handleUpload}
@@ -112,4 +109,4 @@ export default function FileUploader({ onUploaded }: FileUploaderProps) {
       </Button>
     </div>
   );
-} 
+}

@@ -15,5 +15,9 @@ export const useAllWorkflows = () => {
     },
   });
 
-  return { workflowsData: data, workflowsLoading: isLoading, workflowsError: error };
-}; 
+  return {
+    workflowsData: data,
+    workflowsLoading: isLoading,
+    workflowsError: error,
+  };
+};

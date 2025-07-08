@@ -10,11 +10,9 @@ export async function POST(req: Request) {
     );
   }
 
-
   const user = await db.user.findUnique({ where: { email } });
   if (!user)
     return NextResponse.json({ error: "User not found" }, { status: 404 });
 
-  
   return NextResponse.json({ ok: true, received: true });
-} 
+}

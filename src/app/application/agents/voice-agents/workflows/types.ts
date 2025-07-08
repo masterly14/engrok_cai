@@ -41,10 +41,10 @@ export interface ConversationNodeData extends BaseNodeData {
 }
 
 export interface IntegrationNodeData {
-  type: 'integration';
+  type: "integration";
   label: string;
   name: string;
-  integrationType: 'custom-api' | 'google-sheet' | 'google-calendar';
+  integrationType: "custom-api" | "google-sheet" | "google-calendar";
 
   // Google Sheets
   spreadsheetId?: string;
@@ -63,24 +63,24 @@ export interface IntegrationNodeData {
   isDynamicStartTime?: boolean;
 
   // Google Calendar extra
-  calendarAction?: 'availability' | 'createEvent';
+  calendarAction?: "availability" | "createEvent";
   rangeDays?: number;
 
   // Custom API
   url?: string;
-  method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
+  method?: "GET" | "POST" | "PUT" | "DELETE";
   headers?: Record<string, string>;
   body?: Record<string, any>;
 }
 
 export interface TransferCallNodeData extends BaseNodeData {
-    type: "transferCall";
-    number: string;
-    message: string;
+  type: "transferCall";
+  number: string;
+  message: string;
 }
 
 export interface EndCallNodeData extends BaseNodeData {
-    type: "endCall";
+  type: "endCall";
 }
 
 export interface ApiRequestNodeData extends BaseNodeData {
@@ -93,6 +93,11 @@ export interface ApiRequestNodeData extends BaseNodeData {
 
 // --- Objeto Node de React Flow con nuestra data tipada ---
 
-export type WorkflowNodeData = ConversationNodeData | IntegrationNodeData | TransferCallNodeData | EndCallNodeData | ApiRequestNodeData;
+export type WorkflowNodeData =
+  | ConversationNodeData
+  | IntegrationNodeData
+  | TransferCallNodeData
+  | EndCallNodeData
+  | ApiRequestNodeData;
 
-export type WorkflowNode = Node<WorkflowNodeData>; 
+export type WorkflowNode = Node<WorkflowNodeData>;

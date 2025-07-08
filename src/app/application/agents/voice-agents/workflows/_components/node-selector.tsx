@@ -95,7 +95,7 @@ const getNodeColor = (type: string) => {
     case "endCall":
       return "from-red-500 to-rose-600";
     case "apiRequest":
-        return "from-purple-500 to-violet-600";
+      return "from-purple-500 to-violet-600";
     default:
       return "from-gray-500 to-gray-600";
   }
@@ -109,7 +109,7 @@ export function NodeSelector({ onSelect, onClose }: NodeSelectorProps) {
     (node) =>
       (activeTab === "all" || node.category === activeTab) &&
       (node.label.toLowerCase().includes(search.toLowerCase()) ||
-        node.description.toLowerCase().includes(search.toLowerCase()))
+        node.description.toLowerCase().includes(search.toLowerCase())),
   );
 
   return (
@@ -123,7 +123,12 @@ export function NodeSelector({ onSelect, onClose }: NodeSelectorProps) {
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
           <h3 className="font-semibold text-gray-900 text-lg">Add a Node</h3>
-          <Button variant="ghost" size="sm" onClick={onClose} className="h-8 w-8 p-0 rounded-full hover:bg-gray-100">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClose}
+            className="h-8 w-8 p-0 rounded-full hover:bg-gray-100"
+          >
             <X className="h-4 w-4" />
           </Button>
         </div>
@@ -149,7 +154,11 @@ export function NodeSelector({ onSelect, onClose }: NodeSelectorProps) {
                 All
               </TabsTrigger>
               {nodeCategories.map((category) => (
-                <TabsTrigger key={category.id} value={category.id} className="text-xs flex items-center gap-1.5">
+                <TabsTrigger
+                  key={category.id}
+                  value={category.id}
+                  className="text-xs flex items-center gap-1.5"
+                >
                   {category.icon}
                   {category.name}
                 </TabsTrigger>
@@ -161,7 +170,11 @@ export function NodeSelector({ onSelect, onClose }: NodeSelectorProps) {
             <div className="p-3 max-h-[320px] overflow-y-auto">
               <div className="grid grid-cols-2 gap-2">
                 {filteredNodes.map((option) => (
-                  <motion.div key={option.type} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                  <motion.div
+                    key={option.type}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
                     <Button
                       variant="ghost"
                       className="w-full h-auto p-0 overflow-hidden bg-white hover:bg-gray-50 shadow-sm border border-gray-200 rounded-lg"
@@ -172,13 +185,19 @@ export function NodeSelector({ onSelect, onClose }: NodeSelectorProps) {
                           className={`w-full py-3 px-3 bg-gradient-to-r ${getNodeColor(option.type)} flex items-center justify-between`}
                         >
                           <div className="flex items-center gap-2">
-                            <div className="bg-white/20 rounded-md p-1.5">{option.icon}</div>
-                            <span className="font-medium text-white">{option.label}</span>
+                            <div className="bg-white/20 rounded-md p-1.5">
+                              {option.icon}
+                            </div>
+                            <span className="font-medium text-white">
+                              {option.label}
+                            </span>
                           </div>
                           <ArrowRightCircle className="h-4 w-4 text-white/70" />
                         </div>
                         <div className="p-2 text-left">
-                          <span className="text-xs text-gray-500 font-mono block mt-1">{option.shortcut}</span>
+                          <span className="text-xs text-gray-500 font-mono block mt-1">
+                            {option.shortcut}
+                          </span>
                         </div>
                       </div>
                     </Button>
@@ -187,7 +206,9 @@ export function NodeSelector({ onSelect, onClose }: NodeSelectorProps) {
               </div>
 
               {filteredNodes.length === 0 && (
-                <div className="text-center py-8 text-gray-500">No nodes match your search</div>
+                <div className="text-center py-8 text-gray-500">
+                  No nodes match your search
+                </div>
               )}
             </div>
           </TabsContent>

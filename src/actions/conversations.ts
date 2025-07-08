@@ -19,8 +19,7 @@ export const getAgentById = async (agentId: string) => {
     },
   });
 
-  if (!agent)
-    return { status: 404, message: "Agent not found" } as const;
+  if (!agent) return { status: 404, message: "Agent not found" } as const;
 
   return { status: 200, data: agent } as const;
 };
@@ -34,8 +33,7 @@ export const getAgentConversations = async (agentId: string) => {
   const agent = await db.chatAgent.findFirst({
     where: { id: agentId, userId: user.data.id },
   });
-  if (!agent)
-    return { status: 404, message: "Agent not found" } as const;
+  if (!agent) return { status: 404, message: "Agent not found" } as const;
 
   const contacts = await db.chatContact.findMany({
     where: { chatAgentId: agentId },
@@ -65,7 +63,10 @@ export const getAgentConversations = async (agentId: string) => {
 };
 
 // Recuperar los mensajes de un contacto concreto
-export const getMessagesByContact = async (contactId: string, options?: { page?: number; limit?: number }) => {
+export const getMessagesByContact = async (
+  contactId: string,
+  options?: { page?: number; limit?: number },
+) => {
   const user = await onBoardUser();
   if (!user?.data?.id) throw new Error("User not found");
 
@@ -92,8 +93,8 @@ export const getMessagesByContact = async (contactId: string, options?: { page?:
         },
       },
       _count: {
-        select: { messages: true }
-      }
+        select: { messages: true },
+      },
     },
   });
 
@@ -110,11 +111,11 @@ export const getMessagesByContact = async (contactId: string, options?: { page?:
   const totalMessages = contact._count.messages;
   const hasMore = skip + limit < totalMessages;
 
-  return { 
-    status: 200, 
+  return {
+    status: 200,
     data: formattedMessages,
     nextPage: hasMore ? page + 1 : undefined,
-    totalMessages
+    totalMessages,
   } as const;
 };
 
@@ -132,19 +133,19 @@ export const getAgentWithContacts = async (agentId: string) => {
     include: {
       chatContacts: {
         orderBy: {
-          updatedAt: 'desc'
+          updatedAt: "desc",
         },
         include: {
           messages: {
             orderBy: {
-              timestamp: 'desc'
+              timestamp: "desc",
             },
           },
           sessions: {
             where: { status: { in: ["ACTIVE", "NEEDS_ATTENTION"] } },
-          }
-        }
-      }
+          },
+        },
+      },
     },
   });
 
@@ -159,7 +160,7 @@ export const getAgentWithContacts = async (agentId: string) => {
  */
 export const getMessagesForConversation = async (
   agentId: string,
-  contactPhone: string
+  contactPhone: string,
 ) => {
   const user = await onBoardUser();
   if (!user?.data?.id) {
@@ -179,7 +180,7 @@ export const getMessagesForConversation = async (
 
   if (!contact) {
     console.warn(
-      `Attempt to access messages for contact ${contactPhone} failed. Contact not found for agent ${agentId}.`
+      `Attempt to access messages for contact ${contactPhone} failed. Contact not found for agent ${agentId}.`,
     );
     return [];
   }
@@ -311,7 +312,9 @@ export const sendManualMessage = async ({
     }
 
     // Map string type to Prisma enum
-    const prismaType = MessageType[type.toUpperCase() as keyof typeof MessageType] || MessageType.TEXT;
+    const prismaType =
+      MessageType[type.toUpperCase() as keyof typeof MessageType] ||
+      MessageType.TEXT;
 
     const newMessage = await db.message.create({
       data: {
@@ -333,8 +336,12 @@ export const sendManualMessage = async ({
 
     return { success: true, message: newMessage };
   } catch (error: any) {
-    console.error("[sendManualMessage] Error:", error.response?.data || error.message);
-    const errorMessage = error.response?.data?.error?.message || "An unknown error occurred.";
+    console.error(
+      "[sendManualMessage] Error:",
+      error.response?.data || error.message,
+    );
+    const errorMessage =
+      error.response?.data?.error?.message || "An unknown error occurred.";
     return { error: `Failed to send message: ${errorMessage}` };
   }
 };

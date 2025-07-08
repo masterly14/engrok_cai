@@ -9,7 +9,11 @@ interface ApiRequestNodeProps {
   selected?: boolean;
 }
 
-export function ApiRequestNode({ data, isConnectable, selected }: ApiRequestNodeProps) {
+export function ApiRequestNode({
+  data,
+  isConnectable,
+  selected,
+}: ApiRequestNodeProps) {
   return (
     <motion.div
       initial={{ scale: 0.8, opacity: 0 }}
@@ -29,7 +33,9 @@ export function ApiRequestNode({ data, isConnectable, selected }: ApiRequestNode
         </div>
       </div>
       <div className="bg-white border-x border-b border-gray-200 p-3 rounded-b-lg">
-        <div className="text-sm text-gray-600">Haz una llamada a una API Externa.</div>
+        <div className="text-sm text-gray-600">
+          Haz una llamada a una API Externa.
+        </div>
       </div>
       <Handle
         type="target"

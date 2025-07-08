@@ -5,7 +5,7 @@ import { onBoardUser } from "./user";
 
 /**
  * Envia un mensaje multimedia (imagen o documento) y lo guarda en la base de datos.
- * NOTA: Esta acción únicamente persiste el mensaje en la base de datos.  
+ * NOTA: Esta acción únicamente persiste el mensaje en la base de datos.
  * Si quieres integrar el envío real por WhatsApp/Facebook, llama al servicio correspondiente
  * antes de crear el registro (por ejemplo `whatsappService.sendMessage`).
  */
@@ -13,7 +13,7 @@ export const sendMediaMessage = async (
   agentId: string,
   contactId: string,
   mediaUrl: string,
-  mediaType: "IMAGE" | "DOCUMENT"
+  mediaType: "IMAGE" | "DOCUMENT",
 ) => {
   const user = await onBoardUser();
   if (!user?.data?.id) {
@@ -49,4 +49,4 @@ export const sendMediaMessage = async (
   });
 
   return { status: 201 as const, data: message };
-}; 
+};

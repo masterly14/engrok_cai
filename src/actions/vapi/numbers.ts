@@ -33,7 +33,6 @@ export const createPhoneNumber = async (params: CreatePhoneNumberParams) => {
     throw new Error("User not found");
   }
 
-
   let vapiResponse;
   // Create phone number in Vapi
   if (params.provider === "twilio") {
@@ -142,7 +141,6 @@ export const getAllPhoneNumbers = async () => {
   return numbers;
 };
 
-
 export const updatePhoneNumber = async (params: any) => {
   try {
     const user = await onBoardUser();
@@ -160,11 +158,19 @@ export const updatePhoneNumber = async (params: any) => {
       throw new Error("Phone number not found or not registered with Vapi.");
     }
 
-    const vapiPayload: { assistantId?: string; workflowId?: string, name?: string } = {
-      name: name
+    const vapiPayload: {
+      assistantId?: string;
+      workflowId?: string;
+      name?: string;
+    } = {
+      name: name,
     };
-    let localPayload: { assistantId?: string | null; workflowId?: string | null; name?: string } = {
-      name: name
+    let localPayload: {
+      assistantId?: string | null;
+      workflowId?: string | null;
+      name?: string;
+    } = {
+      name: name,
     };
 
     if (workflowId) {
@@ -189,19 +195,24 @@ export const updatePhoneNumber = async (params: any) => {
       localPayload.workflowId = null;
     }
 
-    const response = await fetch(`https://api.vapi.ai/phone-number/${phoneNumber.vapiId}`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.VAPI_API_KEY}`,
+    const response = await fetch(
+      `https://api.vapi.ai/phone-number/${phoneNumber.vapiId}`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.VAPI_API_KEY}`,
+        },
+        body: JSON.stringify(vapiPayload),
       },
-      body: JSON.stringify(vapiPayload),
-    });
+    );
 
     if (!response.ok) {
       const errorData = await response.json();
       console.error("Vapi API error:", errorData);
-      throw new Error(errorData.message || "Failed to update phone number in Vapi.");
+      throw new Error(
+        errorData.message || "Failed to update phone number in Vapi.",
+      );
     }
 
     const updatedPhoneNumberInVapi = await response.json();

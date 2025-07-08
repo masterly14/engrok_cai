@@ -1,37 +1,51 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { MessageSquare, Database, Globe, PowerOff, Save, GitBranch, Search, X, Sparkles, Zap, User, BrainCircuit, Clock } from "lucide-react"
-import { useState, useMemo } from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import { Card } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import {
+  MessageSquare,
+  Database,
+  Globe,
+  PowerOff,
+  Save,
+  GitBranch,
+  Search,
+  X,
+  Sparkles,
+  Zap,
+  User,
+  BrainCircuit,
+  Clock,
+} from "lucide-react";
+import { useState, useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 interface NodeSelectorProps {
-  onSelect: (nodeType: string) => void
-  onClose: () => void
+  onSelect: (nodeType: string) => void;
+  onClose: () => void;
 }
 
 type NodeCategory = {
-  id: string
-  name: string
-  icon: React.ReactNode
-  color: string
-  description: string
-}
+  id: string;
+  name: string;
+  icon: React.ReactNode;
+  color: string;
+  description: string;
+};
 
 type NodeOption = {
-  type: string
-  label: string
-  icon: React.ReactNode
-  description: string
-  category: string
-  tags: string[]
-  isPopular?: boolean
-  isNew?: boolean
-}
+  type: string;
+  label: string;
+  icon: React.ReactNode;
+  description: string;
+  category: string;
+  tags: string[];
+  isPopular?: boolean;
+  isNew?: boolean;
+};
 
 const nodeCategories: NodeCategory[] = [
   {
@@ -48,7 +62,7 @@ const nodeCategories: NodeCategory[] = [
     color: "from-emerald-500 to-teal-500",
     description: "Flow control and decision making",
   },
-]
+];
 
 const nodeOptions: NodeOption[] = [
   {
@@ -147,28 +161,31 @@ const nodeOptions: NodeOption[] = [
     tags: ["api", "http", "external"],
     isNew: true,
   },
-]
+];
 
 export function NodeSelector({ onSelect, onClose }: NodeSelectorProps) {
-  const [search, setSearch] = useState("")
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
+  const [search, setSearch] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   const filteredNodes = useMemo(() => {
     return nodeOptions.filter((node) => {
       const matchesSearch =
         node.label.toLowerCase().includes(search.toLowerCase()) ||
         node.description.toLowerCase().includes(search.toLowerCase()) ||
-        node.tags.some((tag) => tag.toLowerCase().includes(search.toLowerCase()))
+        node.tags.some((tag) =>
+          tag.toLowerCase().includes(search.toLowerCase()),
+        );
 
-      const matchesCategory = !selectedCategory || node.category === selectedCategory
+      const matchesCategory =
+        !selectedCategory || node.category === selectedCategory;
 
-      return matchesSearch && matchesCategory
-    })
-  }, [search, selectedCategory])
+      return matchesSearch && matchesCategory;
+    });
+  }, [search, selectedCategory]);
 
   const getCategoryInfo = (categoryId: string) => {
-    return nodeCategories.find((cat) => cat.id === categoryId)
-  }
+    return nodeCategories.find((cat) => cat.id === categoryId);
+  };
 
   return (
     <motion.div
@@ -183,8 +200,12 @@ export function NodeSelector({ onSelect, onClose }: NodeSelectorProps) {
         <div className="relative bg-gradient-to-r from-gray-50 to-white border-b border-gray-100">
           <div className="flex items-center justify-between p-5">
             <div>
-              <h3 className="font-semibold text-gray-900 text-base">Agregar nodo</h3>
-              <p className="text-xs text-gray-500 mt-0.5">Elige un componente para tu flujo</p>
+              <h3 className="font-semibold text-gray-900 text-base">
+                Agregar nodo
+              </h3>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Elige un componente para tu flujo
+              </p>
             </div>
             <Button
               variant="ghost"
@@ -192,7 +213,7 @@ export function NodeSelector({ onSelect, onClose }: NodeSelectorProps) {
               onClick={onClose}
               className="h-8 w-8 hover:bg-gray-100 rounded-lg transition-colors"
             >
-              <X className="h-4 w-4 text-gray-500" /> 
+              <X className="h-4 w-4 text-gray-500" />
             </Button>
           </div>
         </div>
@@ -221,12 +242,14 @@ export function NodeSelector({ onSelect, onClose }: NodeSelectorProps) {
               onClick={() => setSelectedCategory(null)}
               className={`whitespace-nowrap text-xs font-medium rounded-md h-8 px-3 ${selectedCategory === null ? "bg-blue-100 text-blue-700 hover:bg-blue-200" : "text-gray-600 hover:bg-gray-100"}`}
             >
-            Todos
+              Todos
             </Button>
             {nodeCategories.map((category) => (
               <Button
                 key={category.id}
-                variant={selectedCategory === category.id ? "secondary" : "ghost"}
+                variant={
+                  selectedCategory === category.id ? "secondary" : "ghost"
+                }
                 size="sm"
                 onClick={() => setSelectedCategory(category.id)}
                 className={`whitespace-nowrap text-xs font-medium flex items-center gap-1.5 rounded-md h-8 px-3 ${selectedCategory === category.id ? "bg-blue-100 text-blue-700 hover:bg-blue-200" : "text-gray-600 hover:bg-gray-100"}`}
@@ -246,7 +269,7 @@ export function NodeSelector({ onSelect, onClose }: NodeSelectorProps) {
             {filteredNodes.length > 0 ? (
               <div className="p-2 space-y-1">
                 {filteredNodes.map((node, index) => {
-                  const categoryInfo = getCategoryInfo(node.category)
+                  const categoryInfo = getCategoryInfo(node.category);
                   return (
                     <motion.div
                       key={node.type}
@@ -291,7 +314,9 @@ export function NodeSelector({ onSelect, onClose }: NodeSelectorProps) {
                               </h4>
                               {/* Badges can be added here if needed */}
                             </div>
-                            <p className="text-xs text-gray-500 line-clamp-2">{node.description}</p>
+                            <p className="text-xs text-gray-500 line-clamp-2">
+                              {node.description}
+                            </p>
                           </div>
 
                           <div className="flex items-center justify-center w-5 h-5 rounded-full bg-gray-100 group-hover:bg-gray-200 transition-colors opacity-0 group-hover:opacity-100 scale-90 group-hover:scale-100">
@@ -301,27 +326,40 @@ export function NodeSelector({ onSelect, onClose }: NodeSelectorProps) {
                               stroke="currentColor"
                               viewBox="0 0 24 24"
                             >
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" />
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={3}
+                                d="M9 5l7 7-7 7"
+                              />
                             </svg>
                           </div>
                         </div>
                       </Button>
                     </motion.div>
-                  )
+                  );
                 })}
               </div>
             ) : (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-12 px-4">
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-center py-12 px-4"
+              >
                 <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
                   <Search className="h-5 w-5 text-gray-400" />
                 </div>
-                <h4 className="font-medium text-gray-700 mb-1 text-sm">No se encontraron nodos</h4>
-                <p className="text-xs text-gray-500">Intenta con una búsqueda o categoría diferente.</p>
+                <h4 className="font-medium text-gray-700 mb-1 text-sm">
+                  No se encontraron nodos
+                </h4>
+                <p className="text-xs text-gray-500">
+                  Intenta con una búsqueda o categoría diferente.
+                </p>
               </motion.div>
             )}
           </AnimatePresence>
         </div>
       </Card>
     </motion.div>
-  )
+  );
 }

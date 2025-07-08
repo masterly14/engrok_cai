@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState, useCallback, useRef } from "react"
+import { useState, useCallback, useRef } from "react";
 import ReactFlow, {
   ReactFlowProvider,
   addEdge,
@@ -15,18 +15,18 @@ import ReactFlow, {
   type Node,
   type NodeTypes,
   BackgroundVariant,
-} from "reactflow"
-import "reactflow/dist/style.css"
-import { ConversationNode } from "./nodes/conversation-node"
-import { EndCallNode } from "./nodes/end-call-node"
-import { ApiRequestNode } from "./nodes/api-request-node"
-import { IntegrationNode } from "./nodes/integration-node"
-import { TransferCallNode } from "./nodes/trasfer-call-node"
-import { conditionEdges } from "./edges/condition-edges"
-import type { WorkflowTemplate } from "./template-selector"
-import { NodeConfigurationSheet } from "./node-configuration"
-import { useWorkflowData } from "./hooks/use-workflow-data"
-import { v4 as uuidv4 } from "uuid"
+} from "reactflow";
+import "reactflow/dist/style.css";
+import { ConversationNode } from "./nodes/conversation-node";
+import { EndCallNode } from "./nodes/end-call-node";
+import { ApiRequestNode } from "./nodes/api-request-node";
+import { IntegrationNode } from "./nodes/integration-node";
+import { TransferCallNode } from "./nodes/trasfer-call-node";
+import { conditionEdges } from "./edges/condition-edges";
+import type { WorkflowTemplate } from "./template-selector";
+import { NodeConfigurationSheet } from "./node-configuration";
+import { useWorkflowData } from "./hooks/use-workflow-data";
+import { v4 as uuidv4 } from "uuid";
 import type {
   WorkflowNode,
   ConversationNodeData,
@@ -34,14 +34,14 @@ import type {
   TransferCallNodeData,
   EndCallNodeData,
   WorkflowNodeData,
-} from "../types"
-import { WorkflowSidebar } from "./workflow-sidebar"
-import { WorkflowToolbar } from "./workflow-toolbar"
-import { CreateTriggerModal } from "./create-trigger-modal"
+} from "../types";
+import { WorkflowSidebar } from "./workflow-sidebar";
+import { WorkflowToolbar } from "./workflow-toolbar";
+import { CreateTriggerModal } from "./create-trigger-modal";
 
 // Initial nodes and edges
-const initialNodes: WorkflowNode[] = []
-const initialEdges: Edge[] = []
+const initialNodes: WorkflowNode[] = [];
+const initialEdges: Edge[] = [];
 
 // Define custom node types
 const nodeTypes: NodeTypes = {
@@ -50,21 +50,21 @@ const nodeTypes: NodeTypes = {
   endCall: EndCallNode,
   apiRequest: ApiRequestNode,
   integration: IntegrationNode,
-}
+};
 
 // Add after the nodeTypes definition
 const edgeTypes = {
   smartCondition: conditionEdges,
-}
+};
 
 export function FlowBuilder({ workflowId }: { workflowId: string }) {
-  const reactFlowWrapper = useRef<HTMLDivElement>(null)
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
-  const [reactFlowInstance, setReactFlowInstance] = useState<any>(null)
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
-  const [sidebarOpen, setSidebarOpen] = useState(true)
-  const [isTriggerModalOpen, setIsTriggerModalOpen] = useState(false)
+  const reactFlowWrapper = useRef<HTMLDivElement>(null);
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [isTriggerModalOpen, setIsTriggerModalOpen] = useState(false);
 
   // Use workflow data hook
   const {
@@ -79,11 +79,11 @@ export function FlowBuilder({ workflowId }: { workflowId: string }) {
     workflowId,
     setNodes,
     setEdges,
-  })
+  });
 
   const handleAddTrigger = () => {
-    setIsTriggerModalOpen(true)
-  }
+    setIsTriggerModalOpen(true);
+  };
 
   // Handle connections between nodes
   const onConnect = useCallback(
@@ -93,24 +93,24 @@ export function FlowBuilder({ workflowId }: { workflowId: string }) {
         type: "smartCondition",
         data: { condition: { type: "ai", prompt: "Condition" } },
         animated: true,
-      }
-      setEdges((eds) => addEdge(newEdge, eds))
+      };
+      setEdges((eds) => addEdge(newEdge, eds));
     },
     [setEdges],
-  )
+  );
 
   // Add a new node to the canvas
   const addNode = useCallback(
     (nodeType: string) => {
-      if (!reactFlowInstance) return
+      if (!reactFlowInstance) return;
 
       const position = reactFlowInstance.project({
         x: reactFlowWrapper.current!.clientWidth / 2,
         y: reactFlowWrapper.current!.clientHeight / 2,
-      })
+      });
 
-      const nodeCount = nodes.length + 1
-      let newNode: WorkflowNode
+      const nodeCount = nodes.length + 1;
+      let newNode: WorkflowNode;
 
       switch (nodeType) {
         case "conversation":
@@ -127,8 +127,8 @@ export function FlowBuilder({ workflowId }: { workflowId: string }) {
               transcriber: { provider: "deepgram", model: "nova-2" },
               variables: [],
             } as ConversationNodeData,
-          }
-          break
+          };
+          break;
         case "integration":
           newNode = {
             id: uuidv4(),
@@ -140,8 +140,8 @@ export function FlowBuilder({ workflowId }: { workflowId: string }) {
               name: `integration_${nodeCount}`,
               integrationType: "custom-api",
             } as IntegrationNodeData,
-          }
-          break
+          };
+          break;
         case "transferCall":
           newNode = {
             id: uuidv4(),
@@ -154,8 +154,8 @@ export function FlowBuilder({ workflowId }: { workflowId: string }) {
               number: "",
               message: "",
             } as TransferCallNodeData,
-          }
-          break
+          };
+          break;
         case "endCall":
           newNode = {
             id: uuidv4(),
@@ -166,8 +166,8 @@ export function FlowBuilder({ workflowId }: { workflowId: string }) {
               label: `Finalizar Llamada ${nodeCount}`,
               name: `end_call_${nodeCount}`,
             } as EndCallNodeData,
-          }
-          break
+          };
+          break;
         case "apiRequest":
           newNode = {
             id: uuidv4(),
@@ -182,56 +182,63 @@ export function FlowBuilder({ workflowId }: { workflowId: string }) {
               headers: {},
               body: {},
             } as WorkflowNodeData,
-          }
-          break
+          };
+          break;
         default:
-          return
+          return;
       }
 
-      setNodes((nds) => nds.concat(newNode))
+      setNodes((nds) => nds.concat(newNode));
     },
     [nodes, reactFlowInstance, setNodes],
-  )
+  );
 
   // Handle template selection
   const handleTemplateSelect = useCallback(
     (template: WorkflowTemplate) => {
-      setNodes(template.nodes as Node[])
-      setEdges(template.edges as Edge[])
+      setNodes(template.nodes as Node[]);
+      setEdges(template.edges as Edge[]);
     },
     [setNodes, setEdges],
-  )
+  );
 
   // Find selected node
-  const selectedNode = nodes.find((n) => n.id === selectedNodeId) || null
+  const selectedNode = nodes.find((n) => n.id === selectedNodeId) || null;
 
   // Determine if the selected node is the first conversation node
-  const firstConversationNode = nodes.find((n) => n.type === "conversation")
+  const firstConversationNode = nodes.find((n) => n.type === "conversation");
   const isFirstConversationSelected =
-    selectedNode?.type === "conversation" && selectedNode.id === firstConversationNode?.id
+    selectedNode?.type === "conversation" &&
+    selectedNode.id === firstConversationNode?.id;
 
   // Handle node click to open configuration sheet
-  const onNodeClick = useCallback((_: React.MouseEvent, node: Node<WorkflowNodeData>) => {
-    setSelectedNodeId(node.id)
-  }, [])
+  const onNodeClick = useCallback(
+    (_: React.MouseEvent, node: Node<WorkflowNodeData>) => {
+      setSelectedNodeId(node.id);
+    },
+    [],
+  );
 
   // Update node function for the sheet components
-  const updateNode = (nodeId: string, dataUpdates: Partial<WorkflowNodeData>) => {
+  const updateNode = (
+    nodeId: string,
+    dataUpdates: Partial<WorkflowNodeData>,
+  ) => {
     setNodes(
       (prev) =>
         prev.map((node) => {
           if (node.id === nodeId) {
-            return { ...node, data: { ...node.data, ...dataUpdates } }
+            return { ...node, data: { ...node.data, ...dataUpdates } };
           }
-          return node
+          return node;
         }) as WorkflowNode[],
-    )
-  }
+    );
+  };
 
   const handleSaveWorkflow = async () => {
-    const success = await saveWorkflow(nodes, edges)
-    return success
-  }
+    const success = await saveWorkflow(nodes, edges);
+    return success;
+  };
 
   return (
     <div className="h-screen w-full bg-gray-50 flex">
@@ -285,7 +292,12 @@ export function FlowBuilder({ workflowId }: { workflowId: string }) {
               minZoom={0.1}
               maxZoom={2}
             >
-            <Background gap={20} size={1} color="#6b7280" variant={BackgroundVariant.Dots} />
+              <Background
+                gap={20}
+                size={1}
+                color="#6b7280"
+                variant={BackgroundVariant.Dots}
+              />
               <Controls
                 className="bg-gray-800 shadow-lg rounded-lg border border-gray-700 overflow-hidden"
                 showZoom={true}
@@ -312,5 +324,5 @@ export function FlowBuilder({ workflowId }: { workflowId: string }) {
         workflowId={workflowId}
       />
     </div>
-  )
+  );
 }

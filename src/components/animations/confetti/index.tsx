@@ -1,12 +1,12 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
+import { useEffect, useState } from "react";
 
 interface ConfettiProps {
-  duration?: number
-  pieces?: number
-  colors?: string[]
-  autoStart?: boolean
+  duration?: number;
+  pieces?: number;
+  colors?: string[];
+  autoStart?: boolean;
 }
 
 export default function Confetti({
@@ -31,33 +31,33 @@ export default function Confetti({
   ],
   autoStart = true,
 }: ConfettiProps) {
-  const [isActive, setIsActive] = useState(autoStart)
+  const [isActive, setIsActive] = useState(autoStart);
 
   useEffect(() => {
-    if (!isActive) return
+    if (!isActive) return;
 
     // Create canvas element
-    const canvas = document.createElement("canvas")
-    canvas.style.position = "fixed"
-    canvas.style.top = "0"
-    canvas.style.left = "0"
-    canvas.style.width = "100%"
-    canvas.style.height = "100%"
-    canvas.style.pointerEvents = "none"
-    canvas.style.zIndex = "9999"
-    document.body.appendChild(canvas)
+    const canvas = document.createElement("canvas");
+    canvas.style.position = "fixed";
+    canvas.style.top = "0";
+    canvas.style.left = "0";
+    canvas.style.width = "100%";
+    canvas.style.height = "100%";
+    canvas.style.pointerEvents = "none";
+    canvas.style.zIndex = "9999";
+    document.body.appendChild(canvas);
 
     // Set canvas size
     const setCanvasSize = () => {
-      canvas.width = window.innerWidth
-      canvas.height = window.innerHeight
-    }
-    setCanvasSize()
-    window.addEventListener("resize", setCanvasSize)
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+    setCanvasSize();
+    window.addEventListener("resize", setCanvasSize);
 
     // Create confetti pieces
-    const ctx = canvas.getContext("2d")
-    if (!ctx) return
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
 
     const confettiPieces = Array.from({ length: pieces }, () => ({
       x: Math.random() * canvas.width,
@@ -70,63 +70,67 @@ export default function Confetti({
       speedY: 1 + Math.random() * 5,
       gravity: 0.1 + Math.random() * 0.1,
       opacity: 1,
-    }))
+    }));
 
     // Animation
-    let animationFrame: number
-    const startTime = Date.now()
+    let animationFrame: number;
+    const startTime = Date.now();
 
     const animate = () => {
-      const currentTime = Date.now()
-      const elapsed = currentTime - startTime
-      const progress = Math.min(elapsed / duration, 1)
+      const currentTime = Date.now();
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / duration, 1);
 
-      ctx.clearRect(0, 0, canvas.width, canvas.height)
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       confettiPieces.forEach((piece) => {
         // Update position
-        piece.x += piece.speedX
-        piece.y += piece.speedY
-        piece.speedY += piece.gravity
-        piece.rotation += piece.rotationSpeed
+        piece.x += piece.speedX;
+        piece.y += piece.speedY;
+        piece.speedY += piece.gravity;
+        piece.rotation += piece.rotationSpeed;
 
         // Fade out as animation progresses
         if (progress > 0.7) {
-          piece.opacity = (1 - progress) / 0.3
+          piece.opacity = (1 - progress) / 0.3;
         }
 
         // Draw confetti
-        ctx.save()
-        ctx.translate(piece.x, piece.y)
-        ctx.rotate((piece.rotation * Math.PI) / 180)
-        ctx.globalAlpha = piece.opacity
-        ctx.fillStyle = piece.color
-        ctx.fillRect(-piece.size / 2, -piece.size / 2, piece.size, piece.size / 3)
-        ctx.restore()
-      })
+        ctx.save();
+        ctx.translate(piece.x, piece.y);
+        ctx.rotate((piece.rotation * Math.PI) / 180);
+        ctx.globalAlpha = piece.opacity;
+        ctx.fillStyle = piece.color;
+        ctx.fillRect(
+          -piece.size / 2,
+          -piece.size / 2,
+          piece.size,
+          piece.size / 3,
+        );
+        ctx.restore();
+      });
 
       if (progress < 1) {
-        animationFrame = requestAnimationFrame(animate)
+        animationFrame = requestAnimationFrame(animate);
       } else {
         // Clean up
-        document.body.removeChild(canvas)
-        window.removeEventListener("resize", setCanvasSize)
-        setIsActive(false)
+        document.body.removeChild(canvas);
+        window.removeEventListener("resize", setCanvasSize);
+        setIsActive(false);
       }
-    }
+    };
 
-    animationFrame = requestAnimationFrame(animate)
+    animationFrame = requestAnimationFrame(animate);
 
     // Clean up
     return () => {
-      cancelAnimationFrame(animationFrame)
+      cancelAnimationFrame(animationFrame);
       if (document.body.contains(canvas)) {
-        document.body.removeChild(canvas)
+        document.body.removeChild(canvas);
       }
-      window.removeEventListener("resize", setCanvasSize)
-    }
-  }, [colors, duration, pieces, isActive])
+      window.removeEventListener("resize", setCanvasSize);
+    };
+  }, [colors, duration, pieces, isActive]);
 
-  return null
+  return null;
 }
-

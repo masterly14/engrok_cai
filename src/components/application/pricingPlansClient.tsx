@@ -18,7 +18,7 @@ type PlanUI = {
 export default function PricingPlansClient({
   plans,
   userId,
-  currentPlan
+  currentPlan,
 }: {
   plans: PlanUI[];
   userId: string | null;
@@ -42,7 +42,8 @@ export default function PricingPlansClient({
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
       {visiblePlans.map((plan, index) => {
         // Si el usuario ya tiene un plan activo, solo permitimos acción en ese plan
-        const hasCurrentPlan = currentPlan !== null && currentPlan !== undefined;
+        const hasCurrentPlan =
+          currentPlan !== null && currentPlan !== undefined;
         const isUserPlan = currentPlan === plan.name;
         const isDisabled = hasCurrentPlan && !isUserPlan;
         return (
@@ -68,7 +69,10 @@ export default function PricingPlansClient({
             <div className="relative z-10">
               <div className="text-center mb-8">
                 <h3 className="font-light text-2xl text-white mb-2 tracking-wide">
-                  {plan.name} {isUserPlan ? <span className="text-cyan-400"> - Tu plan actual</span> : null}
+                  {plan.name}{" "}
+                  {isUserPlan ? (
+                    <span className="text-cyan-400"> - Tu plan actual</span>
+                  ) : null}
                 </h3>
               </div>
               <div className="text-center mb-8">
@@ -78,7 +82,9 @@ export default function PricingPlansClient({
                       <span className="text-5xl font-light text-white tracking-tight">
                         ${Number(plan.price)}
                       </span>
-                      <span className="text-white/60 text-lg">/{plan.period ?? plan.interval ?? "mes"}</span>
+                      <span className="text-white/60 text-lg">
+                        /{plan.period ?? plan.interval ?? "mes"}
+                      </span>
                     </div>
                   </div>
                 ) : (
@@ -88,16 +94,21 @@ export default function PricingPlansClient({
                 )}
               </div>
               <div className="space-y-4 mb-8">
-                {(plan.ui?.features as string[]).map((feature: string, featureIndex: number) => (
-                  <div key={featureIndex} className="flex items-start space-x-3">
-                    <div className="w-5 h-5 bg-cyan-400/20 rounded-full flex items-center justify-center mt-0.5 flex-shrink-0">
-                      <Check className="h-3 w-3 text-cyan-400" />
+                {(plan.ui?.features as string[]).map(
+                  (feature: string, featureIndex: number) => (
+                    <div
+                      key={featureIndex}
+                      className="flex items-start space-x-3"
+                    >
+                      <div className="w-5 h-5 bg-cyan-400/20 rounded-full flex items-center justify-center mt-0.5 flex-shrink-0">
+                        <Check className="h-3 w-3 text-cyan-400" />
+                      </div>
+                      <span className="text-white/80 text-sm leading-relaxed tracking-wide">
+                        {feature}
+                      </span>
                     </div>
-                    <span className="text-white/80 text-sm leading-relaxed tracking-wide">
-                      {feature}
-                    </span>
-                  </div>
-                ))}
+                  ),
+                )}
               </div>
               <Button
                 className={`w-full font-light text-sm tracking-wide px-6 py-3 h-auto rounded-full transition-all duration-300 ${
@@ -105,12 +116,20 @@ export default function PricingPlansClient({
                     ? "bg-white text-black hover:bg-white/90 hover:scale-105"
                     : "bg-white/10 text-white hover:bg-white/20 border border-white/20 hover:border-white/40"
                 } ${isDisabled ? "opacity-50 cursor-not-allowed pointer-events-none" : ""}`}
-                onClick={isUserPlan ? () => {
-                  router.push("/application/credits");
-                } : () => handleCreateCheckout(Number(plan.variantId))}
+                onClick={
+                  isUserPlan
+                    ? () => {
+                        router.push("/application/credits");
+                      }
+                    : () => handleCreateCheckout(Number(plan.variantId))
+                }
                 disabled={isDisabled}
               >
-                {isUserPlan ? "Tu plan" : hasCurrentPlan ? "No disponible" : "Comenzar ahora"}
+                {isUserPlan
+                  ? "Tu plan"
+                  : hasCurrentPlan
+                    ? "No disponible"
+                    : "Comenzar ahora"}
                 <ArrowUpRight className="ml-2 h-4 w-4" />
               </Button>
             </div>

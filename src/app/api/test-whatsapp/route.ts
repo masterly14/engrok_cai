@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
     if (!from || !text) {
       return NextResponse.json(
         { message: "Los campos 'from' y 'text' son requeridos." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
       console.error(
         "[API /test-whatsapp] Error al llamar al webhook:",
         webhookResponse.status,
-        errorBody
+        errorBody,
       );
       return NextResponse.json(
         {
@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
           message: `Error al procesar el webhook: ${webhookResponse.statusText}`,
           details: errorBody,
         },
-        { status: webhookResponse.status }
+        { status: webhookResponse.status },
       );
     }
 
@@ -98,13 +98,13 @@ export async function POST(req: NextRequest) {
         success: true,
         message: "Mensaje de prueba procesado y enviado al webhook.",
       },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error) {
     console.error("[API /test-whatsapp] Error procesando la petición:", error);
     return NextResponse.json(
       { message: "Error interno del servidor." },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

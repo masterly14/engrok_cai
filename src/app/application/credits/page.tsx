@@ -21,7 +21,9 @@ export default function CreditsPage() {
       try {
         const res1 = await fetch("/api/credits/balance").then((r) => r.json());
         setBalance(res1.credits ?? 0);
-        const res2 = await fetch("/api/credits/ledger?take=100").then((r) => r.json());
+        const res2 = await fetch("/api/credits/ledger?take=100").then((r) =>
+          r.json(),
+        );
         setLedger(res2.data ?? []);
       } catch (e) {
         console.error(e);
@@ -36,7 +38,11 @@ export default function CreditsPage() {
         <h1 className="text-2xl font-semibold text-slate-800">Créditos</h1>
 
         {/* Balance actual */}
-        <CreditDisplay amount={balance} maxAmount={balance} className="w-full" />
+        <CreditDisplay
+          amount={balance}
+          maxAmount={balance}
+          className="w-full"
+        />
 
         {/* Histórico */}
         <Card>
@@ -80,4 +86,4 @@ export default function CreditsPage() {
       </div>
     </div>
   );
-} 
+}

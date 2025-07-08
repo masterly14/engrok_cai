@@ -6,12 +6,7 @@ import {
   getSessionToken,
 } from "@/actions/nango";
 import { Button } from "../ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-} from "../ui/card";
+import { Card, CardContent, CardDescription, CardHeader } from "../ui/card";
 import { useEffect, useState } from "react";
 import { onBoardUser } from "@/actions/user";
 import Nango from "@nangohq/frontend";
@@ -25,15 +20,17 @@ const IntegrationComponent = ({
   authMode,
   nodeId,
   updateNode,
-  _selectedNode
+  _selectedNode,
+  displayMode = "full",
 }: {
   setIntegrationConnection: (isConnected: boolean) => void;
   visibleName: string;
   providerConfigKey: string;
   authMode: string;
-  nodeId: string;
-  updateNode: (nodeId: string, updates: any) => void;
-  _selectedNode: any
+  nodeId?: string;
+  updateNode?: (nodeId: string, updates: any) => void;
+  _selectedNode?: any;
+  displayMode?: "full" | "button";
 }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isConnected, setIsConnected] = useState<boolean>(false);
@@ -42,7 +39,9 @@ const IntegrationComponent = ({
   const [userId, setUserId] = useState<string | null>(null);
 
   const handleConnect = async () => {
-    toast("Asegurate de no bloquear las ventanas emergentes. Si no lo haces, no se podrá conectar con la aplicación.")
+    toast(
+      "Asegurate de no bloquear las ventanas emergentes. Si no lo haces, no se podrá conectar con la aplicación.",
+    );
     try {
       setIsLoading(true);
       setError(null);
@@ -76,9 +75,18 @@ const IntegrationComponent = ({
         console.log("Conexión creada:", connection);
 
         // Guardar el connectionId en el nodo
-        updateNode(nodeId, { data: { ..._selectedNode.data, fields: { ..._selectedNode.data.fields, connectionId: connection.connectionId } } });
+        if (updateNode && nodeId && _selectedNode) {
+          updateNode(nodeId, {
+            data: {
+              ..._selectedNode.data,
+              fields: {
+                ..._selectedNode.data.fields,
+                connectionId: connection.connectionId,
+              },
+            },
+          });
+        }
       }
-      
     } catch (error) {
       console.error(`Error conectando con ${visibleName}:`, error);
       setError(error instanceof Error ? error.message : "Error desconocido");
@@ -103,15 +111,20 @@ const IntegrationComponent = ({
 
       const connection = await ConnectionExists(
         user?.data.clerkId,
-        providerConfigKey
+        providerConfigKey,
       );
       const connId = connection.connection?.connectionId || null;
       console.log("connId", connection);
       setIsConnected(connection.isConnected);
       setIntegrationConnection(connection.isConnected);
 
-      if (connId) {
-        updateNode(nodeId, { data: { ..._selectedNode.data, fields: { ..._selectedNode.data.fields, connectionId: connId } } });
+      if (connId && updateNode && nodeId && _selectedNode) {
+        updateNode(nodeId, {
+          data: {
+            ..._selectedNode.data,
+            fields: { ..._selectedNode.data.fields, connectionId: connId },
+          },
+        });
       }
     } catch (error) {
       console.error("Error verificando conexión:", error);
@@ -141,17 +154,67 @@ const IntegrationComponent = ({
 
   // Estado conectado
   if (isConnected) {
+    if (displayMode === "button") {
+      return null;
+    }
     return (
       <Card className="w-full max-w-md mx-auto border-green-200 bg-green-50/50">
         <CardContent className="flex items-center justify-center p-6 gap-2">
           <Calendar className="h-4 w-4 text-green-600" />
-          <span className="text-sm font-medium text-green-700">{visibleName} conectado</span>
+          <span className="text-sm font-medium text-green-700">
+            {visibleName} conectado
+          </span>
         </CardContent>
       </Card>
     );
   }
 
+  const ConnectButton = (
+    <Button
+      onClick={handleConnect}
+      disabled={isLoading}
+      className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+      size="lg"
+    >
+      {isLoading ? (
+        <>
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          Conectando...
+        </>
+      ) : (
+        <>
+          <Calendar className="mr-2 h-4 w-4" />
+          Conectar con {visibleName}
+        </>
+      )}
+    </Button>
+  );
+
   // Estado no conectado
+  if (displayMode === "button") {
+    return (
+      <div className="w-full max-w-md mx-auto">
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+              <div className="space-y-1">
+                <h4 className="text-sm font-medium text-red-800">
+                  Error de Conexión
+                </h4>
+                <p className="text-xs text-red-700">{error}</p>
+              </div>
+            </div>
+          </div>
+        )}
+        {ConnectButton}
+        <p className="text-xs text-gray-500 text-center mt-2">
+          Asegurate de no bloquear las ventanas emergentes.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <Card className="w-full max-w-md mx-auto">
       <CardHeader className="text-center">
@@ -194,27 +257,12 @@ const IntegrationComponent = ({
           </div>
         )}
 
-        <Button
-          onClick={handleConnect}
-          disabled={isLoading}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-          size="lg"
-        >
-          {isLoading ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Conectando...
-            </>
-          ) : (
-            <>
-              <Calendar className="mr-2 h-4 w-4" />
-              Conectar con {visibleName}
-            </>
-          )}
-        </Button>
+        {ConnectButton}
 
         <p className="text-xs text-gray-500 text-center">
-          Al conectar, aceptas que podamos acceder a tu {visibleName}. Asegurate de no bloquear las ventanas emergentes. Si no lo haces, no se podrá conectar con la aplicación.
+          Al conectar, aceptas que podamos acceder a tu {visibleName}. Asegurate
+          de no bloquear las ventanas emergentes. Si no lo haces, no se podrá
+          conectar con la aplicación.
         </p>
       </CardContent>
     </Card>

@@ -1,24 +1,37 @@
-"use client"
+"use client";
 
-import { Button } from "@/components/ui/button"
-import { Calendar } from "@/components/ui/calendar"
-import { Dialog, DialogTitle, DialogContent, DialogHeader, DialogTrigger, DialogFooter } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectValue, SelectItem, SelectTrigger } from "@/components/ui/select"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Card, CardContent } from "@/components/ui/card"
-import { Phone, PhoneCall, CalendarIcon, Clock } from "lucide-react"
-import { useState } from "react"
-import { format } from "date-fns"
-import { es } from "date-fns/locale"
-import { startCall } from "@/actions/vapi/calls"
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogHeader,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectValue,
+  SelectItem,
+  SelectTrigger,
+} from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent } from "@/components/ui/card";
+import { Phone, PhoneCall, CalendarIcon, Clock } from "lucide-react";
+import { useState } from "react";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
+import { startCall } from "@/actions/vapi/calls";
 
 type Props = {
-  phoneNumberId: string
-  phoneNumberVapiId: string
-  assistans: any
-}
+  phoneNumberId: string;
+  phoneNumberVapiId: string;
+  assistans: any;
+};
 
 const countryCodes = [
   { code: "+1", country: "US/CA", flag: "🇺🇸" },
@@ -33,71 +46,75 @@ const countryCodes = [
   { code: "+57", country: "CO", flag: "🇨🇴" },
   { code: "+51", country: "PE", flag: "🇵🇪" },
   { code: "+56", country: "CL", flag: "🇨🇱" },
-]
+];
 
 // Generar horas (00-23)
-const hours = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, "0"))
+const hours = Array.from({ length: 24 }, (_, i) =>
+  i.toString().padStart(2, "0"),
+);
 
 // Generar minutos (00, 15, 30, 45)
-const minutes = ["00", "15", "30", "45"]
+const minutes = ["00", "15", "30", "45"];
 
 const CreateCall = ({ phoneNumberId, phoneNumberVapiId, assistans }: Props) => {
-  const [countryCode, setCountryCode] = useState("+1")
-  const [phoneNumber, setPhoneNumber] = useState("")
-  const [selectedAssistant, setSelectedAssistant] = useState("")
-  const [isOpen, setIsOpen] = useState(false)
-  const [callType, setCallType] = useState("now") // "now" or "scheduled"
-  const [selectedDate, setSelectedDate] = useState<Date>()
-  const [selectedHour, setSelectedHour] = useState("09")
-  const [selectedMinute, setSelectedMinute] = useState("00")
-  const [isLoading, setIsLoading] = useState(false)
+  const [countryCode, setCountryCode] = useState("+1");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [selectedAssistant, setSelectedAssistant] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
+  const [callType, setCallType] = useState("now"); // "now" or "scheduled"
+  const [selectedDate, setSelectedDate] = useState<Date>();
+  const [selectedHour, setSelectedHour] = useState("09");
+  const [selectedMinute, setSelectedMinute] = useState("00");
+  const [isLoading, setIsLoading] = useState(false);
 
   // Get current date and time
-  const now = new Date()
-  const currentHour = now.getHours().toString().padStart(2, "0")
-  const currentMinute = Math.ceil(now.getMinutes() / 15) * 15 % 60
-  const currentMinuteStr = currentMinute.toString().padStart(2, "0")
+  const now = new Date();
+  const currentHour = now.getHours().toString().padStart(2, "0");
+  const currentMinute = (Math.ceil(now.getMinutes() / 15) * 15) % 60;
+  const currentMinuteStr = currentMinute.toString().padStart(2, "0");
 
   // Filter hours based on selected date
   const getAvailableHours = () => {
-    if (!selectedDate) return hours
-    
-    const isToday = selectedDate.toDateString() === now.toDateString()
-    if (!isToday) return hours
-    
-    return hours.filter(hour => parseInt(hour) > parseInt(currentHour))
-  }
+    if (!selectedDate) return hours;
+
+    const isToday = selectedDate.toDateString() === now.toDateString();
+    if (!isToday) return hours;
+
+    return hours.filter((hour) => parseInt(hour) > parseInt(currentHour));
+  };
 
   // Filter minutes based on selected date and hour
   const getAvailableMinutes = () => {
-    if (!selectedDate) return minutes
-    
-    const isToday = selectedDate.toDateString() === now.toDateString()
-    if (!isToday) return minutes
-    
-    const selectedHourInt = parseInt(selectedHour)
-    if (selectedHourInt > parseInt(currentHour)) return minutes
-    
-    return minutes.filter(minute => parseInt(minute) > parseInt(currentMinuteStr))
-  }
+    if (!selectedDate) return minutes;
+
+    const isToday = selectedDate.toDateString() === now.toDateString();
+    if (!isToday) return minutes;
+
+    const selectedHourInt = parseInt(selectedHour);
+    if (selectedHourInt > parseInt(currentHour)) return minutes;
+
+    return minutes.filter(
+      (minute) => parseInt(minute) > parseInt(currentMinuteStr),
+    );
+  };
 
   // Update selected time when date changes
   const handleDateSelect = (date: Date | undefined) => {
-    setSelectedDate(date)
+    setSelectedDate(date);
     if (date) {
-      const isToday = date.toDateString() === now.toDateString()
+      const isToday = date.toDateString() === now.toDateString();
       if (isToday) {
-        setSelectedHour(currentHour)
-        setSelectedMinute(currentMinuteStr)
+        setSelectedHour(currentHour);
+        setSelectedMinute(currentMinuteStr);
       } else {
-        setSelectedHour("09")
-        setSelectedMinute("00")
+        setSelectedHour("09");
+        setSelectedMinute("00");
       }
     }
-  }
+  };
 
   const handleCall = async () => {
-    setIsLoading(true)
+    setIsLoading(true);
     try {
       const callData = {
         phoneNumber: countryCode + phoneNumber,
@@ -121,40 +138,40 @@ const CreateCall = ({ phoneNumberId, phoneNumberVapiId, assistans }: Props) => {
         phoneNumberId,
         phoneNumberVapiId,
         createdAt: new Date().toISOString(),
-      }
-      console.log("Call Data:", callData)
-      
-      const response = await startCall(phoneNumberVapiId, callData)
-      
+      };
+      console.log("Call Data:", callData);
+
+      const response = await startCall(phoneNumberVapiId, callData);
+
       if (response) {
-        const { call, message } = response
-        console.log("Call Data JSON:", JSON.stringify(callData, null, 2))
-        console.log("Call:", call)
-        console.log("Message:", message)
+        const { call, message } = response;
+        console.log("Call Data JSON:", JSON.stringify(callData, null, 2));
+        console.log("Call:", call);
+        console.log("Message:", message);
       }
-      setIsOpen(false)
+      setIsOpen(false);
     } catch (error) {
-      console.error("Error making call:", error)
+      console.error("Error making call:", error);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   const isFormValid =
     phoneNumber.trim() !== "" &&
     selectedAssistant !== "" &&
-    (callType === "now" || (callType === "scheduled" && selectedDate))
+    (callType === "now" || (callType === "scheduled" && selectedDate));
 
   const getScheduledDateTime = () => {
-    if (!selectedDate) return null
+    if (!selectedDate) return null;
     return new Date(
       selectedDate.getFullYear(),
       selectedDate.getMonth(),
       selectedDate.getDate(),
       Number.parseInt(selectedHour),
       Number.parseInt(selectedMinute),
-    )
-  }
+    );
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -170,7 +187,9 @@ const CreateCall = ({ phoneNumberId, phoneNumberVapiId, assistans }: Props) => {
             <PhoneCall className="h-5 w-5 text-emerald-600" />
             Configurar llamada
           </DialogTitle>
-          <p className="text-sm text-muted-foreground">Configura los detalles de tu llamada</p>
+          <p className="text-sm text-muted-foreground">
+            Configura los detalles de tu llamada
+          </p>
         </DialogHeader>
 
         <div className="space-y-6 py-4">
@@ -187,7 +206,9 @@ const CreateCall = ({ phoneNumberId, phoneNumberVapiId, assistans }: Props) => {
                     <SelectItem key={country.code} value={country.code}>
                       <div className="flex items-center gap-2">
                         <span>{country.flag}</span>
-                        <span className="font-mono text-sm">{country.code}</span>
+                        <span className="font-mono text-sm">
+                          {country.code}
+                        </span>
                       </div>
                     </SelectItem>
                   ))}
@@ -206,7 +227,10 @@ const CreateCall = ({ phoneNumberId, phoneNumberVapiId, assistans }: Props) => {
           {/* Asistente */}
           <div className="space-y-3">
             <Label className="text-sm font-medium">Asistente</Label>
-            <Select value={selectedAssistant} onValueChange={setSelectedAssistant}>
+            <Select
+              value={selectedAssistant}
+              onValueChange={setSelectedAssistant}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Selecciona un asistente" />
               </SelectTrigger>
@@ -232,13 +256,20 @@ const CreateCall = ({ phoneNumberId, phoneNumberVapiId, assistans }: Props) => {
           {/* Programación de llamada */}
           <div className="space-y-3">
             <Label className="text-sm font-medium">Programación</Label>
-            <Tabs value={callType} onValueChange={setCallType} className="w-full">
+            <Tabs
+              value={callType}
+              onValueChange={setCallType}
+              className="w-full"
+            >
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="now" className="flex items-center gap-2">
                   <PhoneCall className="h-4 w-4" />
                   Ahora
                 </TabsTrigger>
-                <TabsTrigger value="scheduled" className="flex items-center gap-2">
+                <TabsTrigger
+                  value="scheduled"
+                  className="flex items-center gap-2"
+                >
                   <CalendarIcon className="h-4 w-4" />
                   Programar
                 </TabsTrigger>
@@ -269,7 +300,9 @@ const CreateCall = ({ phoneNumberId, phoneNumberVapiId, assistans }: Props) => {
                           mode="single"
                           selected={selectedDate}
                           onSelect={handleDateSelect}
-                          disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                          disabled={(date) =>
+                            date < new Date(new Date().setHours(0, 0, 0, 0))
+                          }
                           className="rounded-md border"
                         />
                       </div>
@@ -282,8 +315,13 @@ const CreateCall = ({ phoneNumberId, phoneNumberVapiId, assistans }: Props) => {
                         </Label>
                         <div className="flex gap-2">
                           <div className="flex-1">
-                            <Label className="text-xs text-muted-foreground">Hora</Label>
-                            <Select value={selectedHour} onValueChange={setSelectedHour}>
+                            <Label className="text-xs text-muted-foreground">
+                              Hora
+                            </Label>
+                            <Select
+                              value={selectedHour}
+                              onValueChange={setSelectedHour}
+                            >
                               <SelectTrigger>
                                 <SelectValue />
                               </SelectTrigger>
@@ -297,8 +335,13 @@ const CreateCall = ({ phoneNumberId, phoneNumberVapiId, assistans }: Props) => {
                             </Select>
                           </div>
                           <div className="flex-1">
-                            <Label className="text-xs text-muted-foreground">Minutos</Label>
-                            <Select value={selectedMinute} onValueChange={setSelectedMinute}>
+                            <Label className="text-xs text-muted-foreground">
+                              Minutos
+                            </Label>
+                            <Select
+                              value={selectedMinute}
+                              onValueChange={setSelectedMinute}
+                            >
                               <SelectTrigger>
                                 <SelectValue />
                               </SelectTrigger>
@@ -315,9 +358,15 @@ const CreateCall = ({ phoneNumberId, phoneNumberVapiId, assistans }: Props) => {
 
                         {selectedDate && (
                           <div className="mt-4 p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
-                            <div className="text-sm font-medium text-emerald-800">Llamada programada para:</div>
+                            <div className="text-sm font-medium text-emerald-800">
+                              Llamada programada para:
+                            </div>
                             <div className="text-sm text-emerald-700">
-                              {format(selectedDate, "EEEE, d 'de' MMMM 'de' yyyy", { locale: es })}
+                              {format(
+                                selectedDate,
+                                "EEEE, d 'de' MMMM 'de' yyyy",
+                                { locale: es },
+                              )}
                             </div>
                             <div className="text-sm text-emerald-700">
                               {selectedHour}:{selectedMinute}
@@ -334,7 +383,11 @@ const CreateCall = ({ phoneNumberId, phoneNumberVapiId, assistans }: Props) => {
         </div>
 
         <DialogFooter className="flex gap-2 pt-4 border-t">
-          <Button variant="outline" onClick={() => setIsOpen(false)} className="flex-1">
+          <Button
+            variant="outline"
+            onClick={() => setIsOpen(false)}
+            className="flex-1"
+          >
             Cancelar
           </Button>
           <Button
@@ -362,7 +415,7 @@ const CreateCall = ({ phoneNumberId, phoneNumberVapiId, assistans }: Props) => {
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
-}
+  );
+};
 
-export default CreateCall
+export default CreateCall;

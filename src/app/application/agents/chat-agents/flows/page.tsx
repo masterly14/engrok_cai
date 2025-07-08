@@ -5,12 +5,15 @@ import { ChatWorkflowTable } from "./_components/table-workflows";
 import { useChatWorkflows as useChatWorkflowsHook } from "@/hooks/use-chat-workflows";
 
 const Page = () => {
-  const { workflows, workflowsLoading, workflowsError } = useChatWorkflowsHook();
+  const { workflows, workflowsLoading, workflowsError } =
+    useChatWorkflowsHook();
 
   if (workflowsLoading) {
-    return <div className="flex justify-center items-center h-full">
-      <LoadingSpinner />
-    </div>
+    return (
+      <div className="flex justify-center items-center h-full">
+        <LoadingSpinner />
+      </div>
+    );
   }
 
   if (workflowsError) {
@@ -18,7 +21,9 @@ const Page = () => {
   }
 
   if (!workflows || !Array.isArray(workflows)) {
-    return <div className="p-4 text-red-600">Error: Invalid workflows data</div>;
+    return (
+      <div className="p-4 text-red-600">Error: Invalid workflows data</div>
+    );
   }
 
   return <ChatWorkflowTable workflows={workflows} />;

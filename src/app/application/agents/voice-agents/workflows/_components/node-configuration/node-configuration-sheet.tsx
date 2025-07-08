@@ -63,7 +63,7 @@ export function NodeConfigurationSheet({
             setGlobalVoice={setGlobalVoice}
           />
         );
-      case "integration": 
+      case "integration":
         return (
           <IntegrationNodeConfig
             selectedNode={selectedNode}
@@ -89,7 +89,7 @@ export function NodeConfigurationSheet({
         );
     }
   };
-  console.log(selectedNode)
+  console.log(selectedNode);
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <SheetContent
@@ -97,16 +97,14 @@ export function NodeConfigurationSheet({
         className="w-[90vw] sm:max-w-md overflow-y-auto"
       >
         <SheetHeader>
-          <SheetTitle>
-            Configurar nodo – {selectedNode.data.label}
-          </SheetTitle>
+          <SheetTitle>Configurar nodo – {selectedNode.data.label}</SheetTitle>
           <div className="text-sm text-gray-500">
             Tipo de Nodo: {selectedNode.type}
           </div>
         </SheetHeader>
-        
+
         {renderNodeConfiguration()}
       </SheetContent>
     </Sheet>
   );
-} 
+}

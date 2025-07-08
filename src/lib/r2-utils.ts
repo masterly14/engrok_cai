@@ -1,10 +1,14 @@
-import { PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import {
+  PutObjectCommand,
+  GetObjectCommand,
+  DeleteObjectCommand,
+} from "@aws-sdk/client-s3";
 import { r2Client, R2_BUCKET_NAME } from "./r2";
 
 export async function uploadFileToR2(
   key: string,
   file: Buffer,
-  contentType: string
+  contentType: string,
 ): Promise<string> {
   const command = new PutObjectCommand({
     Bucket: R2_BUCKET_NAME,
@@ -24,7 +28,7 @@ export async function downloadFileFromR2(key: string): Promise<Buffer> {
   });
 
   const response = await r2Client.send(command);
-  
+
   if (!response.Body) {
     throw new Error("No file content received from R2");
   }
@@ -32,7 +36,7 @@ export async function downloadFileFromR2(key: string): Promise<Buffer> {
   // Convert stream to buffer
   const chunks: Uint8Array[] = [];
   const reader = response.Body.transformToWebStream().getReader();
-  
+
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
@@ -54,6 +58,6 @@ export async function deleteFileFromR2(key: string): Promise<void> {
 export function generateR2Key(fileName: string, userId: string): string {
   const timestamp = Date.now();
   const randomId = Math.random().toString(36).substring(2, 15);
-  const extension = fileName.split('.').pop();
+  const extension = fileName.split(".").pop();
   return `knowledge-bases/${userId}/${timestamp}-${randomId}.${extension}`;
-} 
+}

@@ -1,81 +1,93 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { Bell, CheckCircle } from "lucide-react"
-import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import Pusher from "pusher-js"
-import { toast } from "sonner"
+import { useEffect, useState } from "react";
+import { Bell, CheckCircle } from "lucide-react";
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import Pusher from "pusher-js";
+import { toast } from "sonner";
 
 interface Notification {
-  id: string
-  message: string
-  link?: string
-  read: boolean
-  createdAt: string
+  id: string;
+  message: string;
+  link?: string;
+  read: boolean;
+  createdAt: string;
 }
 
 export function NotificationBell() {
-  const [notifications, setNotifications] = useState<Notification[]>([])
-  const [open, setOpen] = useState(false)
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [open, setOpen] = useState(false);
 
-  const unreadCount = notifications.filter((n) => !n.read).length
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
   const fetchNotifications = async () => {
     try {
-      const res = await fetch("/api/notifications")
+      const res = await fetch("/api/notifications");
       if (res.ok) {
-        const data = await res.json()
-        setNotifications(data.notifications)
+        const data = await res.json();
+        setNotifications(data.notifications);
       }
     } catch (err) {
-      console.error("Failed to fetch notifications", err)
+      console.error("Failed to fetch notifications", err);
     }
-  }
+  };
 
   useEffect(() => {
-    fetchNotifications()
-  }, [])
+    fetchNotifications();
+  }, []);
 
   // Subscribe to pusher channel for real-time refresh
   useEffect(() => {
-    if (!process.env.NEXT_PUBLIC_PUSHER_KEY || !process.env.NEXT_PUBLIC_PUSHER_CLUSTER) return
+    if (
+      !process.env.NEXT_PUBLIC_PUSHER_KEY ||
+      !process.env.NEXT_PUBLIC_PUSHER_CLUSTER
+    )
+      return;
 
-    let userId: string | null = null
+    let userId: string | null = null;
 
     // Obtain user id once
     fetch("/api/users/current")
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
-        if (!data?.id) return
-        userId = data.id
+        if (!data?.id) return;
+        userId = data.id;
         const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
           cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
-        })
-        const channelName = `notifications-for-user-${userId}`
-        const channel = pusher.subscribe(channelName)
+        });
+        const channelName = `notifications-for-user-${userId}`;
+        const channel = pusher.subscribe(channelName);
         channel.bind("new_notification", () => {
-          fetchNotifications()
-          toast.info("Tienes una nueva notificación")
-        })
+          fetchNotifications();
+          toast.info("Tienes una nueva notificación");
+        });
         return () => {
-          channel.unbind_all()
-          pusher.unsubscribe(channelName)
-        }
+          channel.unbind_all();
+          pusher.unsubscribe(channelName);
+        };
       })
-      .catch(() => {})
-  }, [])
+      .catch(() => {});
+  }, []);
 
   const handleMarkRead = async (id: string) => {
     try {
-      const res = await fetch(`/api/notifications?id=${id}`, { method: "PATCH" })
+      const res = await fetch(`/api/notifications?id=${id}`, {
+        method: "PATCH",
+      });
       if (res.ok) {
-        setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)))
+        setNotifications((prev) =>
+          prev.map((n) => (n.id === id ? { ...n, read: true } : n)),
+        );
       }
     } catch (err) {
-      console.error(err)
+      console.error(err);
     }
-  }
+  };
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -95,10 +107,15 @@ export function NotificationBell() {
         </div>
         <ScrollArea className="max-h-72">
           {notifications.length === 0 ? (
-            <div className="p-4 text-center text-sm text-muted-foreground">No hay notificaciones</div>
+            <div className="p-4 text-center text-sm text-muted-foreground">
+              No hay notificaciones
+            </div>
           ) : (
             notifications.map((n) => (
-              <div key={n.id} className="px-4 py-3 border-b last:border-none flex items-start gap-2">
+              <div
+                key={n.id}
+                className="px-4 py-3 border-b last:border-none flex items-start gap-2"
+              >
                 {!n.read ? (
                   <span className="mt-0.5 h-2 w-2 rounded-full bg-blue-500" />
                 ) : (
@@ -126,5 +143,5 @@ export function NotificationBell() {
         </ScrollArea>
       </PopoverContent>
     </Popover>
-  )
-} 
+  );
+}

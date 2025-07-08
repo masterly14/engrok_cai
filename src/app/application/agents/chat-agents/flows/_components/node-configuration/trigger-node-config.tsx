@@ -65,7 +65,7 @@ export function TriggerNodeConfig({
     (updates: Record<string, any>) => {
       updateNode(selectedNode.id, { data: { ...data, ...updates } });
     },
-    [data, selectedNode.id, updateNode]
+    [data, selectedNode.id, updateNode],
   );
 
   /* Provider selection */
@@ -205,7 +205,9 @@ export function TriggerNodeConfig({
         <div className="mt-4">
           <Card className="border-emerald-200 bg-emerald-50/50">
             <CardHeader>
-              <CardTitle className="text-base">Acciones de Google Sheets</CardTitle>
+              <CardTitle className="text-base">
+                Acciones de Google Sheets
+              </CardTitle>
               <CardDescription>
                 Selecciona documento, pestaña y columnas a usar.
               </CardDescription>
@@ -241,13 +243,16 @@ export function TriggerNodeConfig({
                     type="button"
                     variant="outline"
                     size="icon"
-                    onClick={() => navigator.clipboard.writeText(data.url || "")}>
+                    onClick={() =>
+                      navigator.clipboard.writeText(data.url || "")
+                    }
+                  >
                     <Copy className="w-4 h-4" />
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Envíe un POST JSON a esta URL con los campos <code>phone</code> y
-                  <code>variables</code>.
+                  Envíe un POST JSON a esta URL con los campos{" "}
+                  <code>phone</code> y<code>variables</code>.
                 </p>
               </div>
             ) : (
@@ -267,4 +272,4 @@ export function TriggerNodeConfig({
       )}
     </div>
   );
-} 
+}

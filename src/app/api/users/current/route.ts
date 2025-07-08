@@ -8,4 +8,4 @@ export async function GET(_req: NextRequest) {
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 401 });
   }
-} 
+}

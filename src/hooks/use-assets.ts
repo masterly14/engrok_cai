@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import { getUserAssets } from "@/actions/chat-agents"
-import { useQuery } from "@tanstack/react-query"
+import { getUserAssets } from "@/actions/chat-agents";
+import { useQuery } from "@tanstack/react-query";
 
 export function useAssets(enabled: boolean = true, type?: string) {
   const {
@@ -13,15 +13,15 @@ export function useAssets(enabled: boolean = true, type?: string) {
   } = useQuery({
     queryKey: ["assets", type ?? "all"],
     queryFn: async () => {
-      const response = await getUserAssets(type)
-      return response
+      const response = await getUserAssets(type);
+      return response;
     },
     enabled,
     staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 30,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
-  })
+  });
 
   return {
     assetsData: data?.data || [],
@@ -29,5 +29,5 @@ export function useAssets(enabled: boolean = true, type?: string) {
     assetsFetching,
     assetsError,
     refetchAssets,
-  }
-} 
+  };
+}

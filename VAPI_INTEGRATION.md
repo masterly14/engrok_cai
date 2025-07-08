@@ -66,7 +66,7 @@ POST /api/workflows
 ### Sincronizar Workflow Existente
 
 ```typescript
-POST /api/workflows/[id]/sync
+POST / api / workflows / [id] / sync;
 ```
 
 ## Manejo de Errores
@@ -125,4 +125,4 @@ Si hay un error al comunicarse con Vapi AI:
 
 - [Documentación de Vapi AI](https://docs.vapi.ai/)
 - [API Reference de Vapi](https://docs.vapi.ai/api-reference)
-- [Ejemplos de Workflows](https://docs.vapi.ai/workflows/examples) 
+- [Ejemplos de Workflows](https://docs.vapi.ai/workflows/examples)

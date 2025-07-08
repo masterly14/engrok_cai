@@ -1,34 +1,41 @@
-import { memo } from "react"
-import { Handle, Position, type NodeProps } from "reactflow"
-import { MessageSquare, CornerDownRight, Mic, ArrowRight, PlayCircle, FileIcon, Info, Loader2 } from 'lucide-react'
+import { memo } from "react";
+import { Handle, Position, type NodeProps } from "reactflow";
+import {
+  MessageSquare,
+  CornerDownRight,
+  Mic,
+  ArrowRight,
+  PlayCircle,
+  FileIcon,
+  Info,
+  Loader2,
+} from "lucide-react";
 
 // Definimos el tipo para los botones para mayor claridad
 interface InteractiveButton {
-  id: string
-  title: string
+  id: string;
+  title: string;
 }
 
 interface ConversationNodeProps {
-  name?: string
-  botResponse?: string
-  templateBody?: string
-  templateCategory?: string
-  templateLanguage?: string
-  interactiveButtons?: InteractiveButton[]
-  responseType?: "text" | "audio" | "template"
-  audioUrl?: string
-  fileOrImageUrl?: string
-  isUploadingMedia?: boolean
-  jumpToNextNode?: boolean
-  initialMessage?: boolean
+  name?: string;
+  botResponse?: string;
+  templateBody?: string;
+  templateCategory?: string;
+  templateLanguage?: string;
+  interactiveButtons?: InteractiveButton[];
+  responseType?: "text" | "audio" | "template";
+  audioUrl?: string;
+  fileOrImageUrl?: string;
+  isUploadingMedia?: boolean;
+  jumpToNextNode?: boolean;
+  initialMessage?: boolean;
 }
 
-const ConversationNode = ({
-  data
-}: NodeProps<ConversationNodeProps>) => {
-  const buttons = data.interactiveButtons || []
-  const isAudioResponse = data.responseType === "audio"
-  const isTemplateResponse = data.responseType === "template"
+const ConversationNode = ({ data }: NodeProps<ConversationNodeProps>) => {
+  const buttons = data.interactiveButtons || [];
+  const isAudioResponse = data.responseType === "audio";
+  const isTemplateResponse = data.responseType === "template";
 
   const renderMediaPreview = () => {
     if (!data.fileOrImageUrl && !data.isUploadingMedia) return null;
@@ -37,13 +44,19 @@ const ConversationNode = ({
       return (
         <div className="mb-2 flex items-center justify-center gap-2 p-2 bg-white/90 rounded-lg border border-gray-200">
           <Loader2 className="w-5 h-5 text-green-600 animate-spin" />
-          <span className="text-sm text-gray-700">Cargando previsualización...</span>
+          <span className="text-sm text-gray-700">
+            Cargando previsualización...
+          </span>
         </div>
       );
     }
 
     // Check if it's an image
-    if (data && data.fileOrImageUrl && data.fileOrImageUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
+    if (
+      data &&
+      data.fileOrImageUrl &&
+      data.fileOrImageUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i)
+    ) {
       return (
         <div className="mb-2 rounded-lg overflow-hidden flex justify-center">
           <img
@@ -56,7 +69,11 @@ const ConversationNode = ({
     }
 
     // Check if it's a video
-    if (data && data.fileOrImageUrl && data.fileOrImageUrl.match(/\.(mp4|webm|ogg)$/i)) {
+    if (
+      data &&
+      data.fileOrImageUrl &&
+      data.fileOrImageUrl.match(/\.(mp4|webm|ogg)$/i)
+    ) {
       return (
         <div className="mb-2 rounded-lg overflow-hidden flex justify-center">
           <video
@@ -79,13 +96,13 @@ const ConversationNode = ({
   };
 
   return (
-    <div 
+    <div
       className="relative w-80 p-4 rounded-lg border border-green-400"
       style={{
         backgroundImage: "url('/whatsapp-bg.jpg')",
         backgroundSize: "cover",
         backgroundPosition: "center",
-        backgroundRepeat: "no-repeat"
+        backgroundRepeat: "no-repeat",
       }}
     >
       {/* WhatsApp-style message bubble */}
@@ -93,7 +110,10 @@ const ConversationNode = ({
         {/* info */}
         <div className="flex mb-4 items-center gap-1 text-xs text-green-600 font-medium px-2 py-1 bg-green-100 rounded-full">
           <Info className="w-3 h-3" />
-          <span>Esta es una previsualización de como se verá el mensaje en WhatsApp. Esta sujeta a sutiles cambios visuales.</span>
+          <span>
+            Esta es una previsualización de como se verá el mensaje en WhatsApp.
+            Esta sujeta a sutiles cambios visuales.
+          </span>
         </div>
 
         {/* Bot name/title */}
@@ -102,8 +122,10 @@ const ConversationNode = ({
             <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
               <MessageSquare className="w-4 h-4 text-white" />
             </div>
-            <span className="text-sm font-medium text-gray-700">{data.name}</span>
-            
+            <span className="text-sm font-medium text-gray-700">
+              {data.name}
+            </span>
+
             {data.initialMessage && (
               <div className="flex items-center gap-1 text-xs text-green-600 font-medium px-2 py-1 bg-green-100 rounded-full">
                 <PlayCircle className="w-3 h-3" />
@@ -118,7 +140,7 @@ const ConversationNode = ({
           <div className="bg-white rounded-lg rounded-tl-sm shadow-sm p-3 relative">
             {/* Message tail */}
             <div className="absolute -left-2 top-0 w-0 h-0 border-r-8 border-r-white border-t-8 border-t-transparent"></div>
-            
+
             {isAudioResponse ? (
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-gray-600">
@@ -162,9 +184,9 @@ const ConversationNode = ({
             {/* Message time */}
             <div className="flex justify-end mt-1">
               <span className="text-xs text-gray-500">
-                {new Date().toLocaleTimeString('es-ES', { 
-                  hour: '2-digit', 
-                  minute: '2-digit' 
+                {new Date().toLocaleTimeString("es-ES", {
+                  hour: "2-digit",
+                  minute: "2-digit",
                 })}
               </span>
             </div>
@@ -174,7 +196,9 @@ const ConversationNode = ({
           {data.jumpToNextNode && (
             <div className="mt-2 flex items-center gap-2 text-blue-600 bg-blue-50 p-2 rounded-lg">
               <ArrowRight className="w-4 h-4" />
-              <span className="text-xs font-medium">Continúa automáticamente</span>
+              <span className="text-xs font-medium">
+                Continúa automáticamente
+              </span>
             </div>
           )}
 
@@ -182,10 +206,7 @@ const ConversationNode = ({
           {!data.jumpToNextNode && buttons.length > 0 && (
             <div className="mt-0.5 space-y-0.5 flex flex-col items-center">
               {buttons.map((button, index) => (
-                <div
-                  key={button.id}
-                  className="relative w-full"
-                >
+                <div key={button.id} className="relative w-full">
                   <div className="bg-white border border-green-200 rounded-lg p-3 hover:bg-green-50 transition-colors cursor-pointer shadow-sm">
                     <div className="flex items-center justify-center">
                       <span className="text-sm font-medium text-gray-800 text-center">
@@ -224,7 +245,7 @@ const ConversationNode = ({
         />
       )}
     </div>
-  )
-}
+  );
+};
 
-export default memo(ConversationNode)
+export default memo(ConversationNode);

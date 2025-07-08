@@ -29,7 +29,7 @@ export function useChatWorkflows() {
     },
     onSuccess: (workflowId) => {
       queryClient.setQueryData(["chatWorkflows"], (old: any) =>
-        old.filter((w: any) => w.id !== workflowId)
+        old.filter((w: any) => w.id !== workflowId),
       );
       toast.success("Flujo eliminado correctamente");
     },
@@ -66,4 +66,4 @@ export function useChatWorkflows() {
     deleteWorkflow,
     duplicateWorkflow,
   };
-} 
+}

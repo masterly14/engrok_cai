@@ -1,51 +1,55 @@
-"use client" // This page will manage state, so it's a client component
+"use client"; // This page will manage state, so it's a client component
 
-import { useEffect, useState } from "react"
-import type { ChatAgentWithWorkflows } from "@/types/agent"
-import TemplateBuilderSidebar from "@/components/application/whatsapp-template-builder/sidebar"
-import { initialFormData } from "@/components/application/whatsapp-template-builder/types"
-import TemplateBuilderWizard from "./wizard"
+import { useEffect, useState } from "react";
+import type { ChatAgentWithWorkflows } from "@/types/agent";
+import TemplateBuilderSidebar from "@/components/application/whatsapp-template-builder/sidebar";
+import { initialFormData } from "@/components/application/whatsapp-template-builder/types";
+import TemplateBuilderWizard from "./wizard";
 
 export default function WhatsAppTemplateBuilder() {
   // These states would ideally come from a context, user settings, or URL params
-  const [agents, setAgents] = useState<ChatAgentWithWorkflows[]>([])
-  const [selectedAgent, setSelectedAgent] = useState<ChatAgentWithWorkflows | null>(null)
-  const [currentLanguage, setCurrentLanguage] = useState<string>(initialFormData.language)
+  const [agents, setAgents] = useState<ChatAgentWithWorkflows[]>([]);
+  const [selectedAgent, setSelectedAgent] =
+    useState<ChatAgentWithWorkflows | null>(null);
+  const [currentLanguage, setCurrentLanguage] = useState<string>(
+    initialFormData.language,
+  );
 
   // Mock quota
-  const [quota, setQuota] = useState({ used: 120, max: 6000 })
+  const [quota, setQuota] = useState({ used: 120, max: 6000 });
 
-  const selectedWabaId = selectedAgent?.whatsappBusinessAccountId || ""
+  const selectedWabaId = selectedAgent?.whatsappBusinessAccountId || "";
 
   useEffect(() => {
     const fetchAgents = async () => {
       try {
-        const res = await fetch("/api/chat-agents")
-        if (!res.ok) throw new Error("Failed to fetch chat agents")
-        const data = await res.json()
-        setAgents(data?.agents || [])
+        const res = await fetch("/api/chat-agents");
+        if (!res.ok) throw new Error("Failed to fetch chat agents");
+        const data = await res.json();
+        setAgents(data?.agents || []);
 
         // Auto select first agent if none selected
         if (!selectedAgent && data?.agents?.length) {
-          setSelectedAgent(data.agents[0])
+          setSelectedAgent(data.agents[0]);
         }
       } catch (error) {
-        console.error("[TemplateBuilder] Error fetching chat agents", error)
+        console.error("[TemplateBuilder] Error fetching chat agents", error);
       }
-    }
+    };
 
-    fetchAgents()
-  }, [])
+    fetchAgents();
+  }, []);
 
   const handleWabaChange = (wabaId: string) => {
-    const agent = agents.find((a) => a.whatsappBusinessAccountId === wabaId) || null
-    setSelectedAgent(agent)
-  }
+    const agent =
+      agents.find((a) => a.whatsappBusinessAccountId === wabaId) || null;
+    setSelectedAgent(agent);
+  };
 
   const handleLanguageChange = (languageCode: string) => {
-    setCurrentLanguage(languageCode)
+    setCurrentLanguage(languageCode);
     // This should also update the language in the wizard's formData if a template is being edited/created
-  }
+  };
 
   return (
     <div className="flex h-screen bg-background ">
@@ -71,5 +75,5 @@ export default function WhatsAppTemplateBuilder() {
         </div>
       </main>
     </div>
-  )
+  );
 }

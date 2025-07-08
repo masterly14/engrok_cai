@@ -1,10 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getDashboardAnalytics, getDashboardTimeSeries, DashboardAnalytics, TimeSeriesDayData } from "@/actions/dashboard";
+import {
+  getDashboardAnalytics,
+  getDashboardTimeSeries,
+  DashboardAnalytics,
+  TimeSeriesDayData,
+} from "@/actions/dashboard";
 import TimeSeriesChart from "@/components/dashboard/TimeSeriesChart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Phone, MessageCircle, Clock, DollarSign, TrendingUp, Users } from "lucide-react";
+import {
+  Phone,
+  MessageCircle,
+  Clock,
+  DollarSign,
+  TrendingUp,
+  Users,
+} from "lucide-react";
 
 export default function DashboardPage() {
   const [analytics, setAnalytics] = useState<DashboardAnalytics | null>(null);
@@ -16,12 +28,12 @@ export default function DashboardPage() {
       try {
         const [analyticsData, timeSeriesData] = await Promise.all([
           getDashboardAnalytics(),
-          getDashboardTimeSeries(30)
+          getDashboardTimeSeries(30),
         ]);
         setAnalytics(analyticsData);
         setTimeSeries(timeSeriesData);
       } catch (error) {
-        console.error('Error loading dashboard data:', error);
+        console.error("Error loading dashboard data:", error);
       } finally {
         setLoading(false);
       }
@@ -66,7 +78,9 @@ export default function DashboardPage() {
           <h1 className="text-3xl font-light text-slate-800">
             Panel de Control
           </h1>
-          <p className="text-slate-500 text-sm">Análisis completo de tu actividad</p>
+          <p className="text-slate-500 text-sm">
+            Análisis completo de tu actividad
+          </p>
         </div>
 
         {/* Charts Section */}
@@ -93,7 +107,9 @@ export default function DashboardPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-light text-slate-800">{totalCalls.toLocaleString()}</div>
+              <div className="text-2xl font-light text-slate-800">
+                {totalCalls.toLocaleString()}
+              </div>
               <p className="text-slate-400 text-xs mt-1">Llamadas procesadas</p>
             </CardContent>
           </Card>
@@ -106,8 +122,12 @@ export default function DashboardPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-light text-slate-800">{formatDuration(totalDurationSeconds)}</div>
-              <p className="text-slate-400 text-xs mt-1">Tiempo total de conversación</p>
+              <div className="text-2xl font-light text-slate-800">
+                {formatDuration(totalDurationSeconds)}
+              </div>
+              <p className="text-slate-400 text-xs mt-1">
+                Tiempo total de conversación
+              </p>
             </CardContent>
           </Card>
 
@@ -119,7 +139,9 @@ export default function DashboardPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-light text-slate-800">{formatDuration(averageDurationSeconds)}</div>
+              <div className="text-2xl font-light text-slate-800">
+                {formatDuration(averageDurationSeconds)}
+              </div>
               <p className="text-slate-400 text-xs mt-1">Por llamada</p>
             </CardContent>
           </Card>
@@ -132,7 +154,9 @@ export default function DashboardPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-light text-slate-800">${totalCost.toFixed(2)}</div>
+              <div className="text-2xl font-light text-slate-800">
+                ${totalCost.toFixed(2)}
+              </div>
               <p className="text-slate-400 text-xs mt-1">Inversión total</p>
             </CardContent>
           </Card>
@@ -145,7 +169,9 @@ export default function DashboardPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-light text-slate-800">{successRate.toFixed(1)}%</div>
+              <div className="text-2xl font-light text-slate-800">
+                {successRate.toFixed(1)}%
+              </div>
               <p className="text-slate-400 text-xs mt-1">Llamadas exitosas</p>
             </CardContent>
           </Card>
@@ -158,8 +184,12 @@ export default function DashboardPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-light text-slate-800">{totalMessages.toLocaleString()}</div>
-              <p className="text-slate-400 text-xs mt-1">Mensajes de WhatsApp</p>
+              <div className="text-2xl font-light text-slate-800">
+                {totalMessages.toLocaleString()}
+              </div>
+              <p className="text-slate-400 text-xs mt-1">
+                Mensajes de WhatsApp
+              </p>
             </CardContent>
           </Card>
 
@@ -171,8 +201,12 @@ export default function DashboardPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-light text-slate-800">{totalSessions.toLocaleString()}</div>
-              <p className="text-slate-400 text-xs mt-1">Conversaciones únicas</p>
+              <div className="text-2xl font-light text-slate-800">
+                {totalSessions.toLocaleString()}
+              </div>
+              <p className="text-slate-400 text-xs mt-1">
+                Conversaciones únicas
+              </p>
             </CardContent>
           </Card>
 
@@ -184,8 +218,12 @@ export default function DashboardPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-light text-slate-800">{averageMessagesPerSession.toFixed(1)}</div>
-              <p className="text-slate-400 text-xs mt-1">Promedio de interacción</p>
+              <div className="text-2xl font-light text-slate-800">
+                {averageMessagesPerSession.toFixed(1)}
+              </div>
+              <p className="text-slate-400 text-xs mt-1">
+                Promedio de interacción
+              </p>
             </CardContent>
           </Card>
         </div>

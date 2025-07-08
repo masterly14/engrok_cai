@@ -1,11 +1,15 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { motion, useMotionValue, useTransform, animate } from "framer-motion"
-import { Plus, Loader2, Coins, Sparkles, Crown, Zap } from "lucide-react"
-import { SidebarGroup, SidebarGroupContent, SidebarGroupLabel } from "@/components/ui/sidebar"
-import { Progress } from "@/components/ui/progress"
-import { Button } from "@/components/ui/button"
+import * as React from "react";
+import { motion, useMotionValue, useTransform, animate } from "framer-motion";
+import { Plus, Loader2, Coins, Sparkles, Crown, Zap } from "lucide-react";
+import {
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+} from "@/components/ui/sidebar";
+import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogTrigger,
@@ -13,25 +17,25 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from "@/components/ui/dialog"
-import { Badge } from "@/components/ui/badge"
-import { toast } from "sonner"
-import { cn } from "@/lib/utils"
+} from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 interface CreditDisplayProps {
-  amount: number
-  maxAmount?: number
-  className?: string
+  amount: number;
+  maxAmount?: number;
+  className?: string;
 }
 
 interface CreditPack {
-  credits: number
-  price: number
-  originalPrice?: number
-  icon: React.ComponentType<{ className?: string }>
-  label: string
-  popular?: boolean
-  bonus?: number
+  credits: number;
+  price: number;
+  originalPrice?: number;
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  popular?: boolean;
+  bonus?: number;
 }
 
 const CREDIT_PACKS: CreditPack[] = [
@@ -58,53 +62,61 @@ const CREDIT_PACKS: CreditPack[] = [
     label: "Pro",
     bonus: 1500,
   },
-]
+];
 
-export function CreditDisplay({ amount, maxAmount = 1000, className }: CreditDisplayProps) {
-  const count = useMotionValue(0)
-  const rounded = useTransform(count, (latest) => Math.round(latest))
-  const displayText = useTransform(rounded, (latest) => latest.toLocaleString())
+export function CreditDisplay({
+  amount,
+  maxAmount = 1000,
+  className,
+}: CreditDisplayProps) {
+  const count = useMotionValue(0);
+  const rounded = useTransform(count, (latest) => Math.round(latest));
+  const displayText = useTransform(rounded, (latest) =>
+    latest.toLocaleString(),
+  );
 
   React.useEffect(() => {
     const animation = animate(count, amount, {
       duration: 2,
       ease: "easeOut",
-    })
+    });
 
-    return animation.stop
-  }, [amount, count])
+    return animation.stop;
+  }, [amount, count]);
 
-  const percentage = Math.min(100, Math.round((amount / maxAmount) * 100))
-  const [loadingCredits, setLoadingCredits] = React.useState<number | null>(null)
-  const [isDialogOpen, setIsDialogOpen] = React.useState(false)
+  const percentage = Math.min(100, Math.round((amount / maxAmount) * 100));
+  const [loadingCredits, setLoadingCredits] = React.useState<number | null>(
+    null,
+  );
+  const [isDialogOpen, setIsDialogOpen] = React.useState(false);
 
   const handleBuyCredits = async (pack: CreditPack) => {
     try {
-      setLoadingCredits(pack.credits)
+      setLoadingCredits(pack.credits);
       const res = await fetch("/api/credits/checkout", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ credits: pack.credits }),
-      })
+      });
 
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || "Error generando checkout")
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Error generando checkout");
 
       // Redirigimos al checkout de Lemon Squeezy
-      window.location.href = data.url
+      window.location.href = data.url;
     } catch (e) {
-      console.error(e)
-      toast((e as Error).message ?? "Error desconocido")
+      console.error(e);
+      toast((e as Error).message ?? "Error desconocido");
     } finally {
-      setLoadingCredits(null)
+      setLoadingCredits(null);
     }
-  }
+  };
 
   const getDiscountPercentage = (original: number, current: number) => {
-    return Math.round(((original - current) / original) * 100)
-  }
+    return Math.round(((original - current) / original) * 100);
+  };
 
   return (
     <>
@@ -114,7 +126,10 @@ export function CreditDisplay({ amount, maxAmount = 1000, className }: CreditDis
           style={{ color: "var(--card-foreground)" }}
         >
           <div className="mb-3 flex items-center justify-between">
-            <SidebarGroupLabel className="m-0 p-0 text-sm font-medium" style={{ color: "var(--foreground)" }}>
+            <SidebarGroupLabel
+              className="m-0 p-0 text-sm font-medium"
+              style={{ color: "var(--foreground)" }}
+            >
               Tus créditos
             </SidebarGroupLabel>
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -134,15 +149,16 @@ export function CreditDisplay({ amount, maxAmount = 1000, className }: CreditDis
                     Comprar créditos
                   </DialogTitle>
                   <DialogDescription className="text-center">
-                    Elige el pack perfecto para tus necesidades y obtén créditos al instante
+                    Elige el pack perfecto para tus necesidades y obtén créditos
+                    al instante
                   </DialogDescription>
                 </DialogHeader>
 
                 <div className="grid gap-4 py-4">
                   {CREDIT_PACKS.map((pack, index) => {
-                    const Icon = pack.icon
-                    const isLoading = loadingCredits === pack.credits
-                    const totalCredits = pack.credits + (pack.bonus || 0)
+                    const Icon = pack.icon;
+                    const isLoading = loadingCredits === pack.credits;
+                    const totalCredits = pack.credits + (pack.bonus || 0);
 
                     return (
                       <motion.div
@@ -177,14 +193,21 @@ export function CreditDisplay({ amount, maxAmount = 1000, className }: CreditDis
                             </div>
                             <div>
                               <div className="flex items-center gap-2">
-                                <h3 className="font-semibold text-foreground">{pack.label}</h3>
+                                <h3 className="font-semibold text-foreground">
+                                  {pack.label}
+                                </h3>
                                 {pack.bonus && (
-                                  <Badge variant="secondary" className="text-xs">
+                                  <Badge
+                                    variant="secondary"
+                                    className="text-xs"
+                                  >
                                     +{pack.bonus} bonus
                                   </Badge>
                                 )}
                               </div>
-                              <p className="text-sm text-muted-foreground">{totalCredits.toLocaleString()} créditos</p>
+                              <p className="text-sm text-muted-foreground">
+                                {totalCredits.toLocaleString()} créditos
+                              </p>
                             </div>
                           </div>
 
@@ -195,11 +218,18 @@ export function CreditDisplay({ amount, maxAmount = 1000, className }: CreditDis
                                   ${pack.originalPrice}
                                 </span>
                               )}
-                              <span className="text-lg font-bold text-foreground">${pack.price}</span>
+                              <span className="text-lg font-bold text-foreground">
+                                ${pack.price}
+                              </span>
                             </div>
                             {pack.originalPrice && (
                               <Badge variant="destructive" className="text-xs">
-                                -{getDiscountPercentage(pack.originalPrice, pack.price)}%
+                                -
+                                {getDiscountPercentage(
+                                  pack.originalPrice,
+                                  pack.price,
+                                )}
+                                %
                               </Badge>
                             )}
                           </div>
@@ -208,7 +238,10 @@ export function CreditDisplay({ amount, maxAmount = 1000, className }: CreditDis
                         <Button
                           onClick={() => handleBuyCredits(pack)}
                           disabled={loadingCredits !== null}
-                          className={cn("mt-4 w-full", pack.popular && "bg-blue-600 hover:bg-blue-700")}
+                          className={cn(
+                            "mt-4 w-full",
+                            pack.popular && "bg-blue-600 hover:bg-blue-700",
+                          )}
                         >
                           {isLoading ? (
                             <>
@@ -223,7 +256,7 @@ export function CreditDisplay({ amount, maxAmount = 1000, className }: CreditDis
                           )}
                         </Button>
                       </motion.div>
-                    )
+                    );
                   })}
                 </div>
 
@@ -238,25 +271,37 @@ export function CreditDisplay({ amount, maxAmount = 1000, className }: CreditDis
 
           <SidebarGroupContent className="p-0">
             <div className="mb-2 flex items-center justify-between">
-              <span className="text-sm text-[var(--muted-foreground)]">Disponibles</span>
-              <motion.span className="text-lg font-semibold text-[var(--foreground)]">{displayText}</motion.span>
+              <span className="text-sm text-[var(--muted-foreground)]">
+                Disponibles
+              </span>
+              <motion.span className="text-lg font-semibold text-[var(--foreground)]">
+                {displayText}
+              </motion.span>
             </div>
 
             <Progress value={percentage} className="h-1.5 bg-[var(--muted)]" />
 
             <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
               <div>
-                <span className="text-[var(--muted-foreground)]">Inicial/mes</span>
-                <p className="font-medium text-[var(--foreground)]">{maxAmount.toLocaleString()}</p>
+                <span className="text-[var(--muted-foreground)]">
+                  Inicial/mes
+                </span>
+                <p className="font-medium text-[var(--foreground)]">
+                  {maxAmount.toLocaleString()}
+                </p>
               </div>
               <div>
-                <span className="text-[var(--muted-foreground)]">Usados este mes</span>
-                <p className="font-medium text-[var(--foreground)]">{(maxAmount - amount).toLocaleString()}</p>
+                <span className="text-[var(--muted-foreground)]">
+                  Usados este mes
+                </span>
+                <p className="font-medium text-[var(--foreground)]">
+                  {(maxAmount - amount).toLocaleString()}
+                </p>
               </div>
             </div>
           </SidebarGroupContent>
         </div>
       </SidebarGroup>
     </>
-  )
+  );
 }

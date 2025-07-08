@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     if (!userId) {
       return NextResponse.json(
         { error: "User ID is required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -26,19 +26,19 @@ export async function GET(request: NextRequest) {
     if (!connection) {
       return NextResponse.json(
         { error: "Google Sheets connection not found for this user." },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
     const accessToken = await getAccessToken(
       connection.connectionId,
-      "google-sheet"
+      "google-sheet",
     );
 
     if (!accessToken) {
       return NextResponse.json(
         { error: "Unable to retrieve access token" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
               fields: "files(id,name)",
               pageSize: 100,
             },
-          }
+          },
         );
         return NextResponse.json(response.data.files || []);
       }
@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
         if (!spreadsheetId) {
           return NextResponse.json(
             { error: "spreadsheetId is required" },
-            { status: 400 }
+            { status: 400 },
           );
         }
         const response = await axios.get(
@@ -76,21 +76,18 @@ export async function GET(request: NextRequest) {
             params: {
               fields: "sheets.properties",
             },
-          }
+          },
         );
         return NextResponse.json(response.data.sheets || []);
       }
       default:
-        return NextResponse.json(
-          { error: "Invalid action" },
-          { status: 400 }
-        );
+        return NextResponse.json({ error: "Invalid action" }, { status: 400 });
     }
   } catch (error: any) {
     console.error("Sheets GET error:", error.response?.data || error);
     return NextResponse.json(
       { error: error.response?.data?.error || error.message },
-      { status: error.response?.status || 500 }
+      { status: error.response?.status || 500 },
     );
   }
 }
@@ -104,29 +101,26 @@ export async function POST(request: NextRequest) {
     if (!userId) {
       return NextResponse.json(
         { error: "User ID is required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     if (action !== "appendData") {
-      return NextResponse.json(
-        { error: "Invalid action" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Invalid action" }, { status: 400 });
     }
-    
+
     const connection = await db.connection.findFirst({
-        where: {
-            userId: userId,
-            providerConfigKey: "google-sheet",
-        },
+      where: {
+        userId: userId,
+        providerConfigKey: "google-sheet",
+      },
     });
 
     if (!connection) {
-        return NextResponse.json(
-            { error: "Google Sheets connection not found for this user." },
-            { status: 404 }
-        );
+      return NextResponse.json(
+        { error: "Google Sheets connection not found for this user." },
+        { status: 404 },
+      );
     }
 
     const { spreadsheetId, sheetName, column, value } = await request.json();
@@ -134,11 +128,14 @@ export async function POST(request: NextRequest) {
     if (!spreadsheetId || !sheetName || !column || value === undefined) {
       return NextResponse.json(
         { error: "spreadsheetId, sheetName, column and value are required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    const accessToken = await getAccessToken(connection.connectionId, "google-sheet");
+    const accessToken = await getAccessToken(
+      connection.connectionId,
+      "google-sheet",
+    );
 
     const range = `${sheetName}!${column}:${column}`;
 
@@ -148,7 +145,7 @@ export async function POST(request: NextRequest) {
 
     const response = await axios.post(
       `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(
-        range
+        range,
       )}:append`,
       body,
       {
@@ -159,7 +156,7 @@ export async function POST(request: NextRequest) {
         params: {
           valueInputOption: "USER_ENTERED",
         },
-      }
+      },
     );
 
     return NextResponse.json(response.data);
@@ -167,7 +164,7 @@ export async function POST(request: NextRequest) {
     console.error("Sheets POST error:", error.response?.data || error);
     return NextResponse.json(
       { error: error.response?.data?.error || error.message },
-      { status: error.response?.status || 500 }
+      { status: error.response?.status || 500 },
     );
   }
 }

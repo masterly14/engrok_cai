@@ -14,6 +14,9 @@ export async function GET() {
     return NextResponse.json(voices);
   } catch (error) {
     console.error("Error fetching ElevenLabs voices", error);
-    return NextResponse.json({ error: "Failed to fetch voices" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to fetch voices" },
+      { status: 500 },
+    );
   }
-} 
+}

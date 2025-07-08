@@ -12,7 +12,11 @@ export interface LedgerEntry {
   createdAt: Date;
 }
 
-export async function getCreditLedger(userId: string, take = 50, skip = 0): Promise<LedgerEntry[]> {
+export async function getCreditLedger(
+  userId: string,
+  take = 50,
+  skip = 0,
+): Promise<LedgerEntry[]> {
   const rows = await db.creditLedger.findMany({
     where: { userId },
     orderBy: { createdAt: "desc" },
@@ -34,11 +38,15 @@ export interface GenerateCreditCheckoutParams {
  * Hay un producto en LS con varias variantes (1000cr, 5000cr, etc.).
  * El mapping VARIANT_ID ↔ credits se mantiene en env var JSON: CREDIT_PACK_VARIANTS
  */
-export async function generateCreditCheckout(params: GenerateCreditCheckoutParams) {
+export async function generateCreditCheckout(
+  params: GenerateCreditCheckoutParams,
+) {
   const mappingRaw = process.env.CREDIT_PACK_VARIANTS;
   if (!mappingRaw) throw new Error("CREDIT_PACK_VARIANTS env var missing");
   const mapping: Record<number, number> = JSON.parse(mappingRaw);
-  const variantId = Number(Object.keys(mapping).find((k) => mapping[Number(k)] === params.credits));
+  const variantId = Number(
+    Object.keys(mapping).find((k) => mapping[Number(k)] === params.credits),
+  );
   if (!variantId) throw new Error("No variant found for credits");
 
   const url = await lemonSqueezy.createCheckout({
@@ -52,4 +60,4 @@ export async function generateCreditCheckout(params: GenerateCreditCheckoutParam
   });
 
   return url;
-} 
+}

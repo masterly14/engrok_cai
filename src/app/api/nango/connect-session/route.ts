@@ -10,11 +10,15 @@ export async function GET(_req: NextRequest) {
 
     const tokenOrObj = await getSessionToken(userId);
     console.log("tokenOrObj", tokenOrObj);
-    const token = typeof tokenOrObj === "string" ? tokenOrObj : tokenOrObj?.token;
+    const token =
+      typeof tokenOrObj === "string" ? tokenOrObj : tokenOrObj?.token;
 
     return NextResponse.json({ token });
   } catch (e: any) {
     console.error("[Nango] Failed to get connect session token", e);
-    return NextResponse.json({ error: e.message || "Internal" }, { status: 500 });
+    return NextResponse.json(
+      { error: e.message || "Internal" },
+      { status: 500 },
+    );
   }
-} 
+}

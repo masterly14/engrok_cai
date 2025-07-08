@@ -1,14 +1,21 @@
-"use client"
+"use client";
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { X, Expand } from "lucide-react"
-import type { ReactNode } from "react"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { X, Expand } from "lucide-react";
+import type { ReactNode } from "react";
 
 interface PdfViewerProps {
-  fileUrl: string
-  title: string
-  children: ReactNode
+  fileUrl: string;
+  title: string;
+  children: ReactNode;
 }
 
 export function PdfViewer({ fileUrl, title, children }: PdfViewerProps) {
@@ -20,7 +27,11 @@ export function PdfViewer({ fileUrl, title, children }: PdfViewerProps) {
           <DialogTitle className="truncate">{title}</DialogTitle>
           <div className="flex items-center gap-2 flex-shrink-0">
             <a href={fileUrl} target="_blank" rel="noopener noreferrer">
-              <Button variant="ghost" size="icon" aria-label="Abrir en nueva pestaña">
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Abrir en nueva pestaña"
+              >
                 <Expand className="h-4 w-4" />
               </Button>
             </a>
@@ -41,5 +52,5 @@ export function PdfViewer({ fileUrl, title, children }: PdfViewerProps) {
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

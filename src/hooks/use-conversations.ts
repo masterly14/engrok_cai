@@ -19,16 +19,16 @@ export function useAgentConversations(agentId: string | undefined) {
     refetchOnMount: false,
     select: (data) => ({
       ...data,
-      data: data.data?.map(conv => ({
+      data: data.data?.map((conv) => ({
         id: conv.id,
         contact: conv.contact,
         phoneNumber: conv.phoneNumber,
         lastMessage: conv.lastMessage,
         unread: conv.unread,
         timestamp: conv.timestamp,
-      }))
-    })
+      })),
+    }),
   });
 
   return { conversationsData, conversationsLoading, conversationsError };
-} 
+}

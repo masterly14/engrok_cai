@@ -1,10 +1,10 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
-import * as z from "zod"
-import { Button } from "@/components/ui/button"
+import * as React from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
+import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
@@ -13,16 +13,16 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from "@/components/ui/select";
 
 // Define the form schema with Zod
 const formSchema = z.object({
@@ -35,7 +35,7 @@ const formSchema = z.object({
   type: z.string({
     required_error: "Por favor selecciona un tipo de asistente.",
   }),
-})
+});
 
 const CreateAssistantForm = () => {
   const form = useForm<z.infer<typeof formSchema>>({
@@ -45,10 +45,10 @@ const CreateAssistantForm = () => {
       description: "",
       type: "",
     },
-  })
+  });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    console.log(values)
+    console.log(values);
   }
 
   return (
@@ -61,7 +61,10 @@ const CreateAssistantForm = () => {
             <FormItem>
               <FormLabel>Nombre</FormLabel>
               <FormControl>
-                <Input placeholder="Ingresa el nombre del asistente" {...field} />
+                <Input
+                  placeholder="Ingresa el nombre del asistente"
+                  {...field}
+                />
               </FormControl>
               <FormDescription>
                 Este será el nombre que identifique a tu asistente.
@@ -84,7 +87,8 @@ const CreateAssistantForm = () => {
                 />
               </FormControl>
               <FormDescription>
-                Proporciona una descripción detallada de las capacidades de tu asistente.
+                Proporciona una descripción detallada de las capacidades de tu
+                asistente.
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -110,7 +114,8 @@ const CreateAssistantForm = () => {
                 </SelectContent>
               </Select>
               <FormDescription>
-                Elige el tipo de asistente que mejor se adapte a tus necesidades.
+                Elige el tipo de asistente que mejor se adapte a tus
+                necesidades.
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -120,7 +125,7 @@ const CreateAssistantForm = () => {
         <Button type="submit">Crear Asistente</Button>
       </form>
     </Form>
-  )
-}
+  );
+};
 
-export default CreateAssistantForm
+export default CreateAssistantForm;

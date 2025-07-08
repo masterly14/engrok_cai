@@ -1,4 +1,4 @@
-'use client'
+"use client";
 import { useEffect, useState, useRef } from "react";
 import { Users, Zap, TrendingUp, Clock } from "lucide-react";
 
@@ -8,32 +8,40 @@ const stats = [
     value: 50000,
     suffix: "+",
     label: "Conversaciones/mes",
-    description: "Gestionadas por nuestros agentes de IA"
+    description: "Gestionadas por nuestros agentes de IA",
   },
   {
     icon: Zap,
     value: 90,
     suffix: "%",
     label: "Tasa de Resolución",
-    description: "En el primer contacto, sin intervención humana"
+    description: "En el primer contacto, sin intervención humana",
   },
   {
     icon: TrendingUp,
     value: 40,
     suffix: "%",
     label: "Reducción de Costos",
-    description: "En operaciones de soporte y atención"
+    description: "En operaciones de soporte y atención",
   },
   {
     icon: Clock,
     value: 1000,
     suffix: "+",
     label: "Horas Ahorradas",
-    description: "En tareas manuales y repetitivas cada mes"
-  }
+    description: "En tareas manuales y repetitivas cada mes",
+  },
 ];
 
-const AnimatedCounter = ({ end, duration = 2000, suffix = "" }: { end: number; duration?: number; suffix?: string }) => {
+const AnimatedCounter = ({
+  end,
+  duration = 2000,
+  suffix = "",
+}: {
+  end: number;
+  duration?: number;
+  suffix?: string;
+}) => {
   const [count, setCount] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -45,7 +53,7 @@ const AnimatedCounter = ({ end, duration = 2000, suffix = "" }: { end: number; d
           setIsVisible(true);
         }
       },
-      { threshold: 0.1 }
+      { threshold: 0.1 },
     );
 
     if (ref.current) {
@@ -64,7 +72,7 @@ const AnimatedCounter = ({ end, duration = 2000, suffix = "" }: { end: number; d
     const animate = (timestamp: number) => {
       if (!startTime) startTime = timestamp;
       const progress = Math.min((timestamp - startTime) / duration, 1);
-      
+
       const easeOutQuart = 1 - Math.pow(1 - progress, 4);
       setCount(end * easeOutQuart);
 
@@ -79,8 +87,12 @@ const AnimatedCounter = ({ end, duration = 2000, suffix = "" }: { end: number; d
   }, [isVisible, end, duration]);
 
   return (
-    <div ref={ref} className="text-4xl md:text-5xl font-light tracking-tight text-black">
-      {Math.floor(count).toLocaleString()}{suffix}
+    <div
+      ref={ref}
+      className="text-4xl md:text-5xl font-light tracking-tight text-black"
+    >
+      {Math.floor(count).toLocaleString()}
+      {suffix}
     </div>
   );
 };
@@ -91,7 +103,10 @@ const StatsSection = () => {
       {/* Background Effects */}
       <div className="absolute inset-0">
         <div className="absolute top-0 left-1/4 w-[300px] h-[300px] bg-gradient-to-br from-blue-500/2 to-cyan-400/2 rounded-full blur-3xl animate-float"></div>
-        <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-gradient-to-tl from-purple-500/2 to-pink-400/2 rounded-full blur-3xl animate-float" style={{animationDelay: '3s'}}></div>
+        <div
+          className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-gradient-to-tl from-purple-500/2 to-pink-400/2 rounded-full blur-3xl animate-float"
+          style={{ animationDelay: "3s" }}
+        ></div>
       </div>
 
       <div className="max-w-7xl mx-auto px-8 relative z-10">
@@ -105,7 +120,8 @@ const StatsSection = () => {
             </span>
           </h2>
           <p className="text-lg text-black/60 font-light max-w-2xl mx-auto leading-relaxed tracking-wide">
-            Nuestra tecnología en acción, reflejada en números reales de nuestros clientes.
+            Nuestra tecnología en acción, reflejada en números reales de
+            nuestros clientes.
           </p>
         </div>
 
@@ -115,7 +131,7 @@ const StatsSection = () => {
             <div
               key={index}
               className="group text-center p-8 bg-black/[0.015] backdrop-blur-sm border border-black/8 rounded-2xl hover:bg-black/[0.025] hover:border-black/15 transition-all duration-500 hover:-translate-y-2"
-              style={{animationDelay: `${index * 0.1}s`}}
+              style={{ animationDelay: `${index * 0.1}s` }}
             >
               {/* Icon */}
               <div className="w-16 h-16 bg-gradient-to-br from-cyan-400/12 to-purple-500/12 rounded-xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
@@ -123,8 +139,8 @@ const StatsSection = () => {
               </div>
 
               {/* Counter */}
-              <AnimatedCounter 
-                end={stat.value} 
+              <AnimatedCounter
+                end={stat.value}
                 suffix={stat.suffix}
                 duration={2000 + index * 200}
               />

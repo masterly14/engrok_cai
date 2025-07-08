@@ -23,7 +23,12 @@ interface LeadCardProps {
   compact?: boolean; // Nueva propiedad para modo compacto
 }
 
-export function LeadCard({ lead, tags, onClick, compact = false }: LeadCardProps) {
+export function LeadCard({
+  lead,
+  tags,
+  onClick,
+  compact = false,
+}: LeadCardProps) {
   // Ajustar clases basadas en modo compacto
   const paddingClass = compact ? "p-2" : "p-3";
   const titleClass = compact ? "text-xs font-medium" : "font-medium text-sm";
@@ -43,7 +48,9 @@ export function LeadCard({ lead, tags, onClick, compact = false }: LeadCardProps
         <div className="flex justify-between items-start">
           <div>
             <h3 className={titleClass}>{lead.name}</h3>
-            <div className={`flex items-center text-muted-foreground ${textSize} ${compact ? "mt-0.5" : "mt-1"}`}>
+            <div
+              className={`flex items-center text-muted-foreground ${textSize} ${compact ? "mt-0.5" : "mt-1"}`}
+            >
               <Building2 className={`${iconSize} mr-1`} />
               {lead.company}
             </div>
@@ -59,7 +66,7 @@ export function LeadCard({ lead, tags, onClick, compact = false }: LeadCardProps
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        
+
         {lead.tags.length > 0 && (
           <div className={`flex flex-wrap gap-0.5 ${marginClass}`}>
             {lead.tags.map((tagName) => {
@@ -75,18 +82,23 @@ export function LeadCard({ lead, tags, onClick, compact = false }: LeadCardProps
                     color: tagData.color,
                   }}
                 >
-                  {compact && tagName.length > 8 ? `${tagName.substring(0, 6)}...` : tagName}
+                  {compact && tagName.length > 8
+                    ? `${tagName.substring(0, 6)}...`
+                    : tagName}
                 </Badge>
               ) : null;
             })}
           </div>
         )}
-        
-        <div className={`flex items-center text-muted-foreground ${textSize} ${marginClass}`}>
+
+        <div
+          className={`flex items-center text-muted-foreground ${textSize} ${marginClass}`}
+        >
           <Calendar className={`${iconSize} mr-1`} />
-          {compact ? "Last: " : "Last contact: "}{formatDate(lead.lastContact)}
+          {compact ? "Last: " : "Last contact: "}
+          {formatDate(lead.lastContact)}
         </div>
-        
+
         {lead.value && (
           <div className={`${marginClass} ${valueClass}`}>
             ${lead.value.toLocaleString()}

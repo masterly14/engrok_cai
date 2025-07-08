@@ -1,19 +1,22 @@
-"use client"
+"use client";
 
-import type { Node } from "reactflow"
-import { ConfigField } from "../shared-config-components"
+import type { Node } from "reactflow";
+import { ConfigField } from "../shared-config-components";
 
 interface UrlButtonNodeConfigProps {
-  selectedNode: Node
-  updateNode: (nodeId: string, updates: any) => void
+  selectedNode: Node;
+  updateNode: (nodeId: string, updates: any) => void;
 }
 
-export function UrlButtonNodeConfig({ selectedNode, updateNode }: UrlButtonNodeConfigProps) {
-  const data = selectedNode.data || {}
+export function UrlButtonNodeConfig({
+  selectedNode,
+  updateNode,
+}: UrlButtonNodeConfigProps) {
+  const data = selectedNode.data || {};
 
   const handleChange = (field: string, value: any) => {
-    updateNode(selectedNode.id, { data: { ...data, [field]: value } })
-  }
+    updateNode(selectedNode.id, { data: { ...data, [field]: value } });
+  };
 
   return (
     <div className="space-y-6">
@@ -61,5 +64,5 @@ export function UrlButtonNodeConfig({ selectedNode, updateNode }: UrlButtonNodeC
         disabled={data.isUserResponseAuto}
       />
     </div>
-  )
+  );
 }

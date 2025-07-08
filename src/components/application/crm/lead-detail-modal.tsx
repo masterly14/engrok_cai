@@ -47,14 +47,14 @@ export function LeadDetailModal({
   onUpdate,
 }: LeadDetailModalProps) {
   const [editMode, setEditMode] = useState(false);
-  const [editedLead, setEditedLead] = useState<Lead>({ 
+  const [editedLead, setEditedLead] = useState<Lead>({
     ...lead,
-    status: lead.status ?? undefined 
+    status: lead.status ?? undefined,
   });
   const [tagInput, setTagInput] = useState("");
 
   const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     const { name, value } = e.target;
     setEditedLead({ ...editedLead, [name]: value });
@@ -135,7 +135,7 @@ export function LeadDetailModal({
   });
   const handleDeleteLead = () => {
     deleteLeadMutation.mutateAsync(lead);
-    onClose()
+    onClose();
   };
 
   return (
@@ -307,7 +307,7 @@ export function LeadDetailModal({
                   <div className="flex items-center gap-2 mt-1">
                     {(() => {
                       const stageData = stages.find(
-                        (s) => s.id === lead.status
+                        (s) => s.id === lead.status,
                       );
                       return stageData ? (
                         <>
@@ -406,7 +406,7 @@ export function LeadDetailModal({
             </>
           ) : (
             <>
-            <Button variant={"destructive"} onClick={handleDeleteLead}>
+              <Button variant={"destructive"} onClick={handleDeleteLead}>
                 Delete
               </Button>
               <Button variant="outline" onClick={onClose}>

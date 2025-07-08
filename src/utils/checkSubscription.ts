@@ -100,13 +100,19 @@ export async function checkUserSubscription(userId: string): Promise<{
   return {
     hasActiveSubscription: true,
     currentPlan: subscription.plan.name,
-    restrictions: planRestrictions[subscription.plan.name.toLowerCase()] || fallbackRestrictions,
+    restrictions:
+      planRestrictions[subscription.plan.name.toLowerCase()] ||
+      fallbackRestrictions,
   };
 }
 
-export async function checkFeatureAccess(userId: string, feature: string): Promise<boolean> {
-  const { hasActiveSubscription, restrictions } = await checkUserSubscription(userId);
-  
+export async function checkFeatureAccess(
+  userId: string,
+  feature: string,
+): Promise<boolean> {
+  const { hasActiveSubscription, restrictions } =
+    await checkUserSubscription(userId);
+
   if (!hasActiveSubscription) {
     return false;
   }
@@ -117,10 +123,11 @@ export async function checkFeatureAccess(userId: string, feature: string): Promi
 export async function checkResourceLimit(
   userId: string,
   resourceType: keyof PlanRestrictions,
-  currentCount: number
+  currentCount: number,
 ): Promise<boolean> {
-  const { hasActiveSubscription, restrictions } = await checkUserSubscription(userId);
-  
+  const { hasActiveSubscription, restrictions } =
+    await checkUserSubscription(userId);
+
   if (!hasActiveSubscription) {
     return false;
   }
@@ -128,6 +135,6 @@ export async function checkResourceLimit(
   const limit = restrictions[resourceType];
   if (limit === undefined) return true;
   if (limit === -1) return true; // unlimited
-  
+
   return Number(currentCount) < Number(limit);
-} 
+}

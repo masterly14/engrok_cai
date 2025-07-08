@@ -65,7 +65,7 @@ export function SettingsModal({
     "EditedTags: ",
     editedTags,
     "Stages: ",
-    stages
+    stages,
   );
   console.log("Lead: ", leads);
 
@@ -157,12 +157,12 @@ export function SettingsModal({
 
   const handleDeleteStage = async (stage: Stage) => {
     const exist = leads.some((lead) => lead.status === stage.id);
-    console.log(exist)
+    console.log(exist);
     if (exist) {
       setTimeout(() => {
         setPermittedDelet(false);
       }, 1000);
-      setPermittedDelet(true)
+      setPermittedDelet(true);
       return;
     }
     await deleteStageAsync(stage.id);

@@ -1,10 +1,10 @@
-"use server"
+"use server";
 
-import { NextResponse } from "next/server"
-import { Nango } from "@nangohq/node"
-import axios from "axios"
+import { NextResponse } from "next/server";
+import { Nango } from "@nangohq/node";
+import axios from "axios";
 
-const nango = new Nango({ secretKey: process.env.NANGO_SECRET_KEY! })
+const nango = new Nango({ secretKey: process.env.NANGO_SECRET_KEY! });
 
 async function getPrimaryCalendarId(accessToken: string): Promise<string> {
   try {
@@ -12,13 +12,13 @@ async function getPrimaryCalendarId(accessToken: string): Promise<string> {
       "https://www.googleapis.com/calendar/v3/users/me/calendarList",
       {
         headers: { Authorization: `Bearer ${accessToken}` },
-      }
-    )
-    const primaryCalendar = response.data.items.find((cal: any) => cal.primary)
-    return primaryCalendar?.id || "primary"
+      },
+    );
+    const primaryCalendar = response.data.items.find((cal: any) => cal.primary);
+    return primaryCalendar?.id || "primary";
   } catch (error) {
-    console.error("Error fetching primary calendar ID:", error)
-    return "primary"
+    console.error("Error fetching primary calendar ID:", error);
+    return "primary";
   }
 }
 
@@ -31,26 +31,29 @@ export async function POST(req: Request) {
       endTime,
       attendeeEmail,
       calendarId: providedCalendarId,
-    } = await req.json()
+    } = await req.json();
 
     if (!connectionId) {
       return NextResponse.json(
         { error: "Connection ID is required" },
-        { status: 400 }
-      )
+        { status: 400 },
+      );
     }
     if (!title || !startTime || !endTime || !attendeeEmail) {
       return NextResponse.json(
         { error: "Missing required event details" },
-        { status: 400 }
-      )
+        { status: 400 },
+      );
     }
 
     // Retrieve a fresh access token (Nango auto-refreshes internally)
-    const token: string = await nango.getToken("google-calendar", connectionId) as unknown as string
+    const token: string = (await nango.getToken(
+      "google-calendar",
+      connectionId,
+    )) as unknown as string;
 
     const calendarId =
-      providedCalendarId || (await getPrimaryCalendarId(token))
+      providedCalendarId || (await getPrimaryCalendarId(token));
 
     const event = {
       summary: title,
@@ -63,7 +66,7 @@ export async function POST(req: Request) {
         timeZone: "America/Bogota",
       },
       attendees: [{ email: attendeeEmail }],
-    }
+    };
 
     const response = await axios.post(
       `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events`,
@@ -73,18 +76,18 @@ export async function POST(req: Request) {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-      }
-    )
+      },
+    );
 
-    return NextResponse.json({ event: response.data })
+    return NextResponse.json({ event: response.data });
   } catch (error: any) {
     console.error(
       "Error creating event for vapi:",
-      error.response?.data || error.message
-    )
+      error.response?.data || error.message,
+    );
     return NextResponse.json(
       { error: "Failed to create event for vapi" },
-      { status: 500 }
-    )
+      { status: 500 },
+    );
   }
-} 
+}

@@ -1,9 +1,9 @@
-'use server';
+"use server";
 
-import { db } from '@/utils'; // Ajusta esta ruta si es necesario
-import { onBoardUser } from './user';
-import { revalidatePath } from 'next/cache';
-import { randomBytes } from 'crypto';
+import { db } from "@/utils"; // Ajusta esta ruta si es necesario
+import { onBoardUser } from "./user";
+import { revalidatePath } from "next/cache";
+import { randomBytes } from "crypto";
 
 /**
  * Crea un nuevo trigger para un workflow de voz.
@@ -14,11 +14,11 @@ import { randomBytes } from 'crypto';
 export const createVoiceTrigger = async (
   workflowId: string,
   provider: string,
-  mapping: object
+  mapping: object,
 ) => {
   const user = await onBoardUser();
   if (!user?.data?.id) {
-    throw new Error('Usuario no autenticado');
+    throw new Error("Usuario no autenticado");
   }
 
   // Verificar que el workflow pertenece al usuario
@@ -30,11 +30,11 @@ export const createVoiceTrigger = async (
   });
 
   if (!workflow) {
-    throw new Error('El workflow no existe o no tienes permiso sobre él.');
+    throw new Error("El workflow no existe o no tienes permiso sobre él.");
   }
 
   // Generar un token único y seguro para la URL del webhook
-  const token = randomBytes(20).toString('hex');
+  const token = randomBytes(20).toString("hex");
 
   const newTrigger = await db.voiceWorkflowTrigger.create({
     data: {
@@ -62,7 +62,7 @@ export const createVoiceTrigger = async (
 export const getVoiceTriggersForWorkflow = async (workflowId: string) => {
   const user = await onBoardUser();
   if (!user?.data?.id) {
-    throw new Error('Usuario no autenticado');
+    throw new Error("Usuario no autenticado");
   }
 
   const triggers = await db.voiceWorkflowTrigger.findMany({
@@ -71,7 +71,7 @@ export const getVoiceTriggersForWorkflow = async (workflowId: string) => {
       userId: user.data.id, // Asegura que solo se devuelvan los del usuario
     },
     orderBy: {
-      createdAt: 'desc',
+      createdAt: "desc",
     },
   });
 
@@ -88,7 +88,7 @@ export const getVoiceTriggersForWorkflow = async (workflowId: string) => {
 export const deleteVoiceTrigger = async (triggerId: string) => {
   const user = await onBoardUser();
   if (!user?.data?.id) {
-    throw new Error('Usuario no autenticado');
+    throw new Error("Usuario no autenticado");
   }
 
   const trigger = await db.voiceWorkflowTrigger.findFirst({
@@ -99,7 +99,9 @@ export const deleteVoiceTrigger = async (triggerId: string) => {
   });
 
   if (!trigger) {
-    throw new Error('El trigger no existe o no tienes permiso para eliminarlo.');
+    throw new Error(
+      "El trigger no existe o no tienes permiso para eliminarlo.",
+    );
   }
 
   await db.voiceWorkflowTrigger.delete({
@@ -110,11 +112,11 @@ export const deleteVoiceTrigger = async (triggerId: string) => {
 
   // Revalidar la página del workflow para que la lista de triggers se actualice
   revalidatePath(
-    `/application/agents/voice-agents/workflows/${trigger.workflowId}`
+    `/application/agents/voice-agents/workflows/${trigger.workflowId}`,
   );
 
   return {
     status: 200,
-    message: 'Trigger eliminado correctamente.',
+    message: "Trigger eliminado correctamente.",
   };
-}; 
+};

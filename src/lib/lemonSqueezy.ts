@@ -1,4 +1,4 @@
-import "server-only"
+import "server-only";
 
 /*
  * Minimal Lemon Squeezy API wrapper focused on subscription flows.
@@ -15,19 +15,26 @@ function assertEnv(name: string, value?: string): asserts value is string {
   console.debug(`[LS] Env var ${name} is available`);
   // Log el valor (ocultando parte por seguridad)
   if (name === "LEMON_SQUEEZY_API_KEY") {
-    const maskedValue = value.length > 8 ? `${value.substring(0, 4)}...${value.substring(value.length - 4)}` : "***";
-    console.debug(`[LS] API Key value: ${maskedValue} (length: ${value.length})`);
-    
+    const maskedValue =
+      value.length > 8
+        ? `${value.substring(0, 4)}...${value.substring(value.length - 4)}`
+        : "***";
+    console.debug(
+      `[LS] API Key value: ${maskedValue} (length: ${value.length})`,
+    );
+
     // Detectar si es test o live mode
-    if (value.startsWith('test_')) {
+    if (value.startsWith("test_")) {
       console.debug(`[LS] API Key is in TEST mode`);
-    } else if (value.startsWith('live_')) {
+    } else if (value.startsWith("live_")) {
       console.debug(`[LS] API Key is in LIVE mode`);
     } else {
-      console.warn(`[LS] API Key format not recognized - should start with 'test_' or 'live_'`);
+      console.warn(
+        `[LS] API Key format not recognized - should start with 'test_' or 'live_'`,
+      );
     }
   }
-  
+
   if (name === "LEMON_SQUEEZY_STORE_ID") {
     console.debug(`[LS] Store ID: ${value}`);
   }
@@ -40,13 +47,16 @@ const API_KEY = process.env.LEMON_SQUEEZY_API_KEY!.trim();
 const STORE_ID = process.env.LEMON_SQUEEZY_STORE_ID!;
 
 // Detección del modo de la API key
-const API_KEY_FORMAT = API_KEY.startsWith('test_')
-  ? 'TEST'
-  : API_KEY.startsWith('live_')
-    ? 'LIVE'
-    : 'JWT'; // nueva generación de claves JWT
+const API_KEY_FORMAT = API_KEY.startsWith("test_")
+  ? "TEST"
+  : API_KEY.startsWith("live_")
+    ? "LIVE"
+    : "JWT"; // nueva generación de claves JWT
 
-async function lsFetch<T>(endpoint: string, init: RequestInit = {}): Promise<T> {
+async function lsFetch<T>(
+  endpoint: string,
+  init: RequestInit = {},
+): Promise<T> {
   // Log básico de la petición
   try {
     console.debug(`[LS] Mode detected: ${API_KEY_FORMAT}`);
@@ -60,8 +70,13 @@ async function lsFetch<T>(endpoint: string, init: RequestInit = {}): Promise<T> 
     } else {
       // Log el header Authorization (ocultando parte por seguridad)
       const authHeader = `Bearer ${API_KEY}`;
-      const maskedAuth = authHeader.length > 20 ? `${authHeader.substring(0, 15)}...${authHeader.substring(authHeader.length - 5)}` : "***";
-      console.debug(`[LS] Authorization header: ${maskedAuth} (length: ${authHeader.length})`);
+      const maskedAuth =
+        authHeader.length > 20
+          ? `${authHeader.substring(0, 15)}...${authHeader.substring(authHeader.length - 5)}`
+          : "***";
+      console.debug(
+        `[LS] Authorization header: ${maskedAuth} (length: ${authHeader.length})`,
+      );
     }
   } catch {
     // ignore log errors
@@ -189,13 +204,18 @@ export async function createCheckout(params: CreateCheckoutParams) {
 
   // -------- DEBUG --------
   if (process.env.NODE_ENV !== "production") {
-    console.debug("[LS] createCheckout payload", JSON.stringify(payload, null, 2));
+    console.debug(
+      "[LS] createCheckout payload",
+      JSON.stringify(payload, null, 2),
+    );
   }
 
   // Verificar modo y compatibilidad
-  const isTestMode = API_KEY.startsWith('test_');
-  const isLiveMode = API_KEY.startsWith('live_');
-  console.debug(`[LS] Creating checkout in ${isTestMode ? 'TEST' : isLiveMode ? 'LIVE' : 'UNKNOWN'} mode`);
+  const isTestMode = API_KEY.startsWith("test_");
+  const isLiveMode = API_KEY.startsWith("live_");
+  console.debug(
+    `[LS] Creating checkout in ${isTestMode ? "TEST" : isLiveMode ? "LIVE" : "UNKNOWN"} mode`,
+  );
   console.debug(`[LS] Store ID: ${STORE_ID}, Variant ID: ${params.variantId}`);
 
   try {
@@ -256,4 +276,4 @@ export const lemonSqueezy = {
     const endpoint = `/variants?page[number]=${page}&page[size]=${perPage}`;
     return await lsFetch<{ data: any[] }>(endpoint);
   },
-}; 
+};

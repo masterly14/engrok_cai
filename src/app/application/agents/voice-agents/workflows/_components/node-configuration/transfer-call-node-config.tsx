@@ -46,17 +46,18 @@ export function TransferCallNodeConfig({
   const updateDestination = (
     index: number,
     field: keyof TransferDestination,
-    value: any
+    value: any,
   ) => {
     updateNode(selectedNode.id, {
       data: {
         ...selectedNode.data,
         tool: {
           ...selectedNode.data.tool,
-          destinations: selectedNode.data.tool?.destinations?.map(
-            (dest: TransferDestination, i: number) =>
-              i === index ? { ...dest, [field]: value } : dest
-          ) || [],
+          destinations:
+            selectedNode.data.tool?.destinations?.map(
+              (dest: TransferDestination, i: number) =>
+                i === index ? { ...dest, [field]: value } : dest,
+            ) || [],
         },
       },
     });
@@ -68,9 +69,10 @@ export function TransferCallNodeConfig({
         ...selectedNode.data,
         tool: {
           ...selectedNode.data.tool,
-          destinations: selectedNode.data.tool?.destinations?.filter(
-            (_: any, i: number) => i !== index
-          ) || [],
+          destinations:
+            selectedNode.data.tool?.destinations?.filter(
+              (_: any, i: number) => i !== index,
+            ) || [],
         },
       },
     });
@@ -82,10 +84,11 @@ export function TransferCallNodeConfig({
         ...selectedNode.data,
         tool: {
           ...selectedNode.data.tool,
-          destinations: selectedNode.data.tool?.destinations?.map((dest: any) => ({
-            ...dest,
-            transferPlan: { mode },
-          })) || [],
+          destinations:
+            selectedNode.data.tool?.destinations?.map((dest: any) => ({
+              ...dest,
+              transferPlan: { mode },
+            })) || [],
         },
       },
     });
@@ -124,7 +127,9 @@ export function TransferCallNodeConfig({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="blind_transfer">Transferencia Ciega</SelectItem>
+              <SelectItem value="blind_transfer">
+                Transferencia Ciega
+              </SelectItem>
               <SelectItem value="blind_summary_sip">
                 Transferencia Ciega con Resumen en Encabezado SIP
               </SelectItem>
@@ -139,7 +144,9 @@ export function TransferCallNodeConfig({
           (destination: TransferDestination, index: number) => (
             <Card key={index} className="p-3 border border-gray-200">
               <div className="flex items-center justify-between mb-3">
-                <Label className="text-sm font-medium">Número de Teléfono</Label>
+                <Label className="text-sm font-medium">
+                  Número de Teléfono
+                </Label>
                 <Button
                   size="sm"
                   variant="ghost"
@@ -171,7 +178,7 @@ export function TransferCallNodeConfig({
                           updateDestination(
                             index,
                             "numberE164CheckEnabled",
-                            e.target.checked
+                            e.target.checked,
                           )
                         }
                         className="h-3 w-3"
@@ -208,7 +215,7 @@ export function TransferCallNodeConfig({
                 </div>
               </div>
             </Card>
-          )
+          ),
         )}
       </div>
     </div>

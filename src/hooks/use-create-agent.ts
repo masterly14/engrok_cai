@@ -1,6 +1,9 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { createAssistantAction, updateAssistantAction } from "@/actions/vapi/assistant";
+import {
+  createAssistantAction,
+  updateAssistantAction,
+} from "@/actions/vapi/assistant";
 import { Agent } from "@prisma/client";
 import { publishAgent as publishAgentAction } from "@/actions/agents";
 
@@ -39,9 +42,9 @@ export function useCreateAgent() {
       if (agentData.knowledgeBaseId) {
         formData.append("knowledgeBaseId", agentData.knowledgeBaseId);
       }
-      
+
       const newAssistant = await createAssistantAction(formData);
-      
+
       return newAssistant;
     },
     onSuccess: () => {

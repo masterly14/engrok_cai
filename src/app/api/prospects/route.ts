@@ -57,15 +57,18 @@ export async function POST(req: NextRequest) {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const userId = user.data.id
+  const userId = user.data.id;
 
   try {
     const pdlApiKey = process.env.PDL_API_KEY;
     if (!pdlApiKey) {
       console.error("PDL API key is not configured.");
       return NextResponse.json(
-        { error: "Internal server error: Prospect finder no configurado (falta PDL_API_KEY)." },
-        { status: 500 }
+        {
+          error:
+            "Internal server error: Prospect finder no configurado (falta PDL_API_KEY).",
+        },
+        { status: 500 },
       );
     }
 
@@ -75,7 +78,7 @@ export async function POST(req: NextRequest) {
     if (!validation.success) {
       return NextResponse.json(
         { error: "Invalid input", details: validation.error.errors },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -86,7 +89,7 @@ export async function POST(req: NextRequest) {
 
     // if (company) must.push({ match_phrase: { job_company_name: company } }); // Removed: no longer searching by company name
 
-    if (location) must.push({ term: { 'location.country': location } });
+    if (location) must.push({ term: { "location.country": location } });
     if (industry) must.push({ term: { industry: industry } }); // Changed from job_company_industry
 
     if (employeeSize) {
@@ -108,21 +111,24 @@ export async function POST(req: NextRequest) {
 
     // ------------------ Llamada a PDL ------------------
     // Changed endpoint to Company Search API
-    const pdlResponse = await fetch("https://api.peopledatalabs.com/v5/company/search", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Api-Key": pdlApiKey,
+    const pdlResponse = await fetch(
+      "https://api.peopledatalabs.com/v5/company/search",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Api-Key": pdlApiKey,
+        },
+        body: JSON.stringify(pdlPayload),
       },
-      body: JSON.stringify(pdlPayload),
-    });
+    );
 
     if (!pdlResponse.ok) {
       const errorText = await pdlResponse.text();
       console.error("PDL API Error:", errorText);
       return NextResponse.json(
         { error: `Error PDL: ${pdlResponse.statusText}` },
-        { status: pdlResponse.status }
+        { status: pdlResponse.status },
       );
     }
 
@@ -158,12 +164,11 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(savedProspects);
     */
-
   } catch (error) {
     console.error("[PROSPECTS_POST]", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
-} 
+}

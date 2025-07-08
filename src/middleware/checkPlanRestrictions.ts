@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { checkUserSubscription, checkFeatureAccess, checkResourceLimit, PlanRestrictions } from "@/utils/checkSubscription";
+import {
+  checkUserSubscription,
+  checkFeatureAccess,
+  checkResourceLimit,
+  PlanRestrictions,
+} from "@/utils/checkSubscription";
 import { onBoardUser } from "@/actions/user";
 import { CreditService } from "@/services/credit-service";
 
@@ -9,24 +14,21 @@ export async function checkPlanRestrictions(
   requiredFeature?: string,
   resourceType?: keyof PlanRestrictions,
   currentCount?: number,
-  expectedCredits?: number
+  expectedCredits?: number,
 ) {
   const user = await onBoardUser();
-  
+
   if (!user) {
-    return NextResponse.json(
-      { error: "Unauthorized" },
-      { status: 401 }
-    );
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   // Verificar si el usuario tiene una suscripción activa
   const { hasActiveSubscription } = await checkUserSubscription(user.data.id);
-  
+
   if (!hasActiveSubscription) {
     return NextResponse.json(
       { error: "Subscription required" },
-      { status: 403 }
+      { status: 403 },
     );
   }
 
@@ -36,18 +38,22 @@ export async function checkPlanRestrictions(
     if (!hasAccess) {
       return NextResponse.json(
         { error: "Feature not available in your plan" },
-        { status: 403 }
+        { status: 403 },
       );
     }
   }
 
   // Si se requiere verificar un límite de recurso
   if (resourceType && currentCount !== undefined) {
-    const withinLimit = await checkResourceLimit(user.data.id, resourceType, currentCount);
+    const withinLimit = await checkResourceLimit(
+      user.data.id,
+      resourceType,
+      currentCount,
+    );
     if (!withinLimit) {
       return NextResponse.json(
         { error: "Resource limit reached for your plan" },
-        { status: 403 }
+        { status: 403 },
       );
     }
   }
@@ -57,9 +63,12 @@ export async function checkPlanRestrictions(
     try {
       await CreditService.ensureBalance(user.data.id, expectedCredits);
     } catch {
-      return NextResponse.json({ error: "Not enough credits" }, { status: 403 });
+      return NextResponse.json(
+        { error: "Not enough credits" },
+        { status: 403 },
+      );
     }
   }
 
   return null; // No hay restricciones, continuar
-} 
+}

@@ -1,4 +1,4 @@
-"use server"
+"use server";
 
 import { VapiClient } from "@vapi-ai/server-sdk";
 import { db } from "@/utils";
@@ -60,9 +60,7 @@ export const getDashboardAnalytics = async (): Promise<DashboardAnalytics> => {
   let calls: any[] = [];
   if (agentVapiIds.length > 0) {
     const callsArrays = await Promise.all(
-      agentVapiIds.map((assistantId) =>
-        vapiClient.calls.list({ assistantId })
-      )
+      agentVapiIds.map((assistantId) => vapiClient.calls.list({ assistantId })),
     );
     calls = callsArrays.flat();
   }
@@ -72,9 +70,10 @@ export const getDashboardAnalytics = async (): Promise<DashboardAnalytics> => {
   const durations = calls.map((c) => {
     if (c.startedAt && c.endedAt) {
       return (
-        new Date(c.endedAt as string).getTime() -
-        new Date(c.startedAt as string).getTime()
-      ) / 1000;
+        (new Date(c.endedAt as string).getTime() -
+          new Date(c.startedAt as string).getTime()) /
+        1000
+      );
     }
     return 0;
   });
@@ -138,7 +137,7 @@ export interface TimeSeriesDayData {
 }
 
 export const getDashboardTimeSeries = async (
-  days: number = 30
+  days: number = 30,
 ): Promise<TimeSeriesDayData[]> => {
   /* ----------------------------- Obtain user context ----------------------------- */
   const user = await onBoardUser();
@@ -176,9 +175,7 @@ export const getDashboardTimeSeries = async (
   let calls: any[] = [];
   if (agentVapiIds.length > 0) {
     const callsArrays = await Promise.all(
-      agentVapiIds.map((assistantId) =>
-        vapiClient.calls.list({ assistantId })
-      )
+      agentVapiIds.map((assistantId) => vapiClient.calls.list({ assistantId })),
     );
     calls = callsArrays.flat();
   }
@@ -225,7 +222,8 @@ export const getDashboardTimeSeries = async (
     dateMap[key].calls += 1;
     if (call.startedAt && call.endedAt) {
       dateMap[key].callDurationSeconds +=
-        (new Date(call.endedAt).getTime() - new Date(call.startedAt).getTime()) /
+        (new Date(call.endedAt).getTime() -
+          new Date(call.startedAt).getTime()) /
         1000;
     }
   });
@@ -239,7 +237,5 @@ export const getDashboardTimeSeries = async (
     }
   });
 
-  return Object.values(dateMap).sort((a, b) =>
-    a.date.localeCompare(b.date)
-  );
-}; 
+  return Object.values(dateMap).sort((a, b) => a.date.localeCompare(b.date));
+};

@@ -107,7 +107,10 @@ const NumberConfigurationCard: React.FC<Props> = ({
       <CardContent className="space-y-8">
         <div className="space-y-8">
           <div className="flex items-center gap-2">
-            <Label htmlFor="name" className="text-sm font-medium text-slate-900">
+            <Label
+              htmlFor="name"
+              className="text-sm font-medium text-slate-900"
+            >
               Nombre del número
             </Label>
             <Input
@@ -126,7 +129,10 @@ const NumberConfigurationCard: React.FC<Props> = ({
               Proveedor de servicios
               {!isCreatingNew && <Lock className="h-4 w-4 text-slate-400" />}
             </Label>
-            <Badge variant="outline" className="border-slate-300 hover:bg-slate-50">
+            <Badge
+              variant="outline"
+              className="border-slate-300 hover:bg-slate-50"
+            >
               <Info className="h-4 w-4" />
             </Badge>
           </div>
@@ -144,7 +150,11 @@ const NumberConfigurationCard: React.FC<Props> = ({
             </SelectTrigger>
             <SelectContent className="border-slate-200">
               {providers.map((provider) => (
-                <SelectItem key={provider.value} value={provider.value} className="py-3">
+                <SelectItem
+                  key={provider.value}
+                  value={provider.value}
+                  className="py-3"
+                >
                   <div className="flex items-center gap-3">
                     {provider.image ? (
                       <Image
@@ -159,7 +169,9 @@ const NumberConfigurationCard: React.FC<Props> = ({
                         <Building2 className="h-4 w-4 text-slate-600" />
                       </div>
                     )}
-                    <span className="font-medium text-slate-900">{provider.label}</span>
+                    <span className="font-medium text-slate-900">
+                      {provider.label}
+                    </span>
                   </div>
                 </SelectItem>
               ))}
@@ -183,7 +195,9 @@ const NumberConfigurationCard: React.FC<Props> = ({
               id="credentialId"
               placeholder="Ingresa tu Credential ID"
               value={formData.credentialId}
-              onChange={(e) => handleInputChange("credentialId", e.target.value)}
+              onChange={(e) =>
+                handleInputChange("credentialId", e.target.value)
+              }
               readOnly={!isCreatingNew}
               className={`h-12 border-slate-300 focus:border-slate-500 focus:ring-slate-200 ${
                 !isCreatingNew ? "bg-slate-50 cursor-not-allowed" : ""
@@ -206,7 +220,9 @@ const NumberConfigurationCard: React.FC<Props> = ({
                 id="twilioAccountSid"
                 placeholder="Account SID de Twilio"
                 value={formData.twilioAccountId}
-                onChange={(e) => handleInputChange("twilioAccountSid", e.target.value)}
+                onChange={(e) =>
+                  handleInputChange("twilioAccountSid", e.target.value)
+                }
                 readOnly={!isCreatingNew}
                 className={`h-12 border-slate-300 focus:border-slate-500 focus:ring-slate-200 ${
                   !isCreatingNew ? "bg-slate-50 cursor-not-allowed" : ""
@@ -225,7 +241,9 @@ const NumberConfigurationCard: React.FC<Props> = ({
                 id="twilioAuthToken"
                 placeholder="Auth Token de Twilio"
                 value={formData.twilioAuthToken}
-                onChange={(e) => handleInputChange("twilioAuthToken", e.target.value)}
+                onChange={(e) =>
+                  handleInputChange("twilioAuthToken", e.target.value)
+                }
                 readOnly={!isCreatingNew}
                 className={`h-12 border-slate-300 focus:border-slate-500 focus:ring-slate-200 ${
                   !isCreatingNew ? "bg-slate-50 cursor-not-allowed" : ""
@@ -249,7 +267,9 @@ const NumberConfigurationCard: React.FC<Props> = ({
                 id="numberDesiredAreaCode"
                 placeholder="Código de área deseado"
                 value={formData.numberDesiredAreaCode}
-                onChange={(e) => handleInputChange("numberDesiredAreaCode", e.target.value)}
+                onChange={(e) =>
+                  handleInputChange("numberDesiredAreaCode", e.target.value)
+                }
                 readOnly={!isCreatingNew}
                 className={`h-12 border-slate-300 focus:border-slate-500 focus:ring-slate-200 ${
                   !isCreatingNew ? "bg-slate-50 cursor-not-allowed" : ""
@@ -287,7 +307,9 @@ const NumberConfigurationCard: React.FC<Props> = ({
                 id="sipUsername"
                 placeholder="Username de SIP"
                 value={formData.sipUsername}
-                onChange={(e) => handleInputChange("sipUsername", e.target.value)}
+                onChange={(e) =>
+                  handleInputChange("sipUsername", e.target.value)
+                }
                 readOnly={!isCreatingNew}
                 className={`h-12 border-slate-300 focus:border-slate-500 focus:ring-slate-200 ${
                   !isCreatingNew ? "bg-slate-50 cursor-not-allowed" : ""
@@ -307,7 +329,9 @@ const NumberConfigurationCard: React.FC<Props> = ({
                 type="password"
                 placeholder="Password de SIP"
                 value={formData.sipPassword}
-                onChange={(e) => handleInputChange("sipPassword", e.target.value)}
+                onChange={(e) =>
+                  handleInputChange("sipPassword", e.target.value)
+                }
                 readOnly={!isCreatingNew}
                 className={`h-12 border-slate-300 focus:border-slate-500 focus:ring-slate-200 ${
                   !isCreatingNew ? "bg-slate-50 cursor-not-allowed" : ""
@@ -341,4 +365,4 @@ const NumberConfigurationCard: React.FC<Props> = ({
   );
 };
 
-export default NumberConfigurationCard; 
+export default NumberConfigurationCard;

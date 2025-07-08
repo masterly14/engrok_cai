@@ -48,8 +48,12 @@ export async function syncSubscriptionAction(lsSubscriptionId: number) {
     where: { lsSubscriptionId },
     data: {
       status: lsSub.data.attributes.status_formatted.toUpperCase(),
-      renewsAt: lsSub.data.attributes.renews_at ? new Date(lsSub.data.attributes.renews_at) : null,
-      endsAt: lsSub.data.attributes.ends_at ? new Date(lsSub.data.attributes.ends_at) : null,
+      renewsAt: lsSub.data.attributes.renews_at
+        ? new Date(lsSub.data.attributes.renews_at)
+        : null,
+      endsAt: lsSub.data.attributes.ends_at
+        ? new Date(lsSub.data.attributes.ends_at)
+        : null,
       isPaused: lsSub.data.attributes.is_paused,
     },
   });
@@ -58,7 +62,8 @@ export async function syncSubscriptionAction(lsSubscriptionId: number) {
 export async function createCheckoutFromTemp(userId: string) {
   const user = await db.user.findUnique({ where: { id: userId } });
   if (!user) throw new Error("User not found");
-  if (!user.temporalVariantId) throw new Error("No temporary variantId found for user");
+  if (!user.temporalVariantId)
+    throw new Error("No temporary variantId found for user");
 
   const variantId = Number(user.temporalVariantId);
 
@@ -92,7 +97,6 @@ export async function createCheckoutFromTemp(userId: string) {
   return url;
 }
 
-
 export const getPublicPlans = async () => {
   const plans = await db.plan.findMany();
   const user = await currentUser();
@@ -101,7 +105,7 @@ export const getPublicPlans = async () => {
 
   const userRow = await db.user.findUnique({
     where: { clerkId: user.id },
-    select: { id: true }
+    select: { id: true },
   });
   if (!userRow) return { plans };
 
@@ -109,19 +113,19 @@ export const getPublicPlans = async () => {
   const subscription = await db.lsSubscription.findFirst({
     where: {
       userId: userRow.id,
-      status: "ACTIVE"
+      status: "ACTIVE",
     },
-    include: { plan: true }          // ← aquí
+    include: { plan: true }, // ← aquí
   });
 
   if (subscription) {
     // Buscamos en nuestros planes por variantId
     const matched = plans.find(
-      (p) => p.variantId === subscription.plan.variantId
+      (p) => p.variantId === subscription.plan.variantId,
     );
     return {
       plans,
-      currentPlan: matched?.name ?? null
+      currentPlan: matched?.name ?? null,
     };
   }
 

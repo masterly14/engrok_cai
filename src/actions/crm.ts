@@ -98,7 +98,7 @@ export const CreateUpdateLead = async (newLead: Lead, leadId?: string) => {
         "Lead data that caused the error:",
         Object.entries(sanitizedLead).map(([key, value]) => {
           return `${key}: ${typeof value} - ${JSON.stringify(value)}`;
-        })
+        }),
       );
       throw error;
     }
@@ -131,7 +131,6 @@ export const deleteTag = async (id: string) => {
   });
 };
 
-
 export const createTag = async (data: any) => {
   const user = await onBoardUser();
   if (!user?.data.id) {
@@ -141,8 +140,8 @@ export const createTag = async (data: any) => {
   return await db.tag.create({
     data: {
       ...data,
-      userId: user.data.id
-    }
+      userId: user.data.id,
+    },
   });
 };
 
@@ -155,10 +154,10 @@ export const createStage = async (data: any) => {
   return await db.stage.create({
     data: {
       ...data,
-      userId: user.data.id
-    }
+      userId: user.data.id,
+    },
   });
-}
+};
 export const deleteStage = async (id: string) => {
   const user = await onBoardUser();
   if (!user?.data.id) {
@@ -174,4 +173,3 @@ export const deleteStage = async (id: string) => {
     },
   });
 };
-

@@ -37,7 +37,7 @@ export function CreateTriggerModal({
   const handleCreateTrigger = async () => {
     if (!provider.trim() || !phoneMapping.trim()) {
       toast.error(
-        "Por favor, completa el nombre del proveedor y el mapeo del teléfono."
+        "Por favor, completa el nombre del proveedor y el mapeo del teléfono.",
       );
       return;
     }
@@ -110,7 +110,9 @@ export function CreateTriggerModal({
                 <Copy className="h-4 w-4" />
               </Button>
             </div>
-             <Badge variant="destructive">Guarda esta URL en un lugar seguro. No podrás verla de nuevo.</Badge>
+            <Badge variant="destructive">
+              Guarda esta URL en un lugar seguro. No podrás verla de nuevo.
+            </Badge>
           </div>
         ) : (
           <div className="py-4 space-y-4">
@@ -131,8 +133,9 @@ export function CreateTriggerModal({
                 onChange={(e) => setPhoneMapping(e.target.value)}
                 placeholder="Ej: contact.phone o data.telefono"
               />
-               <p className="text-xs text-gray-500">
-                La ruta en el JSON del webhook donde se encuentra el número de teléfono.
+              <p className="text-xs text-gray-500">
+                La ruta en el JSON del webhook donde se encuentra el número de
+                teléfono.
               </p>
             </div>
             <div className="space-y-2">
@@ -143,7 +146,7 @@ export function CreateTriggerModal({
                 onChange={(e) => setNameMapping(e.target.value)}
                 placeholder="Ej: contact.name o data.nombre_completo"
               />
-               <p className="text-xs text-gray-500">
+              <p className="text-xs text-gray-500">
                 La ruta para la variable `name`, que puedes usar en tus prompts.
               </p>
             </div>

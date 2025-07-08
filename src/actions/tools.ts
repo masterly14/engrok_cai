@@ -1,6 +1,6 @@
-"use server"
+"use server";
 
-import { db } from "@/utils"
+import { db } from "@/utils";
 
 /**
  * Obtiene todas las definiciones de herramientas disponibles en la plataforma.
@@ -12,11 +12,11 @@ export async function getAllTools() {
       orderBy: {
         name: "asc",
       },
-    })
-    return tools
+    });
+    return tools;
   } catch (error) {
-    console.error("Error fetching tools:", error)
+    console.error("Error fetching tools:", error);
     // En una app real, podrías querer manejar este error de forma más explícita
-    return []
+    return [];
   }
-} 
+}

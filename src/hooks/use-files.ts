@@ -8,7 +8,7 @@ export function useFiles(enabled: boolean = true) {
     isLoading: filesLoading,
     error: filesError,
     isFetching: filesFetching,
-    refetch: refetchFiles
+    refetch: refetchFiles,
   } = useQuery({
     queryKey: ["files"],
     queryFn: async () => {
@@ -19,7 +19,7 @@ export function useFiles(enabled: boolean = true) {
     staleTime: 1000 * 60 * 5, // 5 minutos
     gcTime: 1000 * 60 * 30, // 30 minutos
     refetchOnWindowFocus: false,
-    refetchOnMount: false
+    refetchOnMount: false,
   });
 
   return {
@@ -27,7 +27,7 @@ export function useFiles(enabled: boolean = true) {
     filesLoading,
     filesFetching,
     filesError,
-    refetchFiles
+    refetchFiles,
   };
 }
 
@@ -35,7 +35,13 @@ export function useUploadFile() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (fileData: { id: string; name: string; bucket: string; url: string; mimeType: string }) => {
+    mutationFn: async (fileData: {
+      id: string;
+      name: string;
+      bucket: string;
+      url: string;
+      mimeType: string;
+    }) => {
       const response = await saveFileInDatabase(fileData);
       if (response.status === 500) {
         throw new Error(response.message);
@@ -45,6 +51,6 @@ export function useUploadFile() {
     onSuccess: () => {
       // Invalidate and refetch files query
       queryClient.invalidateQueries({ queryKey: ["files"] });
-    }
+    },
   });
-} 
+}

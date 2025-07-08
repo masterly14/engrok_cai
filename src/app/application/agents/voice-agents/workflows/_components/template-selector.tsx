@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -10,53 +10,56 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
-import { LayoutGrid, Workflow, Clock, Users } from "lucide-react"
-import { workflowTemplates, type WorkflowTemplate } from "./templates"
-import { motion } from "framer-motion"
+} from "@/components/ui/dialog";
+import { LayoutGrid, Workflow, Clock, Users } from "lucide-react";
+import { workflowTemplates, type WorkflowTemplate } from "./templates";
+import { motion } from "framer-motion";
 
 interface TemplateSelectorProps {
-  onSelectTemplate: (template: WorkflowTemplate) => void
+  onSelectTemplate: (template: WorkflowTemplate) => void;
 }
 
 const getCategoryIcon = (category: string) => {
   switch (category.toLowerCase()) {
     case "customer service":
-      return <Users className="h-4 w-4" />
+      return <Users className="h-4 w-4" />;
     case "sales":
-      return <Workflow className="h-4 w-4" />
+      return <Workflow className="h-4 w-4" />;
     case "scheduling":
-      return <Clock className="h-4 w-4" />
+      return <Clock className="h-4 w-4" />;
     default:
-      return <Workflow className="h-4 w-4" />
+      return <Workflow className="h-4 w-4" />;
   }
-}
+};
 
 const getCategoryColor = (category: string) => {
   switch (category.toLowerCase()) {
     case "customer service":
-      return "bg-blue-100 text-blue-800 border-blue-200"
+      return "bg-blue-100 text-blue-800 border-blue-200";
     case "sales":
-      return "bg-green-100 text-green-800 border-green-200"
+      return "bg-green-100 text-green-800 border-green-200";
     case "scheduling":
-      return "bg-purple-100 text-purple-800 border-purple-200"
+      return "bg-purple-100 text-purple-800 border-purple-200";
     default:
-      return "bg-gray-100 text-gray-800 border-gray-200"
+      return "bg-gray-100 text-gray-800 border-gray-200";
   }
-}
+};
 
 export function TemplateSelector({ onSelectTemplate }: TemplateSelectorProps) {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(false);
 
   const handleSelectTemplate = (template: WorkflowTemplate) => {
-    onSelectTemplate(template)
-    setOpen(false)
-  }
+    onSelectTemplate(template);
+    setOpen(false);
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" className="flex items-center gap-2 hover:bg-gray-50">
+        <Button
+          variant="outline"
+          className="flex items-center gap-2 hover:bg-gray-50"
+        >
           <LayoutGrid className="h-4 w-4" />
           Usar plantilla
         </Button>
@@ -68,7 +71,8 @@ export function TemplateSelector({ onSelectTemplate }: TemplateSelectorProps) {
             Selecciona una plantilla
           </DialogTitle>
           <DialogDescription>
-            Elige una plantilla predefinida para comenzar rápidamente con tu workflow
+            Elige una plantilla predefinida para comenzar rápidamente con tu
+            workflow
           </DialogDescription>
         </DialogHeader>
 
@@ -96,7 +100,9 @@ export function TemplateSelector({ onSelectTemplate }: TemplateSelectorProps) {
                   </Badge>
                 </div>
 
-                <p className="text-sm text-gray-600 mb-4 line-clamp-2">{template.description}</p>
+                <p className="text-sm text-gray-600 mb-4 line-clamp-2">
+                  {template.description}
+                </p>
 
                 <div className="flex justify-between items-center text-xs text-gray-500">
                   <div className="flex items-center gap-3">
@@ -110,7 +116,9 @@ export function TemplateSelector({ onSelectTemplate }: TemplateSelectorProps) {
                     </span>
                   </div>
                   <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                    <span className="text-blue-600 font-medium">Seleccionar →</span>
+                    <span className="text-blue-600 font-medium">
+                      Seleccionar →
+                    </span>
                   </div>
                 </div>
 
@@ -136,7 +144,9 @@ export function TemplateSelector({ onSelectTemplate }: TemplateSelectorProps) {
                       />
                     ))}
                     {template.nodes.length > 4 && (
-                      <span className="text-xs text-gray-400 ml-1">+{template.nodes.length - 4}</span>
+                      <span className="text-xs text-gray-400 ml-1">
+                        +{template.nodes.length - 4}
+                      </span>
                     )}
                   </div>
                 </div>
@@ -147,14 +157,18 @@ export function TemplateSelector({ onSelectTemplate }: TemplateSelectorProps) {
           {workflowTemplates.length === 0 && (
             <div className="text-center py-12">
               <LayoutGrid className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No hay plantillas disponibles</h3>
-              <p className="text-gray-500">Las plantillas aparecerán aquí cuando estén disponibles.</p>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                No hay plantillas disponibles
+              </h3>
+              <p className="text-gray-500">
+                Las plantillas aparecerán aquí cuando estén disponibles.
+              </p>
             </div>
           )}
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
 
-export type { WorkflowTemplate }
+export type { WorkflowTemplate };

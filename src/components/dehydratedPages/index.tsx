@@ -1,28 +1,30 @@
-import { dehydrate, HydrationBoundary, QueryClient } from '@tanstack/react-query';
-import React, { ReactNode } from 'react'
+import {
+  dehydrate,
+  HydrationBoundary,
+  QueryClient,
+} from "@tanstack/react-query";
+import React, { ReactNode } from "react";
 
 type Props = {
-    children: ReactNode,
-    Querykey: string,
-    Queryfn: () => void;
-}
+  children: ReactNode;
+  Querykey: string;
+  Queryfn: () => void;
+};
 
-const DehydratePage = async ({children, Querykey, Queryfn}: Props) => {
-    const queryClient = new QueryClient();
+const DehydratePage = async ({ children, Querykey, Queryfn }: Props) => {
+  const queryClient = new QueryClient();
 
-    await Promise.all([
-        queryClient.prefetchQuery({
-            queryKey: [Querykey],
-            queryFn: Queryfn
-        })
-    ])
+  await Promise.all([
+    queryClient.prefetchQuery({
+      queryKey: [Querykey],
+      queryFn: Queryfn,
+    }),
+  ]);
 
-    const dehydratedState = dehydrate(queryClient);
+  const dehydratedState = dehydrate(queryClient);
   return (
-    <HydrationBoundary state={dehydratedState}>
-        {children}
-    </HydrationBoundary>
-  )
-}
+    <HydrationBoundary state={dehydratedState}>{children}</HydrationBoundary>
+  );
+};
 
-export default DehydratePage
+export default DehydratePage;

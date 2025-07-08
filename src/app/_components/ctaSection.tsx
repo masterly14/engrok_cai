@@ -22,12 +22,13 @@ const CTASection = () => {
             </h2>
 
             <p className="text-xl mb-16 max-w-3xl mx-auto leading-relaxed font-light tracking-wide text-gray-700">
-              Crea tu primer agente de IA en minutos. Automatiza, personaliza y escala la comunicación con tus clientes como nunca antes.
+              Crea tu primer agente de IA en minutos. Automatiza, personaliza y
+              escala la comunicación con tus clientes como nunca antes.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-16">
-              <Button 
-                size="lg" 
+              <Button
+                size="lg"
                 className="font-light text-base tracking-wide px-10 py-4 h-auto rounded-full bg-black text-white hover:bg-gray-900 transition-all duration-300 hover:scale-105"
               >
                 Comenzar gratis
@@ -38,15 +39,21 @@ const CTASection = () => {
             <div className="flex flex-col sm:flex-row gap-12 justify-center items-center text-center">
               <div>
                 <div className="w-2 h-2 bg-cyan-500 rounded-full mx-auto mb-3"></div>
-                <div className="text-sm tracking-wider uppercase font-light text-gray-500">Agendar una demo</div>
+                <div className="text-sm tracking-wider uppercase font-light text-gray-500">
+                  Agendar una demo
+                </div>
               </div>
               <div>
                 <div className="w-2 h-2 bg-purple-500 rounded-full mx-auto mb-3"></div>
-                <div className="text-sm tracking-wider uppercase font-light text-gray-500">Sin compromiso</div>
+                <div className="text-sm tracking-wider uppercase font-light text-gray-500">
+                  Sin compromiso
+                </div>
               </div>
               <div>
                 <div className="w-2 h-2 bg-blue-500 rounded-full mx-auto mb-3"></div>
-                <div className="text-sm tracking-wider uppercase font-light text-gray-500">Soporte premium</div>
+                <div className="text-sm tracking-wider uppercase font-light text-gray-500">
+                  Soporte premium
+                </div>
               </div>
             </div>
           </div>

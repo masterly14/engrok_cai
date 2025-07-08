@@ -1,17 +1,21 @@
-"use client"
+"use client";
 
-import { Handle, Position } from "reactflow"
-import { PhoneOff } from "lucide-react"
-import { motion } from "framer-motion"
-import type { EndCallNodeData } from "../../types"
+import { Handle, Position } from "reactflow";
+import { PhoneOff } from "lucide-react";
+import { motion } from "framer-motion";
+import type { EndCallNodeData } from "../../types";
 
 interface EndCallNodeProps {
-  data: EndCallNodeData
-  isConnectable: boolean
-  selected?: boolean
+  data: EndCallNodeData;
+  isConnectable: boolean;
+  selected?: boolean;
 }
 
-export function EndCallNode({ data, isConnectable, selected }: EndCallNodeProps) {
+export function EndCallNode({
+  data,
+  isConnectable,
+  selected,
+}: EndCallNodeProps) {
   return (
     <motion.div
       initial={{ scale: 0.8, opacity: 0 }}
@@ -28,8 +32,10 @@ export function EndCallNode({ data, isConnectable, selected }: EndCallNodeProps)
           <span className="font-medium text-white">{data.label}</span>
         </div>
       </div>
-        <div className="bg-white border-x border-b border-gray-200 p-3 rounded-b-lg">
-            <div className="text-sm text-gray-600">Termina el flujo de la llamada.</div>
+      <div className="bg-white border-x border-b border-gray-200 p-3 rounded-b-lg">
+        <div className="text-sm text-gray-600">
+          Termina el flujo de la llamada.
+        </div>
       </div>
       <Handle
         type="target"
@@ -38,5 +44,5 @@ export function EndCallNode({ data, isConnectable, selected }: EndCallNodeProps)
         className="w-3 h-3 bg-red-600 border-2 border-white top-0"
       />
     </motion.div>
-  )
+  );
 }

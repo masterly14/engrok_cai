@@ -1,5 +1,12 @@
 "use client";
-import { Check, ArrowUpRight, Sparkles, Zap, Crown, Loader2 } from "lucide-react";
+import {
+  Check,
+  ArrowUpRight,
+  Sparkles,
+  Zap,
+  Crown,
+  Loader2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { onBoardUser } from "@/actions/user";
 import { createCheckoutAction } from "@/actions/lemon-squeezy";
@@ -28,7 +35,13 @@ const PricingPlans = ({ userId }: { userId: string | null }) => {
     load();
   }, []);
 
-  return <PricingPlansClient plans={plans} userId={userId} currentPlan={currentPlan} />;
+  return (
+    <PricingPlansClient
+      plans={plans}
+      userId={userId}
+      currentPlan={currentPlan}
+    />
+  );
 };
 
 const PricingSection = () => {
@@ -46,7 +59,10 @@ const PricingSection = () => {
             const onboardedUser = await onBoardUser();
             setLocalUser(onboardedUser);
           } catch (error) {
-            console.error("Failed to fetch local user, will retry on next render:", error);
+            console.error(
+              "Failed to fetch local user, will retry on next render:",
+              error,
+            );
           } finally {
             setLoading(false);
           }
@@ -89,9 +105,9 @@ const PricingSection = () => {
         </div>
 
         {loading ? (
-           <div className="flex items-center justify-center p-4">
-             <Loader2 className="h-12 w-12 animate-spin text-white" />
-           </div>
+          <div className="flex items-center justify-center p-4">
+            <Loader2 className="h-12 w-12 animate-spin text-white" />
+          </div>
         ) : (
           <PricingPlans userId={localUser?.data?.id || null} />
         )}
@@ -99,7 +115,8 @@ const PricingSection = () => {
         {/* Bottom Text */}
         <div className="text-center mt-16">
           <p className="text-white/40 text-sm tracking-wide">
-            Puedes comprar ahora, o agendar una demo y recibir un periodo de prueba de 7 días.
+            Puedes comprar ahora, o agendar una demo y recibir un periodo de
+            prueba de 7 días.
           </p>
         </div>
       </div>

@@ -4,13 +4,18 @@ import { Input } from "@/components/ui/input";
 import { motion } from "framer-motion";
 import { Check, Edit2, Pencil, PercentCircle, X } from "lucide-react";
 import { useState } from "react";
-import { BaseEdge, EdgeLabelRenderer, EdgeProps, useReactFlow } from "reactflow";
+import {
+  BaseEdge,
+  EdgeLabelRenderer,
+  EdgeProps,
+  useReactFlow,
+} from "reactflow";
 
 function getStraightEdgePath(
   sourceX: number,
   sourceY: number,
   targetX: number,
-  targetY: number
+  targetY: number,
 ) {
   const midY = sourceY + (targetY - sourceY) / 2;
 
@@ -36,14 +41,16 @@ export function conditionEdges({
 }: EdgeProps) {
   const { setEdges } = useReactFlow();
   const [isEditing, setIsEditing] = useState(false);
-  const [condition, setCondition] = useState(data?.condition?.prompt || "Condition");
+  const [condition, setCondition] = useState(
+    data?.condition?.prompt || "Condition",
+  );
   const [tempCondition, setTempCondition] = useState(condition);
 
   const [edgePath, labelX, labelY] = getStraightEdgePath(
     sourceX,
     sourceY,
     targetX,
-    targetY
+    targetY,
   );
 
   const handleSave = () => {
@@ -63,7 +70,7 @@ export function conditionEdges({
           };
         }
         return edge;
-      })
+      }),
     );
   };
 

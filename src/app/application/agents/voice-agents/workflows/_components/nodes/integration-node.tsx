@@ -1,13 +1,16 @@
-"use client"
+"use client";
 
-import { Handle, Position } from "reactflow"
-import { Wrench } from "lucide-react"
-import { motion } from "framer-motion"
-import Image from "next/image"
-import { IntegrationNodeData } from "../../types"
+import { Handle, Position } from "reactflow";
+import { Wrench } from "lucide-react";
+import { motion } from "framer-motion";
+import Image from "next/image";
+import { IntegrationNodeData } from "../../types";
 
 // Mapeo de providerConfigKey a información de la integración
-const integrationInfo: Record<string, { name: string; logo: string; color: string }> = {
+const integrationInfo: Record<
+  string,
+  { name: string; logo: string; color: string }
+> = {
   "google-calendar": {
     name: "Google Calendar",
     logo: "/integrations-logos-providers/google-calendar.png",
@@ -51,13 +54,18 @@ const integrationInfo: Record<string, { name: string; logo: string; color: strin
 };
 
 interface IntegrationNodeProps {
-  data: IntegrationNodeData
-  isConnectable: boolean
-  selected?: boolean
+  data: IntegrationNodeData;
+  isConnectable: boolean;
+  selected?: boolean;
 }
 
-export function IntegrationNode({ data, isConnectable, selected }: IntegrationNodeProps) {
-  const integrationDetails = integrationInfo[data.integrationType] || integrationInfo['custom-api'];
+export function IntegrationNode({
+  data,
+  isConnectable,
+  selected,
+}: IntegrationNodeProps) {
+  const integrationDetails =
+    integrationInfo[data.integrationType] || integrationInfo["custom-api"];
 
   return (
     <motion.div
@@ -67,7 +75,9 @@ export function IntegrationNode({ data, isConnectable, selected }: IntegrationNo
       className={`rounded-lg overflow-hidden shadow-lg transition-shadow ${selected ? "ring-2 ring-amber-500 ring-offset-2" : ""}`}
       style={{ minWidth: 220 }}
     >
-      <div className={`bg-gradient-to-r ${integrationDetails.color} px-4 py-2 flex items-center justify-between`}>
+      <div
+        className={`bg-gradient-to-r ${integrationDetails.color} px-4 py-2 flex items-center justify-between`}
+      >
         <div className="flex items-center gap-2">
           <div className="bg-white/20 p-1.5 rounded-md">
             <Image
@@ -100,18 +110,30 @@ export function IntegrationNode({ data, isConnectable, selected }: IntegrationNo
             )}
           </>
         )}
-        
+
         {data.integrationType === "google-calendar" && (
           <>
-            {data.calendarId && <div className="text-xs text-gray-600">Calendario: {data.calendarId}</div>}
-            {data.eventSummary && <div className="text-xs text-gray-600 truncate">Evento: {data.eventSummary}</div>}
+            {data.calendarId && (
+              <div className="text-xs text-gray-600">
+                Calendario: {data.calendarId}
+              </div>
+            )}
+            {data.eventSummary && (
+              <div className="text-xs text-gray-600 truncate">
+                Evento: {data.eventSummary}
+              </div>
+            )}
           </>
         )}
 
-        {data.integrationType === 'custom-api' && data.url && (
-          <div className="text-xs text-gray-600 font-mono truncate" title={data.url}>{data.method} {data.url}</div>
+        {data.integrationType === "custom-api" && data.url && (
+          <div
+            className="text-xs text-gray-600 font-mono truncate"
+            title={data.url}
+          >
+            {data.method} {data.url}
+          </div>
         )}
-
       </div>
       <Handle
         type="target"
@@ -126,5 +148,5 @@ export function IntegrationNode({ data, isConnectable, selected }: IntegrationNo
         className={`w-3 h-3 ${integrationDetails.color ? "bg-blue-600" : "bg-orange-600"} border-2 border-white bottom-0`}
       />
     </motion.div>
-  )
+  );
 }

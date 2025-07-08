@@ -3,7 +3,7 @@ import { db } from "@/utils";
 
 /**
  * POST /api/crm/contacts
- * 
+ *
  * Crea o actualiza un Lead (contacto) en el CRM propio de la aplicación.
  * El cuerpo debe ser un JSON con, al menos, el teléfono del contacto.
  *
@@ -46,7 +46,10 @@ export async function POST(request: NextRequest) {
 
     // Validación básica
     if (!body || !body.phone) {
-      return NextResponse.json({ error: "El campo 'phone' es obligatorio" }, { status: 400 });
+      return NextResponse.json(
+        { error: "El campo 'phone' es obligatorio" },
+        { status: 400 },
+      );
     }
 
     const {

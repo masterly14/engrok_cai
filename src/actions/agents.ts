@@ -6,7 +6,7 @@ import { unstable_cache } from "next/cache";
 import { db } from "@/utils";
 
 const client = new VapiClient({
-  token: process.env.VAPI_API_KEY!
+  token: process.env.VAPI_API_KEY!,
 });
 
 // Función interna cacheada que solo maneja la consulta a la base de datos
@@ -24,7 +24,7 @@ const getCachedAgents = unstable_cache(
   {
     revalidate: 3600,
     tags: ["agents"],
-  }
+  },
 );
 
 // Función principal que maneja la autenticación y luego usa la función cacheada
@@ -33,7 +33,7 @@ export const getAllAgents = async () => {
   if (!user) {
     return { error: "User not found" };
   }
-  
+
   return await getCachedAgents(user.data.id);
 };
 
@@ -41,16 +41,16 @@ export const deleteAgents = async (agentId: string, vapiId: string) => {
   await db.agent.delete({
     where: {
       id: agentId,
-    }
-  })
+    },
+  });
 
   await client.assistants.delete(vapiId);
 
   return {
     status: 200,
     message: "Agente eliminado correctamente",
-  }
-}
+  };
+};
 
 /**
  * Obtiene todos los agentes de voz para un usuario específico.
@@ -58,7 +58,7 @@ export const deleteAgents = async (agentId: string, vapiId: string) => {
  */
 export async function getAgents(userId: string) {
   if (!userId) {
-    throw new Error("User ID is required")
+    throw new Error("User ID is required");
   }
 
   const agents = await db.agent.findMany({
@@ -69,8 +69,8 @@ export async function getAgents(userId: string) {
     orderBy: {
       name: "asc",
     },
-  })
-  return agents
+  });
+  return agents;
 }
 
 /**
@@ -79,16 +79,16 @@ export async function getAgents(userId: string) {
  * @returns El agente actualizado.
  */
 export async function publishAgent(data: {
-  name: string
-  firstMessage: string
-  prompt: string
-  backgroundSound?: string
-  voiceId?: string
-  knowledgeBaseId?: string | null
-  vapiId: string
-  toolIds: string[] // Se añade para recibir los IDs de las herramientas seleccionadas
+  name: string;
+  firstMessage: string;
+  prompt: string;
+  backgroundSound?: string;
+  voiceId?: string;
+  knowledgeBaseId?: string | null;
+  vapiId: string;
+  toolIds: string[]; // Se añade para recibir los IDs de las herramientas seleccionadas
 }) {
-  const { toolIds, ...agentData } = data
+  const { toolIds, ...agentData } = data;
 
   // 1. Actualizar el agente en la base de datos local y sus relaciones con las herramientas
   const updatedDbAgent = await db.agent.update({
@@ -104,14 +104,14 @@ export async function publishAgent(data: {
     include: {
       tools: true, // Devolvemos el agente con las herramientas actualizadas
     },
-  })
+  });
 
   // 2. Formatear las herramientas para la API de Vapi
   const vapiFunctions = updatedDbAgent.tools.map((tool) => ({
     name: tool.name,
     description: tool.description,
     parameters: tool.parameters,
-  }))
+  }));
 
   // 3. Crear el payload para la API de Vapi
   const vapiPayload = {
@@ -123,22 +123,25 @@ export async function publishAgent(data: {
       model: "gpt-4o",
       functions: vapiFunctions,
     },
-  }
+  };
 
   // 4. Realizar la llamada PATCH a Vapi
-  const response = await fetch(`https://api.vapi.ai/assistant/${agentData.vapiId}`, {
-    method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${process.env.VAPI_API_KEY}`,
+  const response = await fetch(
+    `https://api.vapi.ai/assistant/${agentData.vapiId}`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.VAPI_API_KEY}`,
+      },
+      body: JSON.stringify(vapiPayload),
     },
-    body: JSON.stringify(vapiPayload),
-  })
+  );
 
   if (!response.ok) {
-    const errorBody = await response.text()
-    throw new Error(`Failed to update Vapi assistant: ${errorBody}`)
+    const errorBody = await response.text();
+    throw new Error(`Failed to update Vapi assistant: ${errorBody}`);
   }
 
-  return updatedDbAgent
+  return updatedDbAgent;
 }

@@ -27,12 +27,14 @@ export async function POST(request: NextRequest) {
     ) {
       return NextResponse.json(
         { error: "Faltan campos requeridos." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     // Seleccionar entorno (sandbox vs producción) según prefijo de la llave
-    const isTestKey = typeof wompi_private_key === "string" && wompi_private_key.startsWith("prv_test_");
+    const isTestKey =
+      typeof wompi_private_key === "string" &&
+      wompi_private_key.startsWith("prv_test_");
     const wompiUrl = isTestKey
       ? "https://sandbox.wompi.co/v1/payment_links"
       : "https://production.wompi.co/v1/payment_links";
@@ -53,7 +55,10 @@ export async function POST(request: NextRequest) {
 
     const makeRequest = async (url: string) => {
       console.log("[Wompi] → URL:", url);
-      console.log("[Wompi] → Authorization: Bearer", wompi_private_key.substring(0, 10) + "... (truncated)");
+      console.log(
+        "[Wompi] → Authorization: Bearer",
+        wompi_private_key.substring(0, 10) + "... (truncated)",
+      );
       console.log("[Wompi] → Payload:", JSON.stringify(requestBody));
       return fetch(url, {
         method: "POST",
@@ -72,7 +77,12 @@ export async function POST(request: NextRequest) {
       const fallbackUrl = wompiUrl.includes("sandbox")
         ? "https://production.wompi.co/v1/payment_links"
         : "https://sandbox.wompi.co/v1/payment_links";
-      console.warn("[Wompi] 401 con", wompiUrl, " → intentando fallback", fallbackUrl);
+      console.warn(
+        "[Wompi] 401 con",
+        wompiUrl,
+        " → intentando fallback",
+        fallbackUrl,
+      );
       response = await makeRequest(fallbackUrl);
     }
 
@@ -84,9 +94,10 @@ export async function POST(request: NextRequest) {
     if (!response.ok) {
       return NextResponse.json(
         {
-          error: data?.message || "Error desconocido al crear el enlace de pago.",
+          error:
+            data?.message || "Error desconocido al crear el enlace de pago.",
         },
-        { status: response.status }
+        { status: response.status },
       );
     }
 
@@ -95,7 +106,7 @@ export async function POST(request: NextRequest) {
     console.error("Error al crear el link de pago:", error);
     return NextResponse.json(
       { error: "Error al crear el link de pago." },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

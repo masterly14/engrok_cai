@@ -55,8 +55,6 @@ interface MenuItem {
 }
 
 export function NavMain() {
-
-
   const chatAgentItems: SubMenuItem = {
     title: "Agentes de chat",
     url: "/application/agents/chat",
@@ -121,7 +119,7 @@ export function NavMain() {
   };
 
   const agentSubItems = [chatAgentItems];
-    agentSubItems.push(voiceAgentItems);
+  agentSubItems.push(voiceAgentItems);
 
   const items: MenuItem[] = [
     {
@@ -163,7 +161,10 @@ export function NavMain() {
             >
               <SidebarMenuItem>
                 <CollapsibleTrigger asChild>
-                  <SidebarMenuButton data-tour-id={`tour-${item.title.toLowerCase().replace(/\s+/g, "-")}`} tooltip={item.title}>
+                  <SidebarMenuButton
+                    data-tour-id={`tour-${item.title.toLowerCase().replace(/\s+/g, "-")}`}
+                    tooltip={item.title}
+                  >
                     {item.icon && <item.icon />}
                     <span>{item.title}</span>
                     <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
@@ -180,7 +181,9 @@ export function NavMain() {
                         >
                           <SidebarMenuSubItem>
                             <CollapsibleTrigger asChild>
-                              <SidebarMenuSubButton data-tour-id={`tour-${subItem.title.toLowerCase().replace(/\s+/g, "-")}`}>
+                              <SidebarMenuSubButton
+                                data-tour-id={`tour-${subItem.title.toLowerCase().replace(/\s+/g, "-")}`}
+                              >
                                 {subItem.icon && <subItem.icon />}
                                 <span>{subItem.title}</span>
                                 <ChevronRight className="ml-auto h-4 w-4 transition-transform duration-200 group-data-[state=open]/subcollapsible:rotate-90" />
@@ -190,7 +193,11 @@ export function NavMain() {
                               <div className="ml-2 mt-1 border-l border-sidebar-border pl-2">
                                 {subItem.items.map((nestedItem) => (
                                   <SidebarMenuSubItem key={nestedItem.title}>
-                                    <SidebarMenuSubButton data-tour-id={`tour-${nestedItem.title.toLowerCase().replace(/\s+/g, "-")}`} asChild size="sm">
+                                    <SidebarMenuSubButton
+                                      data-tour-id={`tour-${nestedItem.title.toLowerCase().replace(/\s+/g, "-")}`}
+                                      asChild
+                                      size="sm"
+                                    >
                                       <a href={nestedItem.url}>
                                         {nestedItem.icon && <nestedItem.icon />}
                                         <span>{nestedItem.title}</span>
@@ -204,14 +211,17 @@ export function NavMain() {
                         </Collapsible>
                       ) : (
                         <SidebarMenuSubItem key={subItem.title}>
-                          <SidebarMenuSubButton data-tour-id={`tour-${subItem.title.toLowerCase().replace(/\s+/g, "-")}`} asChild>
+                          <SidebarMenuSubButton
+                            data-tour-id={`tour-${subItem.title.toLowerCase().replace(/\s+/g, "-")}`}
+                            asChild
+                          >
                             <a href={subItem.url}>
                               {subItem.icon && <subItem.icon />}
                               <span>{subItem.title}</span>
                             </a>
                           </SidebarMenuSubButton>
                         </SidebarMenuSubItem>
-                      )
+                      ),
                     )}
                   </SidebarMenuSub>
                 </CollapsibleContent>
@@ -219,14 +229,18 @@ export function NavMain() {
             </Collapsible>
           ) : (
             <SidebarMenuItem key={item.title}>
-              <SidebarMenuButton data-tour-id={`tour-${item.title.toLowerCase().replace(/\s+/g, "-")}`} tooltip={item.title} asChild>
+              <SidebarMenuButton
+                data-tour-id={`tour-${item.title.toLowerCase().replace(/\s+/g, "-")}`}
+                tooltip={item.title}
+                asChild
+              >
                 <a href={item.url}>
                   {item.icon && <item.icon />}
                   <span>{item.title}</span>
                 </a>
               </SidebarMenuButton>
             </SidebarMenuItem>
-          )
+          ),
         )}
       </SidebarMenu>
     </SidebarGroup>

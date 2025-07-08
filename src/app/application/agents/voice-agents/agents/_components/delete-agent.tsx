@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import { useState } from "react"
+import { useState } from "react";
 import {
   Dialog,
   DialogTrigger,
@@ -9,30 +9,37 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { Trash2, AlertTriangle, Phone, Database, CreditCard, Loader2 } from "lucide-react"
-import { useDeleteAgent } from "@/hooks/use-delete-agent"
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import {
+  Trash2,
+  AlertTriangle,
+  Phone,
+  Database,
+  CreditCard,
+  Loader2,
+} from "lucide-react";
+import { useDeleteAgent } from "@/hooks/use-delete-agent";
 
 type Props = {
-  agentId: string
-  vapiId: string
-  onSuccess?: () => void
-}
+  agentId: string;
+  vapiId: string;
+  onSuccess?: () => void;
+};
 
 const DeleteAgent = ({ agentId, vapiId, onSuccess }: Props) => {
-  const [isOpen, setIsOpen] = useState(false)
-  const deleteAgentMutation = useDeleteAgent()
+  const [isOpen, setIsOpen] = useState(false);
+  const deleteAgentMutation = useDeleteAgent();
 
   const handleDelete = async () => {
     try {
-      await deleteAgentMutation.mutateAsync({ agentId, vapiId })
-      setIsOpen(false)
-      onSuccess?.()
+      await deleteAgentMutation.mutateAsync({ agentId, vapiId });
+      setIsOpen(false);
+      onSuccess?.();
     } catch (error) {
-      console.error(error)
+      console.error(error);
     }
-  }
+  };
 
   const preservedData = [
     {
@@ -47,7 +54,7 @@ const DeleteAgent = ({ agentId, vapiId, onSuccess }: Props) => {
       icon: CreditCard,
       text: "Los créditos consumidos por este agente",
     },
-  ]
+  ];
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -66,10 +73,13 @@ const DeleteAgent = ({ agentId, vapiId, onSuccess }: Props) => {
             <AlertTriangle className="h-8 w-8 text-red-600" />
           </div>
           <div className="space-y-2">
-            <DialogTitle className="text-xl font-semibold text-gray-900">¿Eliminar agente?</DialogTitle>
+            <DialogTitle className="text-xl font-semibold text-gray-900">
+              ¿Eliminar agente?
+            </DialogTitle>
             <DialogDescription className="text-sm text-gray-600 leading-relaxed">
-              Esta acción es <span className="font-medium text-gray-900">irreversible</span>. El agente será eliminado
-              permanentemente de tu cuenta.
+              Esta acción es{" "}
+              <span className="font-medium text-gray-900">irreversible</span>.
+              El agente será eliminado permanentemente de tu cuenta.
             </DialogDescription>
           </div>
         </DialogHeader>
@@ -79,10 +89,15 @@ const DeleteAgent = ({ agentId, vapiId, onSuccess }: Props) => {
             <div className="flex items-start gap-3">
               <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
               <div>
-                <h4 className="text-sm font-medium text-amber-800 mb-2">Los siguientes datos se conservarán:</h4>
+                <h4 className="text-sm font-medium text-amber-800 mb-2">
+                  Los siguientes datos se conservarán:
+                </h4>
                 <ul className="space-y-2">
                   {preservedData.map((item, index) => (
-                    <li key={index} className="flex items-start gap-2 text-sm text-amber-700">
+                    <li
+                      key={index}
+                      className="flex items-start gap-2 text-sm text-amber-700"
+                    >
                       <item.icon className="h-4 w-4 mt-0.5 flex-shrink-0" />
                       <span>{item.text}</span>
                     </li>
@@ -122,7 +137,7 @@ const DeleteAgent = ({ agentId, vapiId, onSuccess }: Props) => {
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
-}
+  );
+};
 
-export default DeleteAgent
+export default DeleteAgent;

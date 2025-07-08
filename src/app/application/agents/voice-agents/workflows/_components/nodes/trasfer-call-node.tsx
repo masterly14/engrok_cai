@@ -1,17 +1,21 @@
-"use client"
+"use client";
 
-import { Handle, Position } from "reactflow"
-import { PhoneForwarded } from "lucide-react"
-import { motion } from "framer-motion"
-import type { TransferCallNodeData } from "../../types"
+import { Handle, Position } from "reactflow";
+import { PhoneForwarded } from "lucide-react";
+import { motion } from "framer-motion";
+import type { TransferCallNodeData } from "../../types";
 
 interface TransferCallNodeProps {
-  data: TransferCallNodeData
-  isConnectable: boolean
-  selected?: boolean
+  data: TransferCallNodeData;
+  isConnectable: boolean;
+  selected?: boolean;
 }
 
-export function TransferCallNode({ data, isConnectable, selected }: TransferCallNodeProps) {
+export function TransferCallNode({
+  data,
+  isConnectable,
+  selected,
+}: TransferCallNodeProps) {
   return (
     <motion.div
       initial={{ scale: 0.8, opacity: 0 }}
@@ -29,7 +33,9 @@ export function TransferCallNode({ data, isConnectable, selected }: TransferCall
         </div>
       </div>
       <div className="bg-white border-x border-b border-gray-200 p-3 rounded-b-lg">
-        <div className="text-sm text-gray-600">Transfiere la llamada a otro destino</div>
+        <div className="text-sm text-gray-600">
+          Transfiere la llamada a otro destino
+        </div>
       </div>
       <Handle
         type="target"
@@ -38,5 +44,5 @@ export function TransferCallNode({ data, isConnectable, selected }: TransferCall
         className="w-3 h-3 bg-green-600 border-2 border-white top-0"
       />
     </motion.div>
-  )
+  );
 }

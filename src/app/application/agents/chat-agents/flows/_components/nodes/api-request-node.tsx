@@ -1,11 +1,16 @@
-import { memo } from "react"
-import { Handle, Position, type NodeProps } from "reactflow"
-import { Globe, CheckCircle, XCircle } from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { memo } from "react";
+import { Handle, Position, type NodeProps } from "reactflow";
+import { Globe, CheckCircle, XCircle } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const ApiRequestNode = ({
   data,
-}: NodeProps<{ name?: string; url?: string; statusSuccess?: string; statusError?: string }>) => {
+}: NodeProps<{
+  name?: string;
+  url?: string;
+  statusSuccess?: string;
+  statusError?: string;
+}>) => {
   return (
     <Card className="w-72 shadow-lg border-gray-200/80 bg-white">
       <CardHeader className="p-4 flex flex-row items-center gap-3 space-y-0 bg-gray-50/70 rounded-t-lg">
@@ -13,23 +18,32 @@ const ApiRequestNode = ({
           <Globe className="w-5 h-5 text-orange-600" />
         </div>
         <div>
-          <CardTitle className="text-sm font-semibold text-gray-900">{data.name || "API Request"}</CardTitle>
+          <CardTitle className="text-sm font-semibold text-gray-900">
+            {data.name || "API Request"}
+          </CardTitle>
         </div>
       </CardHeader>
 
       <CardContent className="p-4 text-sm text-gray-700">
-        <p className="line-clamp-3">{data.url || "Configure la URL de la API..."}</p>
+        <p className="line-clamp-3">
+          {data.url || "Configure la URL de la API..."}
+        </p>
       </CardContent>
 
       {/* Handles de salida para Éxito y Error */}
       <div className="border-t border-gray-200 px-4 py-2 space-y-2 bg-gray-50/50 rounded-b-lg">
-        <p className="text-xs font-medium text-gray-500 mb-2">Salidas de Respuesta:</p>
+        <p className="text-xs font-medium text-gray-500 mb-2">
+          Salidas de Respuesta:
+        </p>
 
         {/* Handle de Éxito */}
         <div className="relative flex items-center justify-between bg-white p-2 rounded-md border border-gray-200 group">
           <div className="flex items-center gap-2">
             <CheckCircle className="w-3.5 h-3.5 text-green-500" />
-            <span className="text-xs font-medium text-gray-800 truncate" title={data.statusSuccess || "Success"}>
+            <span
+              className="text-xs font-medium text-gray-800 truncate"
+              title={data.statusSuccess || "Success"}
+            >
               {data.statusSuccess || "Success"}
             </span>
           </div>
@@ -45,7 +59,10 @@ const ApiRequestNode = ({
         <div className="relative flex items-center justify-between bg-white p-2 rounded-md border border-gray-200 group">
           <div className="flex items-center gap-2">
             <XCircle className="w-3.5 h-3.5 text-red-500" />
-            <span className="text-xs font-medium text-gray-800 truncate" title={data.statusError || "Failure"}>
+            <span
+              className="text-xs font-medium text-gray-800 truncate"
+              title={data.statusError || "Failure"}
+            >
               {data.statusError || "Failure"}
             </span>
           </div>
@@ -59,8 +76,12 @@ const ApiRequestNode = ({
       </div>
 
       {/* Handle de entrada (target) para el nodo */}
-      <Handle type="target" position={Position.Left} className="!w-4 !h-4 !bg-gray-400" />
+      <Handle
+        type="target"
+        position={Position.Left}
+        className="!w-4 !h-4 !bg-gray-400"
+      />
     </Card>
-  )
-}
-export default memo(ApiRequestNode)
+  );
+};
+export default memo(ApiRequestNode);

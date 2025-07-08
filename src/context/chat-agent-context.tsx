@@ -1,34 +1,42 @@
-"use client"
+"use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react"
-import type { ChatAgentWithWorkflows } from "@/types/agent"
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+} from "react";
+import type { ChatAgentWithWorkflows } from "@/types/agent";
 
 // Define the shape of the form data based on the ChatAgent model
 export type ChatAgentFormData = {
-  name: string
-  isActive: boolean
-  whatsappAccessToken: string
-  whatsappBusinessAccountId: string
-  whatsappPhoneNumber: string
-  whatsappPhoneNumberId: string
-  workflowId?: string | null
-  isTestNumber: boolean
-  hasSeenTestWarning: boolean
-}
+  name: string;
+  isActive: boolean;
+  whatsappAccessToken: string;
+  whatsappBusinessAccountId: string;
+  whatsappPhoneNumber: string;
+  whatsappPhoneNumberId: string;
+  workflowId?: string | null;
+  isTestNumber: boolean;
+  hasSeenTestWarning: boolean;
+};
 
 // Define the shape of the context
 interface ChatAgentContextType {
-  selectedChatAgent: ChatAgentWithWorkflows | null
-  setSelectedChatAgent: (agent: ChatAgentWithWorkflows | null) => void
-  formData: ChatAgentFormData
-  setFormData: (formData: ChatAgentFormData) => void
-  hasChanges: boolean
-  resetForm: () => void
-  isCreatingNew: boolean
-  setIsCreatingNew: (isCreating: boolean) => void
+  selectedChatAgent: ChatAgentWithWorkflows | null;
+  setSelectedChatAgent: (agent: ChatAgentWithWorkflows | null) => void;
+  formData: ChatAgentFormData;
+  setFormData: (formData: ChatAgentFormData) => void;
+  hasChanges: boolean;
+  resetForm: () => void;
+  isCreatingNew: boolean;
+  setIsCreatingNew: (isCreating: boolean) => void;
 }
 
-const ChatAgentContext = createContext<ChatAgentContextType | undefined>(undefined)
+const ChatAgentContext = createContext<ChatAgentContextType | undefined>(
+  undefined,
+);
 
 // Initial form state
 const initialFormDataState: ChatAgentFormData = {
@@ -41,13 +49,20 @@ const initialFormDataState: ChatAgentFormData = {
   workflowId: null,
   isTestNumber: false,
   hasSeenTestWarning: false,
-}
+};
 
-export const ChatAgentProvider = ({ children }: { children: React.ReactNode }) => {
-  const [selectedChatAgent, setSelectedChatAgent] = useState<ChatAgentWithWorkflows | null>(null)
-  const [isCreatingNew, setIsCreatingNew] = useState<boolean>(false)
-  const [formData, setFormData] = useState<ChatAgentFormData>(initialFormDataState)
-  const [initialFormData, setInitialFormData] = useState<ChatAgentFormData>(initialFormDataState)
+export const ChatAgentProvider = ({
+  children,
+}: {
+  children: React.ReactNode;
+}) => {
+  const [selectedChatAgent, setSelectedChatAgent] =
+    useState<ChatAgentWithWorkflows | null>(null);
+  const [isCreatingNew, setIsCreatingNew] = useState<boolean>(false);
+  const [formData, setFormData] =
+    useState<ChatAgentFormData>(initialFormDataState);
+  const [initialFormData, setInitialFormData] =
+    useState<ChatAgentFormData>(initialFormDataState);
 
   useEffect(() => {
     if (selectedChatAgent && !isCreatingNew) {
@@ -55,26 +70,31 @@ export const ChatAgentProvider = ({ children }: { children: React.ReactNode }) =
         name: selectedChatAgent.name,
         isActive: selectedChatAgent.isActive,
         whatsappAccessToken: selectedChatAgent.whatsappAccessToken || "",
-        whatsappBusinessAccountId: selectedChatAgent.whatsappBusinessAccountId || "",
+        whatsappBusinessAccountId:
+          selectedChatAgent.whatsappBusinessAccountId || "",
         whatsappPhoneNumber: selectedChatAgent.whatsappPhoneNumber || "",
         whatsappPhoneNumberId: selectedChatAgent.whatsappPhoneNumberId || "",
-        workflowId: selectedChatAgent.workflows.find(w => w.agentId === selectedChatAgent.id)?.id || null,
+        workflowId:
+          selectedChatAgent.workflows.find(
+            (w) => w.agentId === selectedChatAgent.id,
+          )?.id || null,
         isTestNumber: selectedChatAgent.isTestNumber,
         hasSeenTestWarning: selectedChatAgent.hasSeenTestWarning,
-      }
-      setFormData(agentData)
-      setInitialFormData(agentData)
+      };
+      setFormData(agentData);
+      setInitialFormData(agentData);
     } else {
-      setFormData(initialFormDataState)
-      setInitialFormData(initialFormDataState)
+      setFormData(initialFormDataState);
+      setInitialFormData(initialFormDataState);
     }
-  }, [selectedChatAgent, isCreatingNew])
+  }, [selectedChatAgent, isCreatingNew]);
 
-  const hasChanges = JSON.stringify(formData) !== JSON.stringify(initialFormData)
+  const hasChanges =
+    JSON.stringify(formData) !== JSON.stringify(initialFormData);
 
   const resetForm = useCallback(() => {
-    setFormData(initialFormData)
-  }, [initialFormData])
+    setFormData(initialFormData);
+  }, [initialFormData]);
 
   const contextValue = {
     selectedChatAgent,
@@ -85,15 +105,19 @@ export const ChatAgentProvider = ({ children }: { children: React.ReactNode }) =
     resetForm,
     isCreatingNew,
     setIsCreatingNew,
-  }
+  };
 
-  return <ChatAgentContext.Provider value={contextValue}>{children}</ChatAgentContext.Provider>
-}
+  return (
+    <ChatAgentContext.Provider value={contextValue}>
+      {children}
+    </ChatAgentContext.Provider>
+  );
+};
 
 export const useChatAgent = () => {
-  const context = useContext(ChatAgentContext)
+  const context = useContext(ChatAgentContext);
   if (context === undefined) {
-    throw new Error("useChatAgent must be used within a ChatAgentProvider")
+    throw new Error("useChatAgent must be used within a ChatAgentProvider");
   }
-  return context
-} 
+  return context;
+};

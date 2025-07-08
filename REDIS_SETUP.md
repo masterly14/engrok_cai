@@ -28,6 +28,7 @@ REDIS_URL="rediss://default:your_password@your_endpoint.upstash.io:6380"
 ```
 
 **Configuración:**
+
 1. Ir a [upstash.com](https://upstash.com)
 2. Crear una cuenta
 3. Crear una nueva base de datos Redis
@@ -78,6 +79,7 @@ curl https://tu-app.vercel.app/api/worker/process-queue
 ```
 
 Deberías ver una respuesta como:
+
 ```json
 {
   "health": {
@@ -94,15 +96,18 @@ Deberías ver una respuesta como:
 ## 🚨 Troubleshooting
 
 ### Error: "Failed to connect to Redis"
+
 - ✅ Verifica que `REDIS_URL` esté correctamente configurada
 - ✅ Asegúrate que tu proveedor Redis permita conexiones externas
 - ✅ Verifica firewall/security groups
 
 ### Error: "Worker not running"
+
 - ✅ Hacer POST request a `/api/worker/process-queue` para inicializar
 - ✅ Verificar logs de Vercel para errores específicos
 
 ### Mensajes no se procesan:
+
 - ✅ Verificar que el webhook llame correctamente al endpoint
 - ✅ Revisar métricas de Redis para ver si los jobs se están encolando
 - ✅ Verificar logs del worker
@@ -141,17 +146,21 @@ curl -X PUT https://tu-app.vercel.app/api/worker/process-queue \
 ## ⚡ Optimizaciones para Producción
 
 ### 1. **Connection Pooling**
+
 El sistema ya está optimizado con:
+
 - Lazy connections
 - Connection reuse
 - Timeout configurations
 
 ### 2. **Queue Management**
+
 - Auto-retry con exponential backoff
 - Job deduplication por ID
 - Cleanup automático de jobs antiguos
 
 ### 3. **Monitoring**
+
 - Health checks automáticos
 - Métricas en tiempo real
 - Error tracking y recovery
@@ -161,4 +170,4 @@ El sistema ya está optimizado con:
 - [Upstash Documentation](https://docs.upstash.com/)
 - [Railway Redis Guide](https://docs.railway.app/databases/redis)
 - [BullMQ Documentation](https://docs.bullmq.io/)
-- [Vercel Environment Variables](https://vercel.com/docs/concepts/projects/environment-variables) 
+- [Vercel Environment Variables](https://vercel.com/docs/concepts/projects/environment-variables)

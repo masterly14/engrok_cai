@@ -1,4 +1,4 @@
-import WhatsAppConnectButton from '@/components/application/whatsapp-connect-button';
+import WhatsAppConnectButton from "@/components/application/whatsapp-connect-button";
 
 export default function WhatsAppLinesPage() {
   return (

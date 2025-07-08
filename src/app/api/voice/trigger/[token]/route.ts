@@ -1,21 +1,21 @@
-import { db } from '@/utils'; // Ajusta la ruta a tu configuración de DB
-import { NextRequest, NextResponse } from 'next/server';
+import { db } from "@/utils"; // Ajusta la ruta a tu configuración de DB
+import { NextRequest, NextResponse } from "next/server";
 
 // Helper para obtener de forma segura un valor anidado de un objeto.
 // Por ejemplo, para obtener 'user.profile.phone' del objeto { user: { profile: { phone: '123' } } }
 const getNestedValue = (obj: any, path: string): any => {
-  return path.split('.').reduce((acc, part) => acc && acc[part], obj);
+  return path.split(".").reduce((acc, part) => acc && acc[part], obj);
 };
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ token: string }> }
+  { params }: { params: Promise<{ token: string }> },
 ) {
   const { token } = await params;
   if (!token) {
     return NextResponse.json(
-      { success: false, error: 'Token no proporcionado en la URL.' },
-      { status: 400 }
+      { success: false, error: "Token no proporcionado en la URL." },
+      { status: 400 },
     );
   }
 
@@ -34,9 +34,9 @@ export async function POST(
         {
           success: false,
           error:
-            'Trigger no válido o el workflow asociado no está sincronizado con Vapi.',
+            "Trigger no válido o el workflow asociado no está sincronizado con Vapi.",
         },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -53,14 +53,14 @@ export async function POST(
     if (!phoneNumberToCall) {
       console.error(
         `Trigger ${trigger.id}: No se encontró el teléfono en el payload usando el mapping '${mapping.phone}'. Payload recibido:`,
-        JSON.stringify(body)
+        JSON.stringify(body),
       );
       return NextResponse.json(
         {
           success: false,
           error: `No se pudo encontrar el número de teléfono en el payload usando el mapping: '${mapping.phone}'.`,
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -73,7 +73,13 @@ export async function POST(
     });
 
     if (!phoneNumberFrom) {
-      return NextResponse.json({ error: "No hay un número de teléfono de origen asignado a este workflow." }, { status: 400 });
+      return NextResponse.json(
+        {
+          error:
+            "No hay un número de teléfono de origen asignado a este workflow.",
+        },
+        { status: 400 },
+      );
     }
 
     // 5. Extraer variables adicionales para personalizar la llamada
@@ -88,19 +94,19 @@ export async function POST(
     }
 
     // 6. Construir y ejecutar la llamada a la API de Vapi.
-    const vapiResponse = await fetch('https://api.vapi.ai/call/phone', {
-      method: 'POST',
+    const vapiResponse = await fetch("https://api.vapi.ai/call/phone", {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         Authorization: `Bearer ${process.env.VAPI_API_KEY}`,
       },
       body: JSON.stringify({
         phoneNumberId: phoneNumberFrom.vapiId, // Usamos el ID del número en Vapi
         assistant: {
-          firstMessage: `Hola ${variables['name'] || ''}, te llamamos de Engrok.`,
+          firstMessage: `Hola ${variables["name"] || ""}, te llamamos de Engrok.`,
           metadata: {
-            ...variables
-          }
+            ...variables,
+          },
         },
       }),
     });
@@ -109,15 +115,15 @@ export async function POST(
       const errorData = await vapiResponse.json();
       console.error(
         `Trigger ${trigger.id}: Error al llamar a la API de Vapi:`,
-        errorData
+        errorData,
       );
       return NextResponse.json(
         {
           success: false,
-          error: 'Error al iniciar la llamada a través de Vapi.',
+          error: "Error al iniciar la llamada a través de Vapi.",
           details: errorData,
         },
-        { status: 502 } // 502 Bad Gateway es apropiado aquí.
+        { status: 502 }, // 502 Bad Gateway es apropiado aquí.
       );
     }
 
@@ -125,20 +131,30 @@ export async function POST(
 
     // 7. Devolver una respuesta exitosa.
     return NextResponse.json(
-      { success: true, message: 'Llamada iniciada con éxito.', callId: callData.id },
-      { status: 201 } // 201 Created es el código de estado correcto.
+      {
+        success: true,
+        message: "Llamada iniciada con éxito.",
+        callId: callData.id,
+      },
+      { status: 201 }, // 201 Created es el código de estado correcto.
     );
   } catch (error: any) {
-    console.error(`Trigger con token ${token}: Error fatal en el webhook.`, error);
+    console.error(
+      `Trigger con token ${token}: Error fatal en el webhook.`,
+      error,
+    );
     if (error instanceof SyntaxError) {
       return NextResponse.json(
-        { success: false, error: 'Payload de la petición no es un JSON válido.' },
-        { status: 400 }
+        {
+          success: false,
+          error: "Payload de la petición no es un JSON válido.",
+        },
+        { status: 400 },
       );
     }
     return NextResponse.json(
-      { success: false, error: 'Error interno del servidor.' },
-      { status: 500 }
+      { success: false, error: "Error interno del servidor." },
+      { status: 500 },
     );
   }
-} 
+}

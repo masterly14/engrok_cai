@@ -33,7 +33,11 @@ export async function syncPlansFromLemon() {
 
       // Filtrar por store si la API nos lo indica
       const storeIdAttr = (v.attributes as any).store_id as number | undefined;
-      if (storeIdAttr && process.env.LEMON_SQUEEZY_STORE_ID && storeIdAttr !== Number(process.env.LEMON_SQUEEZY_STORE_ID)) {
+      if (
+        storeIdAttr &&
+        process.env.LEMON_SQUEEZY_STORE_ID &&
+        storeIdAttr !== Number(process.env.LEMON_SQUEEZY_STORE_ID)
+      ) {
         continue;
       }
 
@@ -67,4 +71,4 @@ export async function syncPlansFromLemon() {
       page += 1;
     }
   }
-} 
+}

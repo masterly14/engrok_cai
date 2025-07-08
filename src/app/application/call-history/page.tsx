@@ -5,7 +5,13 @@ import ManagerCalls from "./_components/manager-calls";
 import { getAllCalls } from "@/actions/vapi/calls";
 import { useAllAgents } from "@/hooks/use-all-agents";
 import { LoadingSpinner } from "@/components/loading-spinner";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertCircle } from "lucide-react";
 
@@ -67,7 +73,9 @@ export default function CallHistoryPage() {
           </CardHeader>
           <CardContent>
             {(!Array.isArray(agentsData) || agentsData.length === 0) && (
-              <p className="text-sm text-muted-foreground">No tienes agentes disponibles.</p>
+              <p className="text-sm text-muted-foreground">
+                No tienes agentes disponibles.
+              </p>
             )}
 
             {Array.isArray(agentsData) && agentsData.length > 0 && (

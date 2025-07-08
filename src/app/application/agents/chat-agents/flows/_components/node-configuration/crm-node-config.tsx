@@ -196,7 +196,6 @@ export function CrmNodeConfig({
         value={openAccordionItem}
         onValueChange={setOpenAccordionItem}
       >
-
         {/* Contact Information */}
         <AccordionItem value="contact-config">
           <AccordionTrigger className="text-base font-medium px-4 py-3 hover:bg-muted/50 rounded-t-lg data-[state=closed]:rounded-lg">

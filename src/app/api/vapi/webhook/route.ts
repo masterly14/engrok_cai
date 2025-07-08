@@ -21,7 +21,8 @@ export async function POST(request: NextRequest) {
 
     const started = call.startedAt ? new Date(call.startedAt).getTime() : 0;
     const ended = call.endedAt ? new Date(call.endedAt).getTime() : 0;
-    const durationSec = ended > started ? Math.round((ended - started) / 1000) : 0;
+    const durationSec =
+      ended > started ? Math.round((ended - started) / 1000) : 0;
 
     await PricingService.applyVoiceUsage({
       userId: agent.userId,
@@ -34,4 +35,4 @@ export async function POST(request: NextRequest) {
     console.error("Vapi webhook error", e);
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
-} 
+}

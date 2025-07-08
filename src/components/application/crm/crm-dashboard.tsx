@@ -70,7 +70,7 @@ export default function CrmDashboard() {
           ...lead,
           notes: lead.notes ?? undefined,
           value: lead.value ?? undefined,
-          status: lead.status ?? stagesData[0]?.id ?? "new"
+          status: lead.status ?? stagesData[0]?.id ?? "new",
         }));
 
         setLeads(mappedLeads);
@@ -100,7 +100,7 @@ export default function CrmDashboard() {
 
   const handleLeadUpdate = (updatedLead: Lead) => {
     setLeads(
-      leads.map((lead) => (lead.id === updatedLead.id ? updatedLead : lead))
+      leads.map((lead) => (lead.id === updatedLead.id ? updatedLead : lead)),
     );
     setSelectedLead(null);
     setIsDetailModalOpen(false);
@@ -149,7 +149,7 @@ export default function CrmDashboard() {
 
     const updatedLeads = [...leads];
     const movedLead = updatedLeads.find(
-      (lead) => lead.id === result.draggableId
+      (lead) => lead.id === result.draggableId,
     );
 
     if (movedLead) {
@@ -209,18 +209,18 @@ export default function CrmDashboard() {
     setStages(updatedStages);
   };
 
-  useEffect(()=> {
+  useEffect(() => {
     if (leadsData) {
       const mappedLeads: Lead[] = leadsData.map((lead) => ({
         ...lead,
         notes: lead.notes ?? undefined,
         value: lead.value ?? undefined,
-        status: lead.status ?? stages[0]?.id ?? "new"
+        status: lead.status ?? stages[0]?.id ?? "new",
       }));
-  
+
       setLeads(mappedLeads);
     }
-  }, [leadsData, stages])
+  }, [leadsData, stages]);
 
   return (
     <div className="flex flex-col h-screen">
@@ -339,7 +339,7 @@ export default function CrmDashboard() {
       <main
         className={cn(
           "flex-1 overflow-auto p-4 bg-muted/30",
-          activeFilters.length > 0 ? "pt-2" : "pt-4"
+          activeFilters.length > 0 ? "pt-2" : "pt-4",
         )}
       >
         {leadsLoading ? (

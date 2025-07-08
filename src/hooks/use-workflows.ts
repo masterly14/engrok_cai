@@ -74,4 +74,4 @@ export function useWorkflows() {
     deleteWorkflow,
     duplicateWorkflow,
   };
-} 
+}

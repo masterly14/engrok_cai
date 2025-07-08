@@ -1,19 +1,22 @@
-"use client"
+"use client";
 
-import type { Node } from "reactflow"
-import { ConfigField } from "../shared-config-components"
+import type { Node } from "reactflow";
+import { ConfigField } from "../shared-config-components";
 
 interface HandoverToHumanNodeConfigProps {
-  selectedNode: Node
-  updateNode: (nodeId: string, updates: any) => void
+  selectedNode: Node;
+  updateNode: (nodeId: string, updates: any) => void;
 }
 
-export function HandoverToHumanNodeConfig({ selectedNode, updateNode }: HandoverToHumanNodeConfigProps) {
-  const data = selectedNode.data || {}
+export function HandoverToHumanNodeConfig({
+  selectedNode,
+  updateNode,
+}: HandoverToHumanNodeConfigProps) {
+  const data = selectedNode.data || {};
 
   const handleChange = (field: string, value: any) => {
-    updateNode(selectedNode.id, { data: { ...data, [field]: value } })
-  }
+    updateNode(selectedNode.id, { data: { ...data, [field]: value } });
+  };
 
   return (
     <div className="space-y-6">
@@ -34,5 +37,5 @@ export function HandoverToHumanNodeConfig({ selectedNode, updateNode }: Handover
         description="Este mensaje se enviará antes de transferir la conversación al agente humano."
       />
     </div>
-  )
-} 
+  );
+}

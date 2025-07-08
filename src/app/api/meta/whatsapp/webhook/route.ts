@@ -16,19 +16,15 @@ export async function GET(request: NextRequest) {
   const token = searchParams.get("hub.verify_token");
   const challenge = searchParams.get("hub.challenge");
 
-  
-
   if (mode === "subscribe" && token === "1234567890") {
-    
     return new NextResponse(challenge);
   } else {
     return NextResponse.json(
       { error: "Verificación fallida" },
-      { status: 403 }
+      { status: 403 },
     );
   }
 }
-
 
 export async function POST(request: NextRequest) {
   try {
@@ -40,14 +36,12 @@ export async function POST(request: NextRequest) {
     // Solo nos interesan los webhooks que contienen mensajes de usuario.
     // Ignoramos otros eventos como las actualizaciones de estado ('statuses').
     if (!value || !value.messages || !value.messages[0]) {
-      console.log(
-        "Received webhook, but it's not a user message. [Ignoring]"
-      );
+      console.log("Received webhook, but it's not a user message. [Ignoring]");
       return NextResponse.json({ status: "ignored" });
     }
 
     console.log(
-      "Mensaje de WhatsApp recibido, añadiendo al stream de Redis..."
+      "Mensaje de WhatsApp recibido, añadiendo al stream de Redis...",
     );
 
     // Identificar el chatAgent por phone_number_id (prop del webhook)
@@ -83,8 +77,7 @@ export async function POST(request: NextRequest) {
     console.error("Error in webhook POST:", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
-

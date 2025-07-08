@@ -40,18 +40,15 @@ export class CRMService {
   }
   async getLeadByPhone(phoneNumber: string): Promise<any> {
     try {
-      const response = await axios.get(
-        `${this.baseUrl}/api/crm`, 
-        {
-          params: { phone: phoneNumber },
-          headers: {
-            'Authorization': `Bearer ${this.apiKey}`
-          }
-        }
-      );
+      const response = await axios.get(`${this.baseUrl}/api/crm`, {
+        params: { phone: phoneNumber },
+        headers: {
+          Authorization: `Bearer ${this.apiKey}`,
+        },
+      });
       return response.data;
     } catch (error) {
-      console.error('Error fetching lead from CRM:', error);
+      console.error("Error fetching lead from CRM:", error);
       throw error;
     }
   }

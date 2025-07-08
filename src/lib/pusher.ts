@@ -1,8 +1,8 @@
-import PusherServer from "pusher"
+import PusherServer from "pusher";
 
 // To avoid creating a new instance on every hot-reload in dev
 declare global {
-  var pusherServerInstance: PusherServer | undefined
+  var pusherServerInstance: PusherServer | undefined;
 }
 
 export const pusherServer =
@@ -13,8 +13,8 @@ export const pusherServer =
     secret: process.env.PUSHER_SECRET!,
     cluster: process.env.PUSHER_CLUSTER!,
     useTLS: true,
-  })
+  });
 
 if (process.env.NODE_ENV !== "production") {
-  global.pusherServerInstance = pusherServer
-} 
+  global.pusherServerInstance = pusherServer;
+}

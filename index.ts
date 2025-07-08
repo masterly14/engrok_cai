@@ -1,34 +1,39 @@
 import { default as Redis } from "ioredis";
-import { PrismaClient, MessageType, ChatAgent, ChatContact } from "@prisma/client";
+import {
+  PrismaClient,
+  MessageType,
+  ChatAgent,
+  ChatContact,
+} from "@prisma/client";
 import axios from "axios";
 import { v4 as uuidv4 } from "uuid";
 import Pusher from "pusher";
 
-
 // --- CONFIGURACIÓN E INICIALIZACIÓN ---
 
 const db = new PrismaClient();
-const pusher = new Pusher({ // <-- 2. Inicializar Pusher
+const pusher = new Pusher({
+  // <-- 2. Inicializar Pusher
   appId: process.env.PUSHER_APP_ID!,
   key: process.env.PUSHER_KEY!,
   secret: process.env.PUSHER_SECRET!,
   cluster: process.env.PUSHER_CLUSTER!,
-  useTLS: true
+  useTLS: true,
 });
 
 function setupRedisLogging(redisInstance: any, instanceName: string) {
   redisInstance.on("connect", () =>
-    console.log(`[Redis ${instanceName}] Connected`)
+    console.log(`[Redis ${instanceName}] Connected`),
   );
   redisInstance.on("ready", () => console.log(`[Redis ${instanceName}] Ready`));
   redisInstance.on("error", (error: any) =>
-    console.error(`[Redis ${instanceName}] Error:`, error)
+    console.error(`[Redis ${instanceName}] Error:`, error),
   );
   redisInstance.on("close", () =>
-    console.log(`[Redis ${instanceName}] Connection closed`)
+    console.log(`[Redis ${instanceName}] Connection closed`),
   );
   redisInstance.on("reconnecting", () =>
-    console.log(`[Redis ${instanceName}] Reconnecting...`)
+    console.log(`[Redis ${instanceName}] Reconnecting...`),
   );
 }
 
@@ -37,13 +42,12 @@ async function sendWhatsappMessage(
   accessToken: string,
   nodeData: any, // => data de un conversation-node
   agent: ChatAgent,
-  contact: ChatContact
+  contact: ChatContact,
 ) {
   if (!agent) throw new Error("No ChatAgent linked to supplied token");
 
   const SENDER_ID = agent.whatsappPhoneNumberId;
   const META_URL = `https://graph.facebook.com/v19.0/${SENDER_ID}/messages`;
-
 
   /* ------------------------------------------------------------------- */
   /* 1. Construir el payload según la configuración del nodo             */
@@ -51,24 +55,32 @@ async function sendWhatsappMessage(
   let payload: any;
 
   /* Comprobamos si hay botones interactivos */
-  const hasButtons = Array.isArray(nodeData.interactiveButtons) && nodeData.interactiveButtons.length > 0;
+  const hasButtons =
+    Array.isArray(nodeData.interactiveButtons) &&
+    nodeData.interactiveButtons.length > 0;
 
   /* 1-0 TEMPLATE MESSAGE --------------------------------------------- */
   if (nodeData.responseType === "template" && nodeData.templateName) {
     const templateComponents: any[] = [];
 
-    const variableMap: Record<string, any> = (nodeData.templateVariableValues && typeof nodeData.templateVariableValues === "object")
-      ? nodeData.templateVariableValues
-      : {};
+    const variableMap: Record<string, any> =
+      nodeData.templateVariableValues &&
+      typeof nodeData.templateVariableValues === "object"
+        ? nodeData.templateVariableValues
+        : {};
 
     // A. HEADER --------------------------------------------------------
-    const headerJson = nodeData.templateJson?.components?.find((c: any) => c.type === "HEADER");
+    const headerJson = nodeData.templateJson?.components?.find(
+      (c: any) => c.type === "HEADER",
+    );
     if (headerJson && headerJson.format === "TEXT") {
       // Contar cuántas variables contiene el header
-      const headerVarMatches = (headerJson.text || "").match(/\{\{\d+\}\}/g) || [];
+      const headerVarMatches =
+        (headerJson.text || "").match(/\{\{\d+\}\}/g) || [];
       const headerParams = headerVarMatches.map((match: string) => {
         const idx = match.replace(/[^\d]/g, "");
-        const val = variableMap[idx] !== undefined ? String(variableMap[idx]) : "";
+        const val =
+          variableMap[idx] !== undefined ? String(variableMap[idx]) : "";
         return { type: "text", text: val };
       });
       if (headerParams.length > 0) {
@@ -87,7 +99,10 @@ async function sendWhatsappMessage(
     }
 
     // C. Botones quick-reply ------------------------------------------
-    if (Array.isArray(nodeData.interactiveButtons) && nodeData.interactiveButtons.length > 0) {
+    if (
+      Array.isArray(nodeData.interactiveButtons) &&
+      nodeData.interactiveButtons.length > 0
+    ) {
       nodeData.interactiveButtons.forEach((btn: any, idx: number) => {
         templateComponents.push({
           type: "button",
@@ -106,9 +121,8 @@ async function sendWhatsappMessage(
         components: templateComponents,
       },
     };
-
   } else if (nodeData.responseType === "audio" && nodeData.audioUrl) {
-  /* 1-A AUDIO independientemente de botones --------------------------- */
+    /* 1-A AUDIO independientemente de botones --------------------------- */
     payload = {
       type: "audio",
       audio: { link: nodeData.audioUrl },
@@ -149,8 +163,7 @@ async function sendWhatsappMessage(
 
     payload = { type: "interactive", interactive };
   } else if (nodeData.fileOrImageUrl) {
-
-  /* 1-C MEDIA sin botones -------------------------------------------- */
+    /* 1-C MEDIA sin botones -------------------------------------------- */
     const link = nodeData.fileOrImageUrl;
     const caption = nodeData.botResponse || undefined;
 
@@ -170,8 +183,7 @@ async function sendWhatsappMessage(
         break;
     }
   } else {
-
-  /* 1-D TEXTO PLANO -------------------------------------------------- */
+    /* 1-D TEXTO PLANO -------------------------------------------------- */
     payload = { type: "text", text: { body: nodeData.botResponse || "" } };
   }
 
@@ -181,54 +193,54 @@ async function sendWhatsappMessage(
   try {
     console.log(
       `[WhatsApp] → ${to} (${payload.type}) :`,
-      JSON.stringify(payload)
+      JSON.stringify(payload),
     );
 
     const response = await axios.post(
       META_URL,
       { messaging_product: "whatsapp", to, ...payload },
-      { headers: { Authorization: `Bearer ${accessToken}` } }
+      { headers: { Authorization: `Bearer ${accessToken}` } },
     );
 
     const sentMessageId = response.data.messages[0].id;
     if (sentMessageId) {
       const messageType = mapWhatsAppTypeToEnum(payload.type);
-        let textBody: string | undefined;
-        if (payload.type === 'text') textBody = payload.text.body;
-        else if (
-          payload.type === "interactive" &&
-          payload.interactive?.type === "button_reply"
-        ) {
-          textBody = payload.interactive.button_reply?.title;
-        } else if (payload.type === "button") {
-          textBody = payload.button?.text;
-        }
-        // ... (más lógica para extraer textBody de otros tipos si es necesario)
+      let textBody: string | undefined;
+      if (payload.type === "text") textBody = payload.text.body;
+      else if (
+        payload.type === "interactive" &&
+        payload.interactive?.type === "button_reply"
+      ) {
+        textBody = payload.interactive.button_reply?.title;
+      } else if (payload.type === "button") {
+        textBody = payload.button?.text;
+      }
+      // ... (más lógica para extraer textBody de otros tipos si es necesario)
 
-        const newMessage = await db.message.create({
-            data: {
-                waId: sentMessageId,
-                from: agent.whatsappPhoneNumber,
-                to: contact.phone,
-                timestamp: new Date(),
-                type: messageType,
-                textBody: textBody,
-                metadata: payload as any,
-                chatAgentId: agent.id,
-                chatContactId: contact.id,
-            }
-        });
+      const newMessage = await db.message.create({
+        data: {
+          waId: sentMessageId,
+          from: agent.whatsappPhoneNumber,
+          to: contact.phone,
+          timestamp: new Date(),
+          type: messageType,
+          textBody: textBody,
+          metadata: payload as any,
+          chatAgentId: agent.id,
+          chatContactId: contact.id,
+        },
+      });
 
-        const channel = `conversation-${agent.id}-${contact.id}`;
-        await pusher.trigger(channel, 'new-message', newMessage);
-        console.log(`[Pusher] Triggered 'new-message' on channel ${channel}`);
+      const channel = `conversation-${agent.id}-${contact.id}`;
+      await pusher.trigger(channel, "new-message", newMessage);
+      console.log(`[Pusher] Triggered 'new-message' on channel ${channel}`);
     }
     console.log(response.data);
     console.log("[WhatsApp] ✓ Enviado con éxito");
   } catch (err: any) {
     console.error(
       "[WhatsApp] ✗ Error enviando mensaje:",
-      err.response?.data || err.message
+      err.response?.data || err.message,
     );
   }
 }
@@ -288,7 +300,7 @@ async function handleIncomingMessage(whatsappPayload: any) {
 
   if (!agent) {
     console.error(
-      `[Handler] CRITICAL: No agent found for business phone ID ${businessPhoneId}`
+      `[Handler] CRITICAL: No agent found for business phone ID ${businessPhoneId}`,
     );
     return;
   }
@@ -311,10 +323,12 @@ async function handleIncomingMessage(whatsappPayload: any) {
   }
 
   /* -----------------------------------------------------------------
-   * Persist incoming message                                         
+   * Persist incoming message
    * ----------------------------------------------------------------- */
   try {
-    const messageType: MessageType = mapWhatsAppTypeToEnum(whatsappMessage.type);
+    const messageType: MessageType = mapWhatsAppTypeToEnum(
+      whatsappMessage.type,
+    );
 
     // Extraer cuerpo de texto (si aplica)
     let textBody: string | undefined;
@@ -344,14 +358,19 @@ async function handleIncomingMessage(whatsappPayload: any) {
     });
     // Después de guardar el mensaje, lo enviamos por Pusher para actualización en tiempo real
     try {
-      const newMessage = await db.message.findUnique({ where: { waId: whatsappMessage.id } })
+      const newMessage = await db.message.findUnique({
+        where: { waId: whatsappMessage.id },
+      });
       if (newMessage) {
-        const channel = `conversation-${agent.id}-${contact.id}`
-        await pusher.trigger(channel, "new-message", newMessage)
-        console.log(`[Pusher] Triggered 'new-message' on channel ${channel}`)
+        const channel = `conversation-${agent.id}-${contact.id}`;
+        await pusher.trigger(channel, "new-message", newMessage);
+        console.log(`[Pusher] Triggered 'new-message' on channel ${channel}`);
       }
     } catch (pusherErr) {
-      console.error("[Handler] Failed to trigger Pusher for new message:", pusherErr)
+      console.error(
+        "[Handler] Failed to trigger Pusher for new message:",
+        pusherErr,
+      );
     }
   } catch (error: any) {
     // Evitamos el crash si el mensaje ya existe (constraint waId unique)
@@ -363,57 +382,71 @@ async function handleIncomingMessage(whatsappPayload: any) {
   }
 
   let session = await db.chatSession.findFirst({
-    where: { 
+    where: {
       contactId: contact.id,
-      status: { in: ["ACTIVE", "NEEDS_ATTENTION"] }
+      status: { in: ["ACTIVE", "NEEDS_ATTENTION"] },
     },
-    orderBy: { updatedAt: 'desc' },
+    orderBy: { updatedAt: "desc" },
     include: { workflow: true, contact: true },
   });
 
   // If the agent's active workflow has changed, close the old session.
-  if (session && agent.activeWorkflowId && session.workflowId !== agent.activeWorkflowId) {
-    console.log(`[Handler] Active workflow changed for agent ${agent.id}. Closing session ${session.id}.`);
+  if (
+    session &&
+    agent.activeWorkflowId &&
+    session.workflowId !== agent.activeWorkflowId
+  ) {
+    console.log(
+      `[Handler] Active workflow changed for agent ${agent.id}. Closing session ${session.id}.`,
+    );
     await db.chatSession.update({
-        where: { id: session.id },
-        data: { status: 'COMPLETED' }
+      where: { id: session.id },
+      data: { status: "COMPLETED" },
     });
     session = null; // Forces creation of a new session with the new workflow
   }
 
   // Si la sesión necesita un agente, no procesamos el flujo.
   // El mensaje ya fue guardado y Pusher ya lo envió a la UI.
-  if (session && session.status === 'NEEDS_ATTENTION') {
-      console.log(`[Handler] Session ${session.id} is waiting for an agent. Stopping automation.`);
-      return; 
+  if (session && session.status === "NEEDS_ATTENTION") {
+    console.log(
+      `[Handler] Session ${session.id} is waiting for an agent. Stopping automation.`,
+    );
+    return;
   }
 
   let nodeToExecute;
 
   if (!session) {
     console.log(
-      `[Handler] No active session for ${userPhone}. Starting new conversation.`
+      `[Handler] No active session for ${userPhone}. Starting new conversation.`,
     );
 
     /* ------------------------------------------------------------------
      * 1. Buscar entre todos los workflows del agente un nodo aislado que
      *    tenga data.userResponse igual al mensaje del usuario
      * ------------------------------------------------------------------ */
-    const normalizedInput = typeof userInput === "string" ? userInput.trim().toLowerCase() : "";
+    const normalizedInput =
+      typeof userInput === "string" ? userInput.trim().toLowerCase() : "";
     let workflowToStart: any | null = null;
     let startNode: any | null = null;
 
-    const agentWorkflows = await db.chatWorkflow.findMany({ where: { agentId: agent.id } });
+    const agentWorkflows = await db.chatWorkflow.findMany({
+      where: { agentId: agent.id },
+    });
     for (const wf of agentWorkflows) {
       if (!wf.workflow) continue;
-      const wfData = typeof wf.workflow === "string" ? JSON.parse(wf.workflow) : wf.workflow;
+      const wfData =
+        typeof wf.workflow === "string" ? JSON.parse(wf.workflow) : wf.workflow;
       /* nodo.match: mismo userResponse y SIN edges entrantes (aislado) */
-      const isolatedNodes = wfData.nodes.filter((n: any) => !wfData.edges.some((e: any) => e.target === n.id));
+      const isolatedNodes = wfData.nodes.filter(
+        (n: any) => !wfData.edges.some((e: any) => e.target === n.id),
+      );
       const match = isolatedNodes.find(
         (n: any) =>
           n.type === "conversation" &&
           typeof n.data?.userResponse === "string" &&
-          n.data.userResponse.trim().toLowerCase() === normalizedInput
+          n.data.userResponse.trim().toLowerCase() === normalizedInput,
       );
       if (match) {
         workflowToStart = wf;
@@ -431,29 +464,38 @@ async function handleIncomingMessage(whatsappPayload: any) {
           where: { id: agent.activeWorkflowId },
         });
         if (!workflowToStart) {
-          console.error(`[Handler] CRITICAL: Agent ${agent.name} has active workflow ${agent.activeWorkflowId}, but it was not found.`);
+          console.error(
+            `[Handler] CRITICAL: Agent ${agent.name} has active workflow ${agent.activeWorkflowId}, but it was not found.`,
+          );
           return;
         }
       } else {
         // Fallback to old behavior if no active workflow is set
-        workflowToStart = await db.chatWorkflow.findFirst({ where: { agentId: agent.id } });
+        workflowToStart = await db.chatWorkflow.findFirst({
+          where: { agentId: agent.id },
+        });
       }
 
       if (!workflowToStart?.workflow) {
-        console.error(`[Handler] CRITICAL: Agent ${agent.name} has no workflow configured or assigned.`);
+        console.error(
+          `[Handler] CRITICAL: Agent ${agent.name} has no workflow configured or assigned.`,
+        );
         return;
       }
     }
 
     const workflowJson = workflowToStart.workflow;
-    const workflowData = typeof workflowJson === "string" ? JSON.parse(workflowJson) : workflowJson;
+    const workflowData =
+      typeof workflowJson === "string"
+        ? JSON.parse(workflowJson)
+        : workflowJson;
 
     // Si no había match, usamos el nodo inicial por defecto
     if (!startNode) {
       startNode = findInitialNode(workflowData.nodes, workflowData.edges);
       if (!startNode) {
         console.error(
-          `[Handler] CRITICAL: Workflow ${workflowToStart.name} has no initial node.`
+          `[Handler] CRITICAL: Workflow ${workflowToStart.name} has no initial node.`,
         );
         return;
       }
@@ -480,7 +522,7 @@ async function handleIncomingMessage(whatsappPayload: any) {
     nodeToExecute = startNode;
   } else {
     console.log(
-      `[Handler] Active session ${session.id} found for ${userPhone}.`
+      `[Handler] Active session ${session.id} found for ${userPhone}.`,
     );
     const workflowJson = session.workflow.workflow;
     const workflowData =
@@ -488,7 +530,7 @@ async function handleIncomingMessage(whatsappPayload: any) {
         ? JSON.parse(workflowJson)
         : workflowJson;
     const lastNode = workflowData?.nodes.find(
-      (n: any) => n.id === session?.currentNodeId
+      (n: any) => n.id === session?.currentNodeId,
     );
 
     // Si el nodo anterior era de tipo captureResponse, almacenamos la respuesta del usuario
@@ -498,7 +540,7 @@ async function handleIncomingMessage(whatsappPayload: any) {
       typeof userInput === "string"
     ) {
       const updatedVariables = {
-        ...(session.variables as Record<string, any> || {}),
+        ...((session.variables as Record<string, any>) || {}),
         [lastNode.data.variableName]: userInput,
       };
 
@@ -513,9 +555,12 @@ async function handleIncomingMessage(whatsappPayload: any) {
     const nextNodeId = findNextNodeId(lastNode, userInput, workflowData.edges);
     if (!nextNodeId) {
       console.log(
-        `[Handler] End of workflow reached or no edge found for input "${userInput}". Resetting to initial node.`
+        `[Handler] End of workflow reached or no edge found for input "${userInput}". Resetting to initial node.`,
       );
-      const initialNode = findInitialNode(workflowData.nodes, workflowData.edges);
+      const initialNode = findInitialNode(
+        workflowData.nodes,
+        workflowData.edges,
+      );
       if (!initialNode) {
         console.error(`[Handler] CRITICAL: Workflow has no initial node.`);
         return;
@@ -537,7 +582,7 @@ async function handleIncomingMessage(whatsappPayload: any) {
   }
 
   console.log(
-    `[Handler] Executing node ${nodeToExecute.id} (${nodeToExecute.type})`
+    `[Handler] Executing node ${nodeToExecute.id} (${nodeToExecute.type})`,
   );
   await executeNode(nodeToExecute, session, agent);
 }
@@ -562,7 +607,7 @@ async function executeNode(node: any, session: any, agent: any) {
 
       const populatedData = populateNodeDataWithVariables(
         node.data,
-        session.variables || {}
+        session.variables || {},
       );
 
       await sendWhatsappMessage(
@@ -570,17 +615,17 @@ async function executeNode(node: any, session: any, agent: any) {
         agent.whatsappAccessToken,
         populatedData,
         agent,
-        session.contact
+        session.contact,
       );
 
       if (node.data.jumpToNextNode) {
         console.log(
-          `[Executor] Node ${node.id} has jumpToNextNode. Proceeding...`
+          `[Executor] Node ${node.id} has jumpToNextNode. Proceeding...`,
         );
         const nextNodeId = findNextNodeId(node, null, workflowData.edges);
         if (nextNodeId) {
           const nextNode = workflowData.nodes.find(
-            (n: any) => n.id === nextNodeId
+            (n: any) => n.id === nextNodeId,
           );
           await db.chatSession.update({
             where: { id: session.id },
@@ -589,7 +634,7 @@ async function executeNode(node: any, session: any, agent: any) {
           await executeNode(
             nextNode,
             { ...session, currentNodeId: nextNode.id },
-            agent
+            agent,
           ); // <-- CORRECCIÓN #3
         }
       }
@@ -601,7 +646,7 @@ async function executeNode(node: any, session: any, agent: any) {
       const method = (node.data.method || "GET").toUpperCase();
       const headers = deepInterpolate(
         node.data.headers || {},
-        sessionVariables
+        sessionVariables,
       );
       const body = deepInterpolate(node.data.body || {}, sessionVariables);
 
@@ -626,20 +671,22 @@ async function executeNode(node: any, session: any, agent: any) {
           const dataPath = node.data.dataPath;
           let dataToStore = apiResponseData;
 
-          if (dataPath && typeof dataPath === "string" && dataPath.trim() !== "") {
+          if (
+            dataPath &&
+            typeof dataPath === "string" &&
+            dataPath.trim() !== ""
+          ) {
             const nestedValue = getNested(apiResponseData, dataPath);
             if (nestedValue !== undefined) {
               dataToStore = nestedValue;
-              console.log(
-                `[Executor] Extracted data from path '${dataPath}'.`
-              );
+              console.log(`[Executor] Extracted data from path '${dataPath}'.`);
             } else {
               console.warn(
-                `[Executor] Path '${dataPath}' not found in API response. Storing full response instead.`
+                `[Executor] Path '${dataPath}' not found in API response. Storing full response instead.`,
               );
             }
           }
-          
+
           const updatedVariables = {
             ...(session.variables || {}),
             [variableName]: dataToStore,
@@ -653,7 +700,7 @@ async function executeNode(node: any, session: any, agent: any) {
           // Actualizamos el objeto de sesión local para los siguientes pasos
           session.variables = updatedVariables;
           console.log(
-            `[Executor] API response saved to session variable '${variableName}'.`
+            `[Executor] API response saved to session variable '${variableName}'.`,
           );
         }
       } catch (error: any) {
@@ -667,13 +714,13 @@ async function executeNode(node: any, session: any, agent: any) {
       const handle = apiSuccess ? successHandle : errorHandle;
 
       const nextEdge = workflowData.edges.find(
-        (e: any) => e.source === node.id && e.sourceHandle === handle
+        (e: any) => e.source === node.id && e.sourceHandle === handle,
       );
       const nextNodeId = nextEdge?.target;
 
       if (nextNodeId) {
         const nextNode = workflowData.nodes.find(
-          (n: any) => n.id === nextNodeId
+          (n: any) => n.id === nextNodeId,
         );
         await db.chatSession.update({
           where: { id: session.id },
@@ -682,11 +729,11 @@ async function executeNode(node: any, session: any, agent: any) {
         await executeNode(
           nextNode,
           { ...session, currentNodeId: nextNodeId },
-          agent
+          agent,
         );
       } else {
         console.warn(
-          `[Executor] No edge found for apiRequest outcome '${handle}'`
+          `[Executor] No edge found for apiRequest outcome '${handle}'`,
         );
       }
       break;
@@ -696,55 +743,68 @@ async function executeNode(node: any, session: any, agent: any) {
       const result = evaluateCondition(node.data.condition, variables);
 
       if (node.data.botResponse) {
-        const populated = populateNodeDataWithVariables({
-          botResponse: node.data.botResponse,
-        }, variables);
+        const populated = populateNodeDataWithVariables(
+          {
+            botResponse: node.data.botResponse,
+          },
+          variables,
+        );
         await sendWhatsappMessage(
           session.contact.phone,
           agent.whatsappAccessToken,
           populated,
           agent,
-          session.contact
+          session.contact,
         );
       }
 
       const handle = result ? "success" : "error";
       const nextEdge = workflowData.edges.find(
-        (e: any) => e.source === node.id && e.sourceHandle === handle
+        (e: any) => e.source === node.id && e.sourceHandle === handle,
       );
       const nextNodeId = nextEdge?.target;
       if (nextNodeId) {
-        const nextNode = workflowData.nodes.find((n: any) => n.id === nextNodeId);
+        const nextNode = workflowData.nodes.find(
+          (n: any) => n.id === nextNodeId,
+        );
         await db.chatSession.update({
           where: { id: session.id },
           data: { currentNodeId: nextNodeId },
         });
-        await executeNode(nextNode, { ...session, currentNodeId: nextNodeId }, agent);
+        await executeNode(
+          nextNode,
+          { ...session, currentNodeId: nextNodeId },
+          agent,
+        );
       } else {
-        console.warn(`[Executor] No edge found for condition outcome ${handle}`);
+        console.warn(
+          `[Executor] No edge found for condition outcome ${handle}`,
+        );
       }
       break;
     }
     case "captureResponse":
       console.log(
-        `[Executor] Node ${node.id} is captureResponse. Waiting for user input.`
+        `[Executor] Node ${node.id} is captureResponse. Waiting for user input.`,
       );
       break;
     case "handoverToHuman": {
-      console.log(`[Executor] Handing over session ${session.id} to a human agent.`);
+      console.log(
+        `[Executor] Handing over session ${session.id} to a human agent.`,
+      );
 
       // 1. Send final message from bot, if configured
       if (node.data.botResponse) {
         const populatedData = populateNodeDataWithVariables(
           node.data,
-          session.variables || {}
+          session.variables || {},
         );
         await sendWhatsappMessage(
           session.contact.phone,
           agent.whatsappAccessToken,
           populatedData,
           agent,
-          session.contact
+          session.contact,
         );
       }
 
@@ -776,7 +836,7 @@ async function executeNode(node: any, session: any, agent: any) {
         message: "Nueva notificación", // Simple payload, the UI will refetch
       });
       console.log(`[Pusher] Sent 'new_notification' to ${notificationChannel}`);
-      
+
       break;
     }
     case "turnOffAgent": {
@@ -785,7 +845,7 @@ async function executeNode(node: any, session: any, agent: any) {
         agent.whatsappAccessToken,
         { botResponse: node.data.message },
         agent,
-        session.contact
+        session.contact,
       );
       await db.chatSession.update({
         where: { id: session.id },
@@ -808,7 +868,10 @@ async function executeNode(node: any, session: any, agent: any) {
       // body puede venir como JSON string o como objeto
       if (node.data.body) {
         try {
-          bodyContent = typeof node.data.body === "string" ? JSON.parse(node.data.body) : node.data.body;
+          bodyContent =
+            typeof node.data.body === "string"
+              ? JSON.parse(node.data.body)
+              : node.data.body;
         } catch (_err) {
           console.warn("[CRM] Body is not valid JSON, usando valor crudo");
           bodyContent = node.data.body;
@@ -826,13 +889,16 @@ async function executeNode(node: any, session: any, agent: any) {
       // Sustituir variables dentro del body (manteniendo compatibilidad con placeholders)
       bodyContent = deepInterpolate(bodyContent, enrichedVariables);
 
-      const headers = deepInterpolate(node.data.headers || { "Content-Type": "application/json" }, enrichedVariables);
+      const headers = deepInterpolate(
+        node.data.headers || { "Content-Type": "application/json" },
+        enrichedVariables,
+      );
 
       console.log(`[Executor] CRM request to ${url}`);
 
       let crmSuccess = false;
       try {
-        console.log(url)
+        console.log(url);
         const axiosConfig: any = { method, url, headers };
         if (method !== "GET" && method !== "HEAD") {
           axiosConfig.data = bodyContent;
@@ -847,24 +913,32 @@ async function executeNode(node: any, session: any, agent: any) {
 
       const handle = crmSuccess ? "success" : "error";
       let nextEdge = workflowData.edges.find(
-        (e: any) => e.source === node.id && e.sourceHandle === handle
+        (e: any) => e.source === node.id && e.sourceHandle === handle,
       );
       if (!nextEdge) {
         // fallback al edge por defecto
         nextEdge = workflowData.edges.find(
-          (e: any) => e.source === node.id && !e.sourceHandle
+          (e: any) => e.source === node.id && !e.sourceHandle,
         );
       }
       const nextNodeId = nextEdge?.target;
       if (nextNodeId) {
-        const nextNode = workflowData.nodes.find((n: any) => n.id === nextNodeId);
+        const nextNode = workflowData.nodes.find(
+          (n: any) => n.id === nextNodeId,
+        );
         await db.chatSession.update({
           where: { id: session.id },
           data: { currentNodeId: nextNodeId },
         });
-        await executeNode(nextNode, { ...session, currentNodeId: nextNodeId }, agent);
+        await executeNode(
+          nextNode,
+          { ...session, currentNodeId: nextNodeId },
+          agent,
+        );
       } else {
-        console.warn(`[Executor] No edge found after CRM node for outcome ${handle}`);
+        console.warn(
+          `[Executor] No edge found after CRM node for outcome ${handle}`,
+        );
       }
       break;
     }
@@ -885,11 +959,12 @@ function findNextNodeId(currentNode: any, userInput: any, edges: any) {
   console.log(userInput);
   if (!currentNode) return null;
   if (currentNode.type === "conversation" && userInput) {
-    const allButtons = currentNode.data.interactiveButtons || currentNode.data.buttons || [];
+    const allButtons =
+      currentNode.data.interactiveButtons || currentNode.data.buttons || [];
     const button = allButtons.find((b: any) => b.id === userInput);
     if (button) {
       const edge = edges.find(
-        (e: any) => e.source === currentNode.id && e.sourceHandle === button.id
+        (e: any) => e.source === currentNode.id && e.sourceHandle === button.id,
       );
       return edge?.target;
     }
@@ -904,7 +979,7 @@ function getNested(obj: any, path: string, defaultValue: any = undefined) {
     .split(".")
     .reduce(
       (res, key) => (res !== null && res !== undefined ? res[key] : res),
-      obj
+      obj,
     );
   return result === undefined || result === obj ? defaultValue : result;
 }
@@ -912,7 +987,7 @@ function getNested(obj: any, path: string, defaultValue: any = undefined) {
 // Helper for variable substitution across strings containing {{var}} placeholders
 function interpolateVariables(
   text: string,
-  variables: Record<string, any>
+  variables: Record<string, any>,
 ): string {
   if (typeof text !== "string") return text as any;
   return text.replace(/\{\{\s*([^}]+)\s*\}\}/g, (_match, varName) => {
@@ -926,21 +1001,28 @@ function interpolateVariables(
 // Deep-clone node.data and replace any placeholders in supported fields
 function populateNodeDataWithVariables(
   nodeData: any,
-  variables: Record<string, any>
+  variables: Record<string, any>,
 ) {
   // simple deep clone
   const dataClone = JSON.parse(JSON.stringify(nodeData));
   if (dataClone.botResponse) {
-    dataClone.botResponse = interpolateVariables(dataClone.botResponse, variables);
+    dataClone.botResponse = interpolateVariables(
+      dataClone.botResponse,
+      variables,
+    );
   }
 
   // Update interactive buttons if present
   if (Array.isArray(dataClone.interactiveButtons)) {
-    dataClone.interactiveButtons = dataClone.interactiveButtons.map((btn: any) => ({
-      ...btn,
-      title: interpolateVariables(btn.title || btn.label || "", variables),
-      label: btn.label ? interpolateVariables(btn.label, variables) : undefined,
-    }));
+    dataClone.interactiveButtons = dataClone.interactiveButtons.map(
+      (btn: any) => ({
+        ...btn,
+        title: interpolateVariables(btn.title || btn.label || "", variables),
+        label: btn.label
+          ? interpolateVariables(btn.label, variables)
+          : undefined,
+      }),
+    );
   }
 
   return dataClone;
@@ -950,7 +1032,8 @@ function populateNodeDataWithVariables(
 function deepInterpolate(obj: any, variables: Record<string, any>): any {
   if (obj == null) return obj;
   if (typeof obj === "string") return interpolateVariables(obj, variables);
-  if (Array.isArray(obj)) return obj.map((item) => deepInterpolate(item, variables));
+  if (Array.isArray(obj))
+    return obj.map((item) => deepInterpolate(item, variables));
   if (typeof obj === "object") {
     const result: any = {};
     for (const [k, v] of Object.entries(obj)) {
@@ -962,15 +1045,21 @@ function deepInterpolate(obj: any, variables: Record<string, any>): any {
 }
 
 // Evalúa expresiones condicionales después de interpolar variables. Devuelve true/false.
-function evaluateCondition(rawCondition: string, variables: Record<string, any>): boolean {
+function evaluateCondition(
+  rawCondition: string,
+  variables: Record<string, any>,
+): boolean {
   if (!rawCondition || typeof rawCondition !== "string") return false;
   // Primero sustituimos los placeholders {{var}}
-  const withValues = rawCondition.replace(/\{\{\s*([^}]+)\s*\}\}/g, (_m, varName) => {
-    const value = variables[varName.trim()];
-    if (value === undefined || value === null) return "undefined";
-    if (typeof value === "string") return JSON.stringify(value);
-    return String(value);
-  });
+  const withValues = rawCondition.replace(
+    /\{\{\s*([^}]+)\s*\}\}/g,
+    (_m, varName) => {
+      const value = variables[varName.trim()];
+      if (value === undefined || value === null) return "undefined";
+      if (typeof value === "string") return JSON.stringify(value);
+      return String(value);
+    },
+  );
 
   try {
     // eslint-disable-next-line no-new-func
@@ -1017,7 +1106,7 @@ async function setupConsumerGroup() {
     } else {
       console.error(
         `[Setup] CRITICAL: Could not create consumer group:`,
-        error
+        error,
       );
       process.exit(1);
     }
@@ -1038,7 +1127,7 @@ async function processMessages() {
         "0",
         "STREAMS",
         STREAM_KEY,
-        ">"
+        ">",
       );
       if (response) {
         const [stream, messages] = response[0] as [string, any[]];
@@ -1061,7 +1150,7 @@ async function processMessages() {
     } catch (error: any) {
       console.error(
         `[Worker] Error in main loop. Reconnecting in 5s...`,
-        error
+        error,
       );
       await new Promise((resolve) => setTimeout(resolve, 5000));
     }
@@ -1102,7 +1191,7 @@ async function startWorker() {
   }
 }
 
-startWorker();  
+startWorker();
 
 // ---------------------------------------------------------------------------
 // NUEVO: Manejar eventos provenientes de Webhook Trigger
@@ -1124,7 +1213,9 @@ async function handleExternalTrigger(event: ExternalTriggerEvent) {
 
     const agent = workflow.agent;
     if (!agent) {
-      console.error(`[Trigger] Workflow ${workflowId} has no assigned ChatAgent.`);
+      console.error(
+        `[Trigger] Workflow ${workflowId} has no assigned ChatAgent.`,
+      );
       return;
     }
 
@@ -1144,7 +1235,10 @@ async function handleExternalTrigger(event: ExternalTriggerEvent) {
     }
 
     // 3. Parsear JSON del flujo
-    const wfData = typeof workflow.workflow === "string" ? JSON.parse(workflow.workflow) : workflow.workflow;
+    const wfData =
+      typeof workflow.workflow === "string"
+        ? JSON.parse(workflow.workflow)
+        : workflow.workflow;
 
     // 4. Obtener nodo inicial
     let initialNode: any = findInitialNode(wfData.nodes, wfData.edges);
@@ -1184,7 +1278,7 @@ async function handleExternalTrigger(event: ExternalTriggerEvent) {
   } catch (error: any) {
     console.error(`[Trigger] Failed handling external trigger:`, error);
   }
-}  
+}
 
 // ---------------------------------------------------------------------------
 // NUEVO: Manejar eventos de envío por lotes
@@ -1212,7 +1306,9 @@ async function handleBatchSend(event: BatchSendEvent) {
       return;
     }
 
-    console.log(`[BatchSend] Sending batch message to ${contacts.length} contacts.`);
+    console.log(
+      `[BatchSend] Sending batch message to ${contacts.length} contacts.`,
+    );
 
     for (const contact of contacts) {
       const individualVars = perContactVariables[contact.id] || {};
@@ -1243,14 +1339,17 @@ async function handleBatchSend(event: BatchSendEvent) {
           agent.whatsappAccessToken,
           payloadData,
           agent,
-          contact
+          contact,
         );
       } catch (err: any) {
-        console.error(`[BatchSend] Failed to send to ${contact.phone}:`, err.message);
+        console.error(
+          `[BatchSend] Failed to send to ${contact.phone}:`,
+          err.message,
+        );
       }
       await new Promise((r) => setTimeout(r, 200));
     }
   } catch (error: any) {
     console.error(`[BatchSend] Error processing batch send:`, error);
   }
-}  
+}

@@ -33,13 +33,18 @@ export async function POST(req: NextRequest) {
   try {
     body = BodySchema.parse(await req.json());
   } catch (err: any) {
-    return NextResponse.json({ error: err.message || "invalid body" }, { status: 400 });
+    return NextResponse.json(
+      { error: err.message || "invalid body" },
+      { status: 400 },
+    );
   }
 
   const { agentId, contactIds, phoneNumbers } = body;
 
   // 3. Ownership checks
-  const agent = await db.chatAgent.findFirst({ where: { id: agentId, userId } });
+  const agent = await db.chatAgent.findFirst({
+    where: { id: agentId, userId },
+  });
   if (!agent) {
     return NextResponse.json({ error: "agent not found" }, { status: 404 });
   }
@@ -70,7 +75,10 @@ export async function POST(req: NextRequest) {
     where: { chatAgentId: agentId, id: { in: finalContactIds } },
   });
   if (validContacts !== finalContactIds.length) {
-    return NextResponse.json({ error: "one or more contacts invalid" }, { status: 400 });
+    return NextResponse.json(
+      { error: "one or more contacts invalid" },
+      { status: 400 },
+    );
   }
 
   // 4. Queue event
@@ -90,4 +98,4 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ status: "queued" });
-} 
+}

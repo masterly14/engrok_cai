@@ -1,12 +1,18 @@
-"use client"
+"use client";
 
-import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Calendar,
   CreditCard,
@@ -18,32 +24,33 @@ import {
   Link2,
   Settings,
   Save,
-} from "lucide-react"
-import { useState, useEffect } from "react"
-import type { Node } from "reactflow"
+} from "lucide-react";
+import { useState, useEffect } from "react";
+import type { Node } from "reactflow";
 import {
   connectIntegrationAccount,
   validateIntegrationUser,
   validateWompiIntegrationUser,
   validateAndSaveWompiCredentials,
-} from "@/actions/integrations"
-import { toast } from "sonner"
-import Image from "next/image"
-import IntegrationComponent from "@/components/nango/integrationComponent"
-import { GoogleCalendarActionConfig } from "./google-calendar-action-config"
+} from "@/actions/integrations";
+import { toast } from "sonner";
+import Image from "next/image";
+import IntegrationComponent from "@/components/nango/integrationComponent";
+import { GoogleCalendarActionConfig } from "./google-calendar-action-config";
 
 type Props = {
-  selectedNode: Node
-  updateNode: (nodeId: string, updates: any) => void
-  workflowId: string
-}
+  selectedNode: Node;
+  updateNode: (nodeId: string, updates: any) => void;
+  workflowId: string;
+};
 
 const availableIntegrations = [
   {
     id: "wompi",
     name: "Wompi",
     description: "Procesa pagos y genera enlaces de pago",
-    className: "hover:border-green-500 hover:bg-green-50/50 transition-all duration-200",
+    className:
+      "hover:border-green-500 hover:bg-green-50/50 transition-all duration-200",
     icon: <CreditCard className="w-5 h-5 text-green-600" />,
     provider: "WOMPI",
     img: "/integrations-logos-providers/wompi.jpg",
@@ -52,120 +59,146 @@ const availableIntegrations = [
   {
     id: "google-calendar",
     name: "Google Calendar",
-    description: "Integra con Google Calendar para obtener disponibilidad de horarios y crear eventos.",
-    className: "hover:border-green-500 hover:bg-green-50/50 transition-all duration-200",
+    description:
+      "Integra con Google Calendar para obtener disponibilidad de horarios y crear eventos.",
+    className:
+      "hover:border-green-500 hover:bg-green-50/50 transition-all duration-200",
     icon: <Calendar className="w-5 h-5 text-green-600" />,
     provider: "GOOGLE_CALENDAR",
     img: "/integrations-logos-providers/google-calendar.png",
     color: "green",
-  }
-]
+  },
+];
 
-const IntegrationNodeConfig = ({ selectedNode, updateNode, workflowId }: Props) => {
+const IntegrationNodeConfig = ({
+  selectedNode,
+  updateNode,
+  workflowId,
+}: Props) => {
   const [selectedIntegration, setSelectedIntegration] = useState<string | null>(
-    selectedNode.data.provider || null
-  )
-  const [isLoading, setIsLoading] = useState(false)
-  const [isConnected, setIsConnected] = useState<boolean | null>(null)
-  const [userId, setUserId] = useState<string | null>(null)
-  const [wompiPublicKey, setWompiPublicKey] = useState<string>("")
-  const [wompiPrivateKey, setWompiPrivateKey] = useState<string>("")
-  const [wompiEventToken, setWompiEventToken] = useState<string>("")
+    selectedNode.data.provider || null,
+  );
+  const [isLoading, setIsLoading] = useState(false);
+  const [isConnected, setIsConnected] = useState<boolean | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [wompiPublicKey, setWompiPublicKey] = useState<string>("");
+  const [wompiPrivateKey, setWompiPrivateKey] = useState<string>("");
+  const [wompiEventToken, setWompiEventToken] = useState<string>("");
 
-  const nodeData = selectedNode.data
+  const nodeData = selectedNode.data;
 
-  const [linkName, setLinkName] = useState<string>(nodeData.fields?.name || "")
-  const [linkDescription, setLinkDescription] = useState<string>(nodeData.fields?.description || "")
-  const [amountInCents, setAmountInCents] = useState<number>(nodeData.fields?.amount_in_cents || 0)
-  const [currency, setCurrency] = useState<string>(nodeData.fields?.currency || "USD")
-  const [redirectUrl, setRedirectUrl] = useState<string>(nodeData.fields?.redirect_url || "")
-  const [saveResponseTo, setSaveResponseTo] = useState<string>(nodeData.saveResponseTo || "paymentLinkUrl")
+  const [linkName, setLinkName] = useState<string>(nodeData.fields?.name || "");
+  const [linkDescription, setLinkDescription] = useState<string>(
+    nodeData.fields?.description || "",
+  );
+  const [amountInCents, setAmountInCents] = useState<number>(
+    nodeData.fields?.amount_in_cents || 0,
+  );
+  const [currency, setCurrency] = useState<string>(
+    nodeData.fields?.currency || "USD",
+  );
+  const [redirectUrl, setRedirectUrl] = useState<string>(
+    nodeData.fields?.redirect_url || "",
+  );
+  const [saveResponseTo, setSaveResponseTo] = useState<string>(
+    nodeData.saveResponseTo || "paymentLinkUrl",
+  );
   const [botResponse, setBotResponse] = useState<string>(
-    nodeData.botResponse || "Aquí tienes tu link de pago: {{paymentLinkUrl}}"
-  )
+    nodeData.botResponse || "Aquí tienes tu link de pago: {{paymentLinkUrl}}",
+  );
 
   useEffect(() => {
     if (selectedIntegration) {
-      handleIntegrationSelect(selectedIntegration)
+      handleIntegrationSelect(selectedIntegration);
     }
-  }, [])
+  }, []);
 
   const handleIntegrationSelect = async (provider: string) => {
-    setSelectedIntegration(provider)
-    setIsLoading(true)
+    setSelectedIntegration(provider);
+    setIsLoading(true);
 
     try {
       if (provider === "WOMPI") {
-        const validateWompiIntegration = await validateWompiIntegrationUser()
+        const validateWompiIntegration = await validateWompiIntegrationUser();
         if (validateWompiIntegration.isConnected) {
-          toast.success("Integración validada correctamente")
-          setIsConnected(true)
-          setSelectedIntegration(validateWompiIntegration.provider)
+          toast.success("Integración validada correctamente");
+          setIsConnected(true);
+          setSelectedIntegration(validateWompiIntegration.provider);
         } else {
-          toast.error(`Conecta tu cuenta de ${provider} para continuar`)
-          setIsConnected(false)
+          toast.error(`Conecta tu cuenta de ${provider} para continuar`);
+          setIsConnected(false);
         }
       } else {
-        const validateIntegration = await validateIntegrationUser(provider)
-        setUserId(validateIntegration.userId)
+        const validateIntegration = await validateIntegrationUser(provider);
+        setUserId(validateIntegration.userId);
         if (validateIntegration.isConnected) {
-          toast.success("Integración validada correctamente")
-          setIsConnected(true)
-          setSelectedIntegration(validateIntegration.provider)
+          toast.success("Integración validada correctamente");
+          setIsConnected(true);
+          setSelectedIntegration(validateIntegration.provider);
         } else {
-          toast.error(`Conecta tu cuenta de ${provider} para continuar`)
-          setIsConnected(false)
+          toast.error(`Conecta tu cuenta de ${provider} para continuar`);
+          setIsConnected(false);
         }
       }
     } catch (error) {
-      toast.error("Error al validar la integración")
+      toast.error("Error al validar la integración");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   const handleConnectAccount = async (provider: string) => {
-    setIsLoading(true)
+    setIsLoading(true);
     try {
-      const connectAccount = await connectIntegrationAccount(provider, userId!, workflowId)
+      const connectAccount = await connectIntegrationAccount(
+        provider,
+        userId!,
+        workflowId,
+      );
       if (connectAccount?.redirectUrl) {
-        window.location.href = connectAccount.redirectUrl
+        window.location.href = connectAccount.redirectUrl;
       } else {
-        toast.error("Error al conectar la cuenta")
+        toast.error("Error al conectar la cuenta");
       }
     } catch (error) {
-      toast.error("Error al conectar la cuenta")
+      toast.error("Error al conectar la cuenta");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   const handleValidateWompi = async () => {
     if (!wompiPublicKey || !wompiPrivateKey || !wompiEventToken) {
-      toast.error("Por favor, completa todos los campos para continuar")
-      return
+      toast.error("Por favor, completa todos los campos para continuar");
+      return;
     }
 
-    setIsLoading(true)
+    setIsLoading(true);
     try {
-      const result = await validateAndSaveWompiCredentials(wompiPublicKey, wompiPrivateKey, wompiEventToken)
+      const result = await validateAndSaveWompiCredentials(
+        wompiPublicKey,
+        wompiPrivateKey,
+        wompiEventToken,
+      );
       if (result.success) {
-        toast.success("Wompi conectada correctamente")
-        setIsConnected(true)
+        toast.success("Wompi conectada correctamente");
+        setIsConnected(true);
       } else {
-        toast.error(result.error || "Error al validar Wompi")
+        toast.error(result.error || "Error al validar Wompi");
       }
     } catch (error) {
-      toast.error("Error inesperado al validar Wompi")
+      toast.error("Error inesperado al validar Wompi");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   const handleSaveWompiConfig = () => {
     if (!saveResponseTo || !botResponse) {
-      toast.error("Por favor, completa los campos de 'Guardar respuesta' y 'Mensaje de respuesta'")
-      return
+      toast.error(
+        "Por favor, completa los campos de 'Guardar respuesta' y 'Mensaje de respuesta'",
+      );
+      return;
     }
 
     updateNode(selectedNode.id, {
@@ -188,13 +221,15 @@ const IntegrationNodeConfig = ({ selectedNode, updateNode, workflowId }: Props) 
         statusSuccess: "success",
         statusError: "error",
       },
-    })
-    toast.success("Configuración de Wompi guardada en el nodo.")
-  }
+    });
+    toast.success("Configuración de Wompi guardada en el nodo.");
+  };
 
   const getSelectedIntegrationData = () => {
-    return availableIntegrations.find((int) => int.provider === selectedIntegration)
-  }
+    return availableIntegrations.find(
+      (int) => int.provider === selectedIntegration,
+    );
+  };
 
   if (isLoading) {
     return (
@@ -206,7 +241,7 @@ const IntegrationNodeConfig = ({ selectedNode, updateNode, workflowId }: Props) 
           </div>
         </CardContent>
       </Card>
-    )
+    );
   }
 
   return (
@@ -215,14 +250,20 @@ const IntegrationNodeConfig = ({ selectedNode, updateNode, workflowId }: Props) 
       <div className="space-y-2">
         <div className="flex items-center gap-2">
           <Settings className="w-5 h-5 text-muted-foreground" />
-          <h3 className="text-lg font-semibold">Configuración de Integración</h3>
+          <h3 className="text-lg font-semibold">
+            Configuración de Integración
+          </h3>
         </div>
-        <p className="text-sm text-muted-foreground">Selecciona y configura un servicio de integración para tu flujo</p>
+        <p className="text-sm text-muted-foreground">
+          Selecciona y configura un servicio de integración para tu flujo
+        </p>
       </div>
 
       {/* Integration Selection */}
       <div className="space-y-4">
-        <Label className="text-base font-medium">Integraciones Disponibles</Label>
+        <Label className="text-base font-medium">
+          Integraciones Disponibles
+        </Label>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {availableIntegrations.map((integration) => (
             <Card
@@ -248,9 +289,13 @@ const IntegrationNodeConfig = ({ selectedNode, updateNode, workflowId }: Props) 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       {integration.icon}
-                      <h4 className="font-medium text-sm">{integration.name}</h4>
+                      <h4 className="font-medium text-sm">
+                        {integration.name}
+                      </h4>
                     </div>
-                    <p className="text-xs text-muted-foreground leading-relaxed">{integration.description}</p>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      {integration.description}
+                    </p>
                   </div>
                 </div>
               </CardContent>
@@ -269,10 +314,15 @@ const IntegrationNodeConfig = ({ selectedNode, updateNode, workflowId }: Props) 
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2">
                 {getSelectedIntegrationData()?.icon}
-                <h4 className="font-medium">{getSelectedIntegrationData()?.name}</h4>
+                <h4 className="font-medium">
+                  {getSelectedIntegrationData()?.name}
+                </h4>
               </div>
               {isConnected !== null && (
-                <Badge variant={isConnected ? "default" : "secondary"} className="gap-1">
+                <Badge
+                  variant={isConnected ? "default" : "secondary"}
+                  className="gap-1"
+                >
                   {isConnected ? (
                     <>
                       <CheckCircle2 className="w-3 h-3" />
@@ -299,7 +349,8 @@ const IntegrationNodeConfig = ({ selectedNode, updateNode, workflowId }: Props) 
                     Configurar Generación de Enlace de Pago
                   </CardTitle>
                   <CardDescription>
-                    Define los parámetros para el enlace de pago. Puedes usar variables como {"{{nombreVariable}}"}
+                    Define los parámetros para el enlace de pago. Puedes usar
+                    variables como {"{{nombreVariable}}"}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -319,7 +370,9 @@ const IntegrationNodeConfig = ({ selectedNode, updateNode, workflowId }: Props) 
                         id="currency"
                         placeholder="USD, COP, EUR, etc."
                         value={currency}
-                        onChange={(e) => setCurrency(e.target.value.toUpperCase())}
+                        onChange={(e) =>
+                          setCurrency(e.target.value.toUpperCase())
+                        }
                       />
                     </div>
                   </div>
@@ -343,11 +396,16 @@ const IntegrationNodeConfig = ({ selectedNode, updateNode, workflowId }: Props) 
                       value={amountInCents || ""}
                       onChange={(e) => setAmountInCents(Number(e.target.value))}
                     />
-                    <p className="text-xs text-muted-foreground">Ingresa el monto en la menor unidad. Puedes usar una variable como {"{{monto}}"} </p>
+                    <p className="text-xs text-muted-foreground">
+                      Ingresa el monto en la menor unidad. Puedes usar una
+                      variable como {"{{monto}}"}{" "}
+                    </p>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="redirectUrl">URL de Redirección de Éxito</Label>
+                    <Label htmlFor="redirectUrl">
+                      URL de Redirección de Éxito
+                    </Label>
                     <Input
                       id="redirectUrl"
                       type="url"
@@ -356,11 +414,13 @@ const IntegrationNodeConfig = ({ selectedNode, updateNode, workflowId }: Props) 
                       onChange={(e) => setRedirectUrl(e.target.value)}
                     />
                   </div>
-                  
+
                   <Separator />
 
                   <div className="space-y-2">
-                    <Label htmlFor="saveResponseTo">Guardar URL del link en la variable</Label>
+                    <Label htmlFor="saveResponseTo">
+                      Guardar URL del link en la variable
+                    </Label>
                     <Input
                       id="saveResponseTo"
                       placeholder="paymentLinkUrl"
@@ -368,35 +428,53 @@ const IntegrationNodeConfig = ({ selectedNode, updateNode, workflowId }: Props) 
                       onChange={(e) => setSaveResponseTo(e.target.value)}
                     />
                   </div>
-                  
+
                   <div className="space-y-2">
-                    <Label htmlFor="botResponse">Mensaje de respuesta para el usuario</Label>
+                    <Label htmlFor="botResponse">
+                      Mensaje de respuesta para el usuario
+                    </Label>
                     <Input
                       id="botResponse"
                       placeholder="Tu link de pago: {{paymentLinkUrl}}"
                       value={botResponse}
                       onChange={(e) => setBotResponse(e.target.value)}
                     />
-                     <p className="text-xs text-muted-foreground">Usa la variable que definiste arriba para insertar el link dinámicamente.</p>
+                    <p className="text-xs text-muted-foreground">
+                      Usa la variable que definiste arriba para insertar el link
+                      dinámicamente.
+                    </p>
                   </div>
 
-
-                  <Button onClick={handleSaveWompiConfig} className="w-full gap-2">
+                  <Button
+                    onClick={handleSaveWompiConfig}
+                    className="w-full gap-2"
+                  >
                     <Save className="w-4 h-4" />
                     Guardar Configuración
                   </Button>
                 </CardContent>
               </Card>
             ) : selectedIntegration === "GOOGLE_CALENDAR" ? (
-              <GoogleCalendarActionConfig selectedNode={selectedNode} updateNode={updateNode} />
+              <GoogleCalendarActionConfig
+                selectedNode={selectedNode}
+                updateNode={updateNode}
+              />
             ) : (
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">Configuración de Integración</CardTitle>
-                  <CardDescription>Configura tu integración con {getSelectedIntegrationData()?.name}</CardDescription>
+                  <CardTitle className="text-base">
+                    Configuración de Integración
+                  </CardTitle>
+                  <CardDescription>
+                    Configura tu integración con{" "}
+                    {getSelectedIntegrationData()?.name}
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-muted-foreground">Configuración de integración para {getSelectedIntegrationData()?.name}</p>
+                  <p className="text-sm text-muted-foreground">
+                    Configuración de integración para{" "}
+                    {getSelectedIntegrationData()?.name}
+                  </p>
                 </CardContent>
               </Card>
             )
@@ -408,7 +486,10 @@ const IntegrationNodeConfig = ({ selectedNode, updateNode, workflowId }: Props) 
                     <Key className="w-4 h-4" />
                     Conecta tu cuenta de Wompi
                   </CardTitle>
-                  <CardDescription>Ingresa tus credenciales de Wompi para establecer la conexión</CardDescription>
+                  <CardDescription>
+                    Ingresa tus credenciales de Wompi para establecer la
+                    conexión
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
@@ -446,7 +527,9 @@ const IntegrationNodeConfig = ({ selectedNode, updateNode, workflowId }: Props) 
                   <Button
                     onClick={handleValidateWompi}
                     className="w-full"
-                    disabled={!wompiPublicKey || !wompiPrivateKey || !wompiEventToken}
+                    disabled={
+                      !wompiPublicKey || !wompiPrivateKey || !wompiEventToken
+                    }
                   >
                     Validar y Conectar
                   </Button>
@@ -455,9 +538,11 @@ const IntegrationNodeConfig = ({ selectedNode, updateNode, workflowId }: Props) 
             ) : selectedIntegration === "GOOGLE_CALENDAR" ? (
               <IntegrationComponent
                 setIntegrationConnection={(connected) => {
-                  setIsConnected(connected)
+                  setIsConnected(connected);
                   if (connected) {
-                    toast.success("Cuenta de Google Calendar conectada exitosamente!")
+                    toast.success(
+                      "Cuenta de Google Calendar conectada exitosamente!",
+                    );
                   }
                 }}
                 visibleName="Google Calendar"
@@ -470,13 +555,19 @@ const IntegrationNodeConfig = ({ selectedNode, updateNode, workflowId }: Props) 
             ) : (
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">Conexión de Cuenta Requerida</CardTitle>
+                  <CardTitle className="text-base">
+                    Conexión de Cuenta Requerida
+                  </CardTitle>
                   <CardDescription>
-                    Conecta tu cuenta de {getSelectedIntegrationData()?.name} para continuar
+                    Conecta tu cuenta de {getSelectedIntegrationData()?.name}{" "}
+                    para continuar
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Button onClick={() => handleConnectAccount(selectedIntegration!)} className="w-full">
+                  <Button
+                    onClick={() => handleConnectAccount(selectedIntegration!)}
+                    className="w-full"
+                  >
                     Conectar Cuenta
                   </Button>
                 </CardContent>
@@ -488,9 +579,12 @@ const IntegrationNodeConfig = ({ selectedNode, updateNode, workflowId }: Props) 
                 <div className="text-center space-y-3">
                   <AlertCircle className="w-8 h-8 text-muted-foreground mx-auto" />
                   <div>
-                    <p className="font-medium">No se ha seleccionado ninguna integración</p>
+                    <p className="font-medium">
+                      No se ha seleccionado ninguna integración
+                    </p>
                     <p className="text-sm text-muted-foreground">
-                      Por favor, selecciona una integración de la lista de arriba.
+                      Por favor, selecciona una integración de la lista de
+                      arriba.
                     </p>
                   </div>
                 </div>
@@ -500,7 +594,7 @@ const IntegrationNodeConfig = ({ selectedNode, updateNode, workflowId }: Props) 
         </>
       )}
     </div>
-  )
-}
+  );
+};
 
-export default IntegrationNodeConfig
+export default IntegrationNodeConfig;

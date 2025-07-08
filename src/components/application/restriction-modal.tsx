@@ -1,4 +1,3 @@
-
 "use client";
 
 import {
@@ -44,7 +43,8 @@ export const RestrictionModal = ({
             Límite del Plan Alcanzado
           </DialogTitle>
           <DialogDescription className="pt-2">
-            Has alcanzado el límite de **{limit} {resourceName}** permitido en tu plan **{planName}**.
+            Has alcanzado el límite de **{limit} {resourceName}** permitido en
+            tu plan **{planName}**.
             <br />
             Para crear más {resourceName}, por favor, actualiza tu plan.
           </DialogDescription>
@@ -53,9 +53,7 @@ export const RestrictionModal = ({
           <Button variant="outline" onClick={onClose}>
             Entendido
           </Button>
-          <Button onClick={handleUpgrade}>
-            Ver Planes
-          </Button>
+          <Button onClick={handleUpgrade}>Ver Planes</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -12,7 +12,7 @@ const STREAM_KEY = "incoming_messages";
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ token: string }> }
+  { params }: { params: Promise<{ token: string }> },
 ) {
   try {
     const { token } = await params;
@@ -21,10 +21,7 @@ export async function POST(
     });
 
     if (!trigger) {
-      return NextResponse.json(
-        { error: "Trigger not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Trigger not found" }, { status: 404 });
     }
 
     const body = await request.json();
@@ -36,7 +33,7 @@ export async function POST(
     if (!phone) {
       return NextResponse.json(
         { error: "Missing 'phone' in payload" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -68,7 +65,7 @@ export async function POST(
     console.error("[Trigger] Error handling trigger POST", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
-} 
+}

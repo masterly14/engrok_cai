@@ -18,7 +18,7 @@ export const getElevenLabsVoices = unstable_cache(
   ["elevenlabs-voices"], // Clave de caché única
   {
     revalidate: 60 * 60, // Cachear por 1 hora
-  }
+  },
 );
 
 /**
@@ -31,9 +31,7 @@ export const getElevenLabsVoices = unstable_cache(
  * correspondiente en la colección `ElevenLabsWidget`.
  * Devuelve el widget persistido con su `agentId` listo para usarse en el front-end.
  */
-export const createAgentAndWidget = async (
-  payload: any
-) => {
+export const createAgentAndWidget = async (payload: any) => {
   const user = await onBoardUser();
   if (!user) {
     throw new Error("unauthorized");
@@ -55,37 +53,43 @@ export const createAgentAndWidget = async (
             llm: "gemini-2.5-flash",
             temperature: 0.5,
           },
-
         },
         tts: {
           voice_id: payload.voiceId,
-          model_id:"eleven_flash_v2_5",
+          model_id: "eleven_flash_v2_5",
           optimize_streaming_latency: 4,
           speed: 1.0,
           stability: 0.5,
         },
         conversation: {
           max_duration_seconds: 300,
-        }
+        },
       },
       platform_settings: {
         widget: {
           action_text: payload.actionText,
-          language_selector: true, 
-          listening_text: payload.listeningText ? payload.listeningText : "Escuchando...",
-          end_call_text: payload.endCallText ? payload.endCallText : "Fin de la llamada",
-          speaking_text: payload.speakingText ? payload.speakingText : "Hablando...",
-          start_call_text: payload.startCallText ? payload.startCallText : "Iniciando llamada...",
+          language_selector: true,
+          listening_text: payload.listeningText
+            ? payload.listeningText
+            : "Escuchando...",
+          end_call_text: payload.endCallText
+            ? payload.endCallText
+            : "Fin de la llamada",
+          speaking_text: payload.speakingText
+            ? payload.speakingText
+            : "Hablando...",
+          start_call_text: payload.startCallText
+            ? payload.startCallText
+            : "Iniciando llamada...",
         },
       },
       name: payload.name,
-
     });
 
     const agentId = (agentData as any).agent_id;
     if (!agentId) {
       throw new Error(
-        "El ID del agente no se encontró en la respuesta de la API de ElevenLabs"
+        "El ID del agente no se encontró en la respuesta de la API de ElevenLabs",
       );
     }
 

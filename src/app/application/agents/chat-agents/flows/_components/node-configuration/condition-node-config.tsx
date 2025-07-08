@@ -1,140 +1,216 @@
-"use client"
+"use client";
 
-import type { Node } from "reactflow"
-import { ConfigField } from "../shared-config-components"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { GitBranch, Code, CheckCircle, XCircle } from 'lucide-react'
-import { Badge } from "@/components/ui/badge"
-import React from "react"
+import type { Node } from "reactflow";
+import { ConfigField } from "../shared-config-components";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { GitBranch, Code, CheckCircle, XCircle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import React from "react";
 
 interface ConditionNodeConfigProps {
-  selectedNode: Node
-  updateNode: (nodeId: string, updates: any) => void
-  globalVariables: string[]
-  onValidationChange?: (hasErrors: boolean) => void
+  selectedNode: Node;
+  updateNode: (nodeId: string, updates: any) => void;
+  globalVariables: string[];
+  onValidationChange?: (hasErrors: boolean) => void;
 }
 
 const CONDITION_OPERATORS = [
-  { value: "==", label: "== (igual)", description: "Valores son exactamente iguales" },
-  { value: "!=", label: "!= (no igual)", description: "Valores son diferentes" },
-  { value: ">", label: "> (mayor)", description: "Primer valor es mayor que el segundo" },
-  { value: ">=", label: ">= (mayor o igual)", description: "Primer valor es mayor o igual al segundo" },
-  { value: "<", label: "< (menor)", description: "Primer valor es menor que el segundo" },
-  { value: "<=", label: "<= (menor o igual)", description: "Primer valor es menor o igual al segundo" },
-  { value: "contains", label: "contiene", description: "Primer valor contiene el segundo" },
-  { value: "startsWith", label: "empieza con", description: "Primer valor empieza con el segundo" },
-  { value: "endsWith", label: "termina con", description: "Primer valor termina con el segundo" },
-  { value: "isEmpty", label: "está vacío", description: "El valor está vacío o no definido" },
-  { value: "isNotEmpty", label: "no está vacío", description: "El valor tiene contenido" },
-]
+  {
+    value: "==",
+    label: "== (igual)",
+    description: "Valores son exactamente iguales",
+  },
+  {
+    value: "!=",
+    label: "!= (no igual)",
+    description: "Valores son diferentes",
+  },
+  {
+    value: ">",
+    label: "> (mayor)",
+    description: "Primer valor es mayor que el segundo",
+  },
+  {
+    value: ">=",
+    label: ">= (mayor o igual)",
+    description: "Primer valor es mayor o igual al segundo",
+  },
+  {
+    value: "<",
+    label: "< (menor)",
+    description: "Primer valor es menor que el segundo",
+  },
+  {
+    value: "<=",
+    label: "<= (menor o igual)",
+    description: "Primer valor es menor o igual al segundo",
+  },
+  {
+    value: "contains",
+    label: "contiene",
+    description: "Primer valor contiene el segundo",
+  },
+  {
+    value: "startsWith",
+    label: "empieza con",
+    description: "Primer valor empieza con el segundo",
+  },
+  {
+    value: "endsWith",
+    label: "termina con",
+    description: "Primer valor termina con el segundo",
+  },
+  {
+    value: "isEmpty",
+    label: "está vacío",
+    description: "El valor está vacío o no definido",
+  },
+  {
+    value: "isNotEmpty",
+    label: "no está vacío",
+    description: "El valor tiene contenido",
+  },
+];
 
-export function ConditionNodeConfig({ selectedNode, updateNode, globalVariables, onValidationChange }: ConditionNodeConfigProps) {
-  const data = selectedNode.data || {}
+export function ConditionNodeConfig({
+  selectedNode,
+  updateNode,
+  globalVariables,
+  onValidationChange,
+}: ConditionNodeConfigProps) {
+  const data = selectedNode.data || {};
 
   // ---------- Variable validation helpers ----------
-  const isVariable = (val: string) => /\{\{\s*[^{}]+\s*\}\}/.test(val)
+  const isVariable = (val: string) => /\{\{\s*[^{}]+\s*\}\}/.test(val);
   const extractVariableName = (val: string) => {
-    const match = val.match(/\{\{\s*([^{}]+)\s*\}\}/)
-    return match ? match[1].trim() : ""
-  }
+    const match = val.match(/\{\{\s*([^{}]+)\s*\}\}/);
+    return match ? match[1].trim() : "";
+  };
 
   // Validation state
-  const [leftError, setLeftError] = React.useState<string>("")
-  const [rightError, setRightError] = React.useState<string>("")
+  const [leftError, setLeftError] = React.useState<string>("");
+  const [rightError, setRightError] = React.useState<string>("");
 
   // Function to validate variable usage
   const validateVariable = (value: string, setError: (msg: string) => void) => {
     if (!isVariable(value)) {
-      setError("")
-      return
+      setError("");
+      return;
     }
 
     if (globalVariables.length === 0) {
-      setError("Este flujo no contiene variables disponibles para comparación. Agrega un nodo de captura de respuesta primero.")
-      return
+      setError(
+        "Este flujo no contiene variables disponibles para comparación. Agrega un nodo de captura de respuesta primero.",
+      );
+      return;
     }
 
-    const varName = extractVariableName(value)
+    const varName = extractVariableName(value);
     if (!globalVariables.includes(varName)) {
-      setError(`La variable "${varName}" no existe en el flujo.`)
+      setError(`La variable "${varName}" no existe en el flujo.`);
     } else {
-      setError("")
+      setError("");
     }
-  }
+  };
 
   // Parse existing condition or set defaults
   const parseCondition = (condition: string) => {
-    if (!condition) return { leftValue: "", operator: "==", rightValue: "" }
-    
+    if (!condition) return { leftValue: "", operator: "==", rightValue: "" };
+
     // Try to parse existing condition format like "{{orderStatus}} == 'shipped'"
     const patterns = [
       { regex: /^(.+?)\s*(==|!=|>=|<=|>|<)\s*(.+)$/, hasRightValue: true },
-      { regex: /^(.+?)\s*(contains|startsWith|endsWith)\s*(.+)$/, hasRightValue: true },
+      {
+        regex: /^(.+?)\s*(contains|startsWith|endsWith)\s*(.+)$/,
+        hasRightValue: true,
+      },
       { regex: /^(.+?)\s*(isEmpty|isNotEmpty)$/, hasRightValue: false },
-    ]
-    
+    ];
+
     for (const pattern of patterns) {
-      const match = condition.match(pattern.regex)
+      const match = condition.match(pattern.regex);
       if (match) {
         return {
           leftValue: match[1].trim(),
           operator: match[2].trim(),
           rightValue: pattern.hasRightValue ? match[3].trim() : "",
-        }
+        };
       }
     }
-    
-    // If no pattern matches, return the condition as leftValue
-    return { leftValue: condition, operator: "==", rightValue: "" }
-  }
 
-  const conditionParts = parseCondition(data.condition || "")
+    // If no pattern matches, return the condition as leftValue
+    return { leftValue: condition, operator: "==", rightValue: "" };
+  };
+
+  const conditionParts = parseCondition(data.condition || "");
 
   const handleChange = (field: string, value: any) => {
-    updateNode(selectedNode.id, { data: { ...data, [field]: value } })
-  }
+    updateNode(selectedNode.id, { data: { ...data, [field]: value } });
+  };
 
-  const handleConditionPartChange = (part: 'leftValue' | 'operator' | 'rightValue', value: string) => {
-    const newParts = { ...conditionParts, [part]: value }
-    
+  const handleConditionPartChange = (
+    part: "leftValue" | "operator" | "rightValue",
+    value: string,
+  ) => {
+    const newParts = { ...conditionParts, [part]: value };
+
     // Build the condition string
-    let conditionString = ""
+    let conditionString = "";
     if (newParts.leftValue) {
-      conditionString = newParts.leftValue
+      conditionString = newParts.leftValue;
       if (newParts.operator) {
-        if (newParts.operator === "isEmpty" || newParts.operator === "isNotEmpty") {
-          conditionString += ` ${newParts.operator}`
+        if (
+          newParts.operator === "isEmpty" ||
+          newParts.operator === "isNotEmpty"
+        ) {
+          conditionString += ` ${newParts.operator}`;
         } else if (newParts.rightValue) {
-          conditionString += ` ${newParts.operator} ${newParts.rightValue}`
+          conditionString += ` ${newParts.operator} ${newParts.rightValue}`;
         }
       }
     }
-    
+
     // Validate variable usage on the changed part
-    if (part === "leftValue") validateVariable(value, setLeftError)
-    if (part === "rightValue") validateVariable(value, setRightError)
+    if (part === "leftValue") validateVariable(value, setLeftError);
+    if (part === "rightValue") validateVariable(value, setRightError);
 
-    handleChange("condition", conditionString)
-  }
+    handleChange("condition", conditionString);
+  };
 
-  const selectedOperator = CONDITION_OPERATORS.find(op => op.value === conditionParts.operator)
-  const needsRightValue = !["isEmpty", "isNotEmpty"].includes(conditionParts.operator)
+  const selectedOperator = CONDITION_OPERATORS.find(
+    (op) => op.value === conditionParts.operator,
+  );
+  const needsRightValue = !["isEmpty", "isNotEmpty"].includes(
+    conditionParts.operator,
+  );
 
   // Revalidate when globalVariables list changes
   React.useEffect(() => {
-    validateVariable(conditionParts.leftValue, setLeftError)
-    validateVariable(conditionParts.rightValue, setRightError)
+    validateVariable(conditionParts.leftValue, setLeftError);
+    validateVariable(conditionParts.rightValue, setRightError);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [globalVariables])
+  }, [globalVariables]);
 
   // Notify parent whenever error state changes
   React.useEffect(() => {
-    const hasErrors = leftError !== "" || rightError !== ""
-    onValidationChange?.(hasErrors)
-  }, [leftError, rightError, onValidationChange])
+    const hasErrors = leftError !== "" || rightError !== "";
+    onValidationChange?.(hasErrors);
+  }, [leftError, rightError, onValidationChange]);
 
   return (
     <div className="space-y-6">
@@ -148,7 +224,9 @@ export function ConditionNodeConfig({ selectedNode, updateNode, globalVariables,
               </div>
               <div>
                 <CardTitle className="text-lg">Condition Node</CardTitle>
-                <CardDescription>Configure logical conditions to branch your flow</CardDescription>
+                <CardDescription>
+                  Configure logical conditions to branch your flow
+                </CardDescription>
               </div>
             </div>
             <Badge variant="outline" className="flex items-center gap-1">
@@ -188,14 +266,19 @@ export function ConditionNodeConfig({ selectedNode, updateNode, globalVariables,
             <Input
               id="left-value"
               value={conditionParts.leftValue}
-              onChange={(e) => handleConditionPartChange('leftValue', e.target.value)}
+              onChange={(e) =>
+                handleConditionPartChange("leftValue", e.target.value)
+              }
               placeholder="E.j: {{orderStatus}}, {{userName}}, 'texto'"
               className="bg-white border-gray-300 focus:border-emerald-500 focus:ring-emerald-500/30"
             />
             <p className="text-xs text-gray-500">
-              Usa {'{{variableName}}'} para variables o 'texto' para valores literales
+              Usa {"{{variableName}}"} para variables o 'texto' para valores
+              literales
             </p>
-            {leftError && <p className="text-xs text-red-500 font-medium">{leftError}</p>}
+            {leftError && (
+              <p className="text-xs text-red-500 font-medium">{leftError}</p>
+            )}
           </div>
 
           {/* Operator */}
@@ -203,11 +286,16 @@ export function ConditionNodeConfig({ selectedNode, updateNode, globalVariables,
             <Label htmlFor="operator" className="font-medium text-gray-700">
               Operador de Comparación
             </Label>
-            <Select 
-              value={conditionParts.operator} 
-              onValueChange={(value) => handleConditionPartChange('operator', value)}
+            <Select
+              value={conditionParts.operator}
+              onValueChange={(value) =>
+                handleConditionPartChange("operator", value)
+              }
             >
-              <SelectTrigger id="operator" className="bg-white border-gray-300 focus:border-emerald-500 focus:ring-emerald-500/30">
+              <SelectTrigger
+                id="operator"
+                className="bg-white border-gray-300 focus:border-emerald-500 focus:ring-emerald-500/30"
+              >
                 <SelectValue placeholder="Selecciona un operador" />
               </SelectTrigger>
               <SelectContent>
@@ -215,7 +303,9 @@ export function ConditionNodeConfig({ selectedNode, updateNode, globalVariables,
                   <SelectItem key={operator.value} value={operator.value}>
                     <div className="flex flex-col">
                       <span className="font-medium">{operator.label}</span>
-                      <span className="text-xs text-gray-500">{operator.description}</span>
+                      <span className="text-xs text-gray-500">
+                        {operator.description}
+                      </span>
                     </div>
                   </SelectItem>
                 ))}
@@ -231,20 +321,27 @@ export function ConditionNodeConfig({ selectedNode, updateNode, globalVariables,
           {/* Right Value */}
           {needsRightValue && (
             <div className="space-y-2">
-              <Label htmlFor="right-value" className="font-medium text-gray-700">
+              <Label
+                htmlFor="right-value"
+                className="font-medium text-gray-700"
+              >
                 Segundo Valor
               </Label>
               <Input
                 id="right-value"
                 value={conditionParts.rightValue}
-                onChange={(e) => handleConditionPartChange('rightValue', e.target.value)}
+                onChange={(e) =>
+                  handleConditionPartChange("rightValue", e.target.value)
+                }
                 placeholder="E.j: 'shipped', {{otherVariable}}, 100"
                 className="bg-white border-gray-300 focus:border-emerald-500 focus:ring-emerald-500/30"
               />
               <p className="text-xs text-gray-500">
                 Valor a comparar con el primer valor
               </p>
-              {rightError && <p className="text-xs text-red-500 font-medium">{rightError}</p>}
+              {rightError && (
+                <p className="text-xs text-red-500 font-medium">{rightError}</p>
+              )}
             </div>
           )}
 
@@ -261,7 +358,6 @@ export function ConditionNodeConfig({ selectedNode, updateNode, globalVariables,
           )}
         </CardContent>
       </Card>
-
 
       {/* Additional Configuration */}
       <Card>
@@ -294,5 +390,5 @@ export function ConditionNodeConfig({ selectedNode, updateNode, globalVariables,
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }
