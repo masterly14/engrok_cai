@@ -35,7 +35,7 @@ export interface ConversationNodeData extends BaseNodeData {
   type: "conversation";
   prompt: string;
   model: VapiModel;
-  voice: VapiVoice;
+  voice?: VapiVoice;
   transcriber: VapiTranscriber;
   variables: Variable[];
 }

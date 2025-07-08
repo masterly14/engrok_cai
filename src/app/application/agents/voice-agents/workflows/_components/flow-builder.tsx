@@ -67,7 +67,15 @@ export function FlowBuilder({ workflowId }: { workflowId: string }) {
   const [isTriggerModalOpen, setIsTriggerModalOpen] = useState(false)
 
   // Use workflow data hook
-  const { workflowName, setWorkflowName, isSaving, isLoading, saveWorkflow } = useWorkflowData({
+  const {
+    workflowName,
+    setWorkflowName,
+    isSaving,
+    isLoading,
+    saveWorkflow,
+    globalVoice,
+    setGlobalVoice,
+  } = useWorkflowData({
     workflowId,
     setNodes,
     setEdges,
@@ -116,7 +124,6 @@ export function FlowBuilder({ workflowId }: { workflowId: string }) {
               name: `conversation_${nodeCount}`,
               prompt: "",
               model: { provider: "openai", model: "gpt-4.1-nano" },
-              voice: { provider: "11labs", voiceId: "joan" },
               transcriber: { provider: "deepgram", model: "nova-2" },
               variables: [],
             } as ConversationNodeData,
@@ -197,6 +204,11 @@ export function FlowBuilder({ workflowId }: { workflowId: string }) {
 
   // Find selected node
   const selectedNode = nodes.find((n) => n.id === selectedNodeId) || null
+
+  // Determine if the selected node is the first conversation node
+  const firstConversationNode = nodes.find((n) => n.type === "conversation")
+  const isFirstConversationSelected =
+    selectedNode?.type === "conversation" && selectedNode.id === firstConversationNode?.id
 
   // Handle node click to open configuration sheet
   const onNodeClick = useCallback((_: React.MouseEvent, node: Node<WorkflowNodeData>) => {
@@ -287,6 +299,9 @@ export function FlowBuilder({ workflowId }: { workflowId: string }) {
               isOpen={!!selectedNode}
               onClose={() => setSelectedNodeId(null)}
               updateNode={updateNode}
+              globalVoice={globalVoice}
+              setGlobalVoice={setGlobalVoice}
+              isFirstConversation={!!isFirstConversationSelected}
             />
           </ReactFlowProvider>
         </div>

@@ -10,12 +10,16 @@ import { TransferCallNodeConfig } from "./transfer-call-node-config";
 import { EndCallNodeConfig } from "./end-call-node-config";
 import { IntegrationNodeConfig } from "./integration-node-config";
 import { ApiRequestNodeConfig } from "./api-request-node-config";
+import { VapiVoice } from "../../types";
 
 interface NodeConfigurationSheetProps {
   selectedNode: Node | null;
   isOpen: boolean;
   onClose: () => void;
   updateNode: (nodeId: string, updates: any) => void;
+  globalVoice: VapiVoice;
+  setGlobalVoice: (voice: VapiVoice) => void;
+  isFirstConversation: boolean;
 }
 
 export function NodeConfigurationSheet({
@@ -23,6 +27,9 @@ export function NodeConfigurationSheet({
   isOpen,
   onClose,
   updateNode,
+  globalVoice,
+  setGlobalVoice,
+  isFirstConversation,
 }: NodeConfigurationSheetProps) {
   if (!selectedNode) return null;
 
@@ -33,6 +40,9 @@ export function NodeConfigurationSheet({
           <ConversationNodeConfig
             selectedNode={selectedNode}
             updateNode={updateNode}
+            globalVoice={globalVoice}
+            setGlobalVoice={setGlobalVoice}
+            isFirstConversation={isFirstConversation}
           />
         );
       case "transferCall":
@@ -40,6 +50,8 @@ export function NodeConfigurationSheet({
           <TransferCallNodeConfig
             selectedNode={selectedNode}
             updateNode={updateNode}
+            globalVoice={globalVoice}
+            setGlobalVoice={setGlobalVoice}
           />
         );
       case "endCall":
@@ -47,6 +59,8 @@ export function NodeConfigurationSheet({
           <EndCallNodeConfig
             selectedNode={selectedNode}
             updateNode={updateNode}
+            globalVoice={globalVoice}
+            setGlobalVoice={setGlobalVoice}
           />
         );
       case "integration": 
@@ -54,6 +68,8 @@ export function NodeConfigurationSheet({
           <IntegrationNodeConfig
             selectedNode={selectedNode}
             updateNode={updateNode}
+            globalVoice={globalVoice}
+            setGlobalVoice={setGlobalVoice}
           />
         );
       case "apiRequest":
@@ -61,6 +77,8 @@ export function NodeConfigurationSheet({
           <ApiRequestNodeConfig
             selectedNode={selectedNode}
             updateNode={updateNode}
+            globalVoice={globalVoice}
+            setGlobalVoice={setGlobalVoice}
           />
         );
       default:

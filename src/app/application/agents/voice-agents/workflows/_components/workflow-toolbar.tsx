@@ -4,7 +4,13 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Save, Play, Menu, X, Cloud, CloudOff, RefreshCw } from "lucide-react"
 import { getWorkflow } from "@/actions/workflow"
@@ -29,26 +35,26 @@ export function WorkflowToolbar({
   onToggleSidebar,
 }: WorkflowToolbarProps) {
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false)
-  const [vapiStatus, setVapiStatus] = useState<'synced' | 'not-synced' | 'loading'>('loading')
+  const [vapiStatus, setVapiStatus] = useState<"synced" | "not-synced" | "loading">("loading")
 
   // Verificar estado de sincronización con Vapi
   useEffect(() => {
     const checkVapiStatus = async () => {
       if (!workflowId) {
-        setVapiStatus('not-synced')
+        setVapiStatus("not-synced")
         return
       }
 
       try {
         const response = await getWorkflow(workflowId)
         if (response.status === 200 && response.workflow) {
-          setVapiStatus(response.workflow.vapiWorkflowId ? 'synced' : 'not-synced')
+          setVapiStatus(response.workflow.vapiWorkflowId ? "synced" : "not-synced")
         } else {
-          setVapiStatus('not-synced')
+          setVapiStatus("not-synced")
         }
       } catch (error) {
-        console.error('Error checking Vapi status:', error)
-        setVapiStatus('not-synced')
+        console.error("Error checking Vapi status:", error)
+        setVapiStatus("not-synced")
       }
     }
 
@@ -65,10 +71,10 @@ export function WorkflowToolbar({
           try {
             const response = await getWorkflow(workflowId)
             if (response.status === 200 && response.workflow) {
-              setVapiStatus(response.workflow.vapiWorkflowId ? 'synced' : 'not-synced')
+              setVapiStatus(response.workflow.vapiWorkflowId ? "synced" : "not-synced")
             }
           } catch (error) {
-            console.error('Error checking Vapi status:', error)
+            console.error("Error checking Vapi status:", error)
           }
         }
         checkVapiStatus()
@@ -78,23 +84,23 @@ export function WorkflowToolbar({
 
   const getVapiStatusIcon = () => {
     switch (vapiStatus) {
-      case 'synced':
+      case "synced":
         return <Cloud className="h-4 w-4 text-green-500" />
-      case 'not-synced':
+      case "not-synced":
         return <CloudOff className="h-4 w-4 text-gray-400" />
-      case 'loading':
+      case "loading":
         return <RefreshCw className="h-4 w-4 text-blue-500 animate-spin" />
     }
   }
 
   const getVapiStatusText = () => {
     switch (vapiStatus) {
-      case 'synced':
-        return 'Sincronizado con Vapi'
-      case 'not-synced':
-        return 'No sincronizado'
-      case 'loading':
-        return 'Verificando...'
+      case "synced":
+        return "Sincronizado con Vapi"
+      case "not-synced":
+        return "No sincronizado"
+      case "loading":
+        return "Verificando..."
     }
   }
 
@@ -108,8 +114,10 @@ export function WorkflowToolbar({
         <div className="h-6 w-px bg-gray-200"></div>
 
         <div className="flex items-center gap-2 flex-1">
-          <h1 className="text-lg font-semibold text-gray-900">{workflowName || "Workflow sin título"}</h1>
-          
+          <h1 className="text-lg font-semibold text-gray-900">
+            {workflowName || "Workflow sin título"}
+          </h1>
+
           {/* Indicador de estado de Vapi */}
           <Badge variant="outline" className="flex items-center gap-1 text-xs">
             {getVapiStatusIcon()}
@@ -153,7 +161,7 @@ export function WorkflowToolbar({
                 className="w-full"
               />
             </div>
-            
+
             {/* Información sobre sincronización con Vapi */}
             <div className="text-xs text-gray-600 bg-gray-50 p-3 rounded-md">
               <div className="flex items-center gap-2 mb-1">

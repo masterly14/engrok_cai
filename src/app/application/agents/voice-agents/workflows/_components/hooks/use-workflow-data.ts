@@ -1,327 +1,348 @@
-import { useState, useEffect } from 'react';
-import { Node, Edge } from 'reactflow';
-import { updateWorkflow, getWorkflow } from '@/actions/workflow';
-import { toast } from 'sonner';
-import {
+import { useState, useEffect, useCallback } from "react"
+import type { Node, Edge } from "reactflow"
+import { updateWorkflow, getWorkflow } from "@/actions/workflow"
+import { toast } from "sonner"
+import type {
   WorkflowNode,
   ConversationNodeData,
   IntegrationNodeData,
   TransferCallNodeData,
   Variable,
-} from '@/app/application/agents/voice-agents/workflows/types';
+  VapiVoice,
+  WorkflowNodeData,
+  EndCallNodeData,
+} from "@/app/application/agents/voice-agents/workflows/types"
 
 interface UseWorkflowDataProps {
-  workflowId: string;
-  setNodes: (nodes: Node[] | ((prev: Node[]) => Node[])) => void;
-  setEdges: (edges: Edge[] | ((prev: Edge[]) => Edge[])) => void;
+  workflowId: string
+  setNodes: (nodes: Node[] | ((prev: Node[]) => Node[])) => void
+  setEdges: (edges: Edge[] | ((prev: Edge[]) => Edge[])) => void
+}
+
+export interface GlobalWorkflowSettings {
+  voice: VapiVoice
 }
 
 interface WorkflowData {
-  name: string;
+  name: string
   workflowJson: {
-    nodes: any[];
-    edges: any[];
-  };
+    nodes: any[]
+    edges: any[]
+    globalSettings?: GlobalWorkflowSettings
+  }
 }
 
 // Función para transformar el estado del builder al formato de VAPI
 const transformToVapiPayload = (
   nodes: WorkflowNode[],
   edges: Edge[],
-  workflowName: string
+  workflowName: string,
+  globalSettings: GlobalWorkflowSettings,
 ) => {
   if (nodes.length === 0) {
-    return { name: workflowName, nodes: [], edges: [] };
+    return { name: workflowName, nodes: [], edges: [] }
   }
 
   // 1. Find the ID of the start node (the one with no incoming edges)
-  const targetNodeIds = new Set(edges.map((edge) => edge.target));
-  let startNode = nodes.find((node) => !targetNodeIds.has(node.id));
+  const targetNodeIds = new Set(edges.map((edge) => edge.target))
+  let startNode = nodes.find((node) => !targetNodeIds.has(node.id))
   if (!startNode && nodes.length > 0) {
-    startNode = nodes[0]; // Fallback for single node or looped flows
+    startNode = nodes[0] // Fallback for single node or looped flows
   }
-  const startNodeId = startNode?.id;
+  const startNodeId = startNode?.id
 
   // 2. Create a unique name for each node.
-  const idToNameMap = new Map<string, string>();
-  const usedNames = new Set<string>();
-  nodes.forEach(node => {
-      let candidateName = node.data.name || node.id;
-      // Ensure name is unique and not a reserved word like 'start'
-      if (usedNames.has(candidateName) || candidateName === 'start') {
-          candidateName = node.id; // fallback to unique id
-      }
-      usedNames.add(candidateName);
-      idToNameMap.set(node.id, candidateName);
-  });
+  const idToNameMap = new Map<string, string>()
+  const usedNames = new Set<string>()
+  nodes.forEach((node) => {
+    let candidateName = node.data.name || node.id
+    // Ensure name is unique and not a reserved word like 'start'
+    if (usedNames.has(candidateName) || candidateName === "start") {
+      candidateName = node.id // fallback to unique id
+    }
+    usedNames.add(candidateName)
+    idToNameMap.set(node.id, candidateName)
+  })
 
   // 3. Transform all user-defined nodes to the Vapi format.
-  const vapiNodes = nodes.map((node) => {
-    const { data } = node;
-    const vapiName = idToNameMap.get(node.id)!;
-    const baseVapiNode = { name: vapiName };
+  const vapiNodes = nodes
+    .map((node) => {
+      const { data } = node
+      const vapiName = idToNameMap.get(node.id)!
+      const baseVapiNode = { name: vapiName }
 
-    if (data.type === "conversation") {
-      const convData = data as ConversationNodeData;
-      const schemaProperties = (convData.variables || []).reduce(
-        (acc: Record<string, { type: string; description: string }>, variable: Variable) => {
-        acc[variable.name] = {
-            type: "string",
-          description: variable.description,
-        };
-        return acc;
-        },
-        {} as Record<string, { type: string; description: string }>
-      );
-
-      const vapiNodeData: any = {
-        ...baseVapiNode,
-        type: "conversation",
-        model: convData.model,
-        voice: convData.voice,
-        transcriber: convData.transcriber,
-        prompt: convData.prompt,
-        variableExtractionPlan: {
-          schema: {
-            type: "object",
-            properties: schemaProperties,
+      if (data.type === "conversation") {
+        const convData = data as ConversationNodeData
+        const schemaProperties = (convData.variables || []).reduce(
+          (acc: Record<string, { type: string; description: string }>, variable: Variable) => {
+            acc[variable.name] = {
+              type: "string",
+              description: variable.description,
+            }
+            return acc
           },
-        },
-      };
+          {} as Record<string, { type: string; description: string }>,
+        )
 
-      if (node.id === startNodeId) {
-        vapiNodeData.isStart = true;
+        const vapiNodeData: any = {
+          ...baseVapiNode,
+          type: "conversation",
+          model: convData.model,
+          voice: convData.voice || globalSettings.voice,
+          transcriber: convData.transcriber,
+          prompt: convData.prompt,
+          variableExtractionPlan: {
+            schema: {
+              type: "object",
+              properties: schemaProperties,
+            },
+          },
+        }
+
+        if (node.id === startNodeId) {
+          vapiNodeData.isStart = true
+        }
+
+        return vapiNodeData
       }
 
-      return vapiNodeData;
-    }
-
-    if (data.type === "transferCall") {
-      const transferData = data as TransferCallNodeData;
-      return {
-        ...baseVapiNode,
-        type: "transfer",
-        destination: {
-          type: "phoneNumber",
-              number: transferData.number,
-        },
-      };
-    }
-
-    if (data.type === "endCall") {
-      return {
-        ...baseVapiNode,
-        type: "end",
-      };
-    }
-    
-    if (data.type === "integration") {
-        const intData = data as IntegrationNodeData;
-        let tool = {};
-      if (intData.integrationType === "google-sheet") {
-            tool = {
-                type: "apiRequest",
-          url: `/api/integrations/sheets?action=appendData`,
-          method: "POST",
-                body: {
-                    type: "object",
-                    properties: {
-                        spreadsheetId: intData.spreadsheetId,
-                        sheetName: intData.sheetName,
-                        column: intData.column,
-                        value: intData.value,
-            },
+      if (data.type === "transferCall") {
+        const transferData = data as TransferCallNodeData
+        return {
+          ...baseVapiNode,
+          type: "transfer",
+          destination: {
+            type: "phoneNumber",
+            number: transferData.number,
           },
-        };
         }
-      if (intData.integrationType === "google-calendar") {
-        if (intData.calendarAction === "availability") {
-                tool = {
+      }
+
+      if (data.type === "endCall") {
+        return {
+          ...baseVapiNode,
+          type: "end",
+        }
+      }
+
+      if (data.type === "integration") {
+        const intData = data as IntegrationNodeData
+        let tool = {}
+        if (intData.integrationType === "google-sheet") {
+          tool = {
             type: "apiRequest",
-                    url: `/api/integrations/calendar?action=availability`,
-            method: "GET",
-                    query: {
-                      calendarId: intData.calendarId,
-                      rangeDays: intData.rangeDays || 15,
-            },
-          };
-            } else {
-                tool = {
-            type: "apiRequest",
-                    url: `/api/integrations/calendar?action=createEvent`,
+            url: `/api/integrations/sheets?action=appendData`,
             method: "POST",
-                    body: {
+            body: {
               type: "object",
-                      properties: {
-                        calendarId: intData.calendarId,
-                        summary: intData.eventSummary,
-                        description: intData.eventDescription,
-                        startDate: intData.eventStartDate,
-                        startTime: intData.eventStartTime,
-                        duration: intData.eventDuration,
+              properties: {
+                spreadsheetId: intData.spreadsheetId,
+                sheetName: intData.sheetName,
+                column: intData.column,
+                value: intData.value,
               },
             },
-          };
-            }
+          }
         }
-      return { ...baseVapiNode, type: "tool", tool };
-    }
+        if (intData.integrationType === "google-calendar") {
+          if (intData.calendarAction === "availability") {
+            tool = {
+              type: "apiRequest",
+              url: `/api/integrations/calendar?action=availability`,
+              method: "GET",
+              query: {
+                calendarId: intData.calendarId,
+                rangeDays: intData.rangeDays || 15,
+              },
+            }
+          } else {
+            tool = {
+              type: "apiRequest",
+              url: `/api/integrations/calendar?action=createEvent`,
+              method: "POST",
+              body: {
+                type: "object",
+                properties: {
+                  calendarId: intData.calendarId,
+                  summary: intData.eventSummary,
+                  description: intData.eventDescription,
+                  startDate: intData.eventStartDate,
+                  startTime: intData.eventStartTime,
+                  duration: intData.eventDuration,
+                },
+              },
+            }
+          }
+        }
+        return { ...baseVapiNode, type: "tool", tool }
+      }
 
-    if (data.type === "apiRequest") {
-        const apiData = data as any;
+      if (data.type === "apiRequest") {
+        const apiData = data as any
 
         // Clone headers to avoid mutating the original data object.
-        const headers = apiData.headers ? { ...apiData.headers } : {};
+        const headers = apiData.headers ? { ...apiData.headers } : {}
 
         // The Vapi API error indicates that 'Content-Type' should not be set manually.
         // We remove it if it exists.
-        if ('Content-Type' in headers) {
-          delete headers['Content-Type'];
+        if ("Content-Type" in headers) {
+          delete headers["Content-Type"]
         }
-        
+
         const tool: any = {
           type: "apiRequest",
-            url: apiData.url,
-            method: apiData.method,
-        };
+          url: apiData.url,
+          method: apiData.method,
+        }
 
         // Only include the headers object if it's not empty after filtering.
         if (Object.keys(headers).length > 0) {
-            tool.headers = headers;
+          tool.headers = headers
         }
 
         // Only include body if it is not empty
         if (apiData.body && Object.keys(apiData.body).length > 0) {
-            tool.body = apiData.body;
+          tool.body = apiData.body
         }
 
         return {
           ...baseVapiNode,
           type: "tool",
           tool: tool,
-        };
-    }
-    return null;
-  }).filter(Boolean);
+        }
+      }
+      return null
+    })
+    .filter(Boolean)
 
   // 4. Transform user-defined edges.
   const vapiEdges = edges.map((edge) => ({
     from: idToNameMap.get(edge.source),
     to: idToNameMap.get(edge.target),
-      condition: edge.data?.condition,
-  }));
+    condition: edge.data?.condition,
+  }))
 
   return {
     name: workflowName,
     nodes: vapiNodes as any[],
     edges: vapiEdges as any[],
-  };
-};
+  }
+}
 
 export function useWorkflowData({ workflowId, setNodes, setEdges }: UseWorkflowDataProps) {
-  const [workflowName, setWorkflowName] = useState("");
-  const [isSaving, setIsSaving] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  
+  const [workflowName, setWorkflowName] = useState("")
+  const [isSaving, setIsSaving] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  const [globalVoice, setGlobalVoice] = useState<VapiVoice>({
+    provider: "11labs",
+    voiceId: "joan",
+  })
+
   // Load workflow data on component mount
   useEffect(() => {
     const loadWorkflow = async () => {
-      if (!workflowId) return;
-      
-      setIsLoading(true);
+      if (!workflowId) {
+        setIsLoading(false)
+        return
+      }
+
+      setIsLoading(true)
       try {
-        const response = await getWorkflow(workflowId);
+        const response = await getWorkflow(workflowId)
         if (response.status === 200 && response.workflow) {
-          const workflow = response.workflow;
-          setWorkflowName(workflow.name || "");
-          
+          const workflow = response.workflow
+          setWorkflowName(workflow.name || "")
+
           // Load nodes and edges from workflowJson if available
           if (workflow.workflowJson) {
             try {
-              let workflowData: any = workflow.workflowJson;
+              let workflowData: any = workflow.workflowJson
               if (typeof workflowData === "string") {
-                workflowData = JSON.parse(workflowData);
+                workflowData = JSON.parse(workflowData)
               }
+
+              if (workflowData.globalSettings?.voice) {
+                setGlobalVoice(workflowData.globalSettings.voice)
+              }
+
               const isMinimalFormat =
                 Array.isArray(workflowData.nodes) &&
                 workflowData.nodes.length > 0 &&
-                !workflowData.nodes[0].id; // "id" is always present in React-Flow nodes
+                !workflowData.nodes[0].id // "id" is always present in React-Flow nodes
 
               if (isMinimalFormat) {
-                const { builderNodes, builderEdges } = transformFromMinimalFormat(
+                const { nodes, edges } = transformFromMinimalFormat(
                   workflowData.nodes,
-                  workflowData.edges || []
-                );
-                setNodes(builderNodes);
-                setEdges(builderEdges);
-              } else {
-                const { nodes: loadedNodes, edges: loadedEdges } = workflowData;
-                if (loadedNodes) setNodes(loadedNodes);
-                if (loadedEdges) setEdges(loadedEdges);
+                  workflowData.edges,
+                )
+                setNodes(nodes)
+                setEdges(edges)
+              } else if (workflowData.nodes && workflowData.edges) {
+                // Handle old format or direct React Flow format
+                setNodes(workflowData.nodes)
+                setEdges(workflowData.edges)
               }
             } catch (error) {
-              console.error("Error parsing workflow JSON:", error);
-              toast.error("Error al cargar el workflow");
+              console.error("Error parsing workflowJson:", error)
+              toast.error("Hubo un error al cargar el workflow.")
             }
           }
+        } else {
+          toast.error(response.message || "No se pudo cargar el workflow.")
         }
       } catch (error) {
-        console.error("Error loading workflow:", error);
-        toast.error("Error al cargar el workflow");
+        console.error("Failed to load workflow:", error)
+        toast.error("Ocurrió un error inesperado al cargar el workflow.")
       } finally {
-        setIsLoading(false);
+        setIsLoading(false)
       }
-    };
-
-    loadWorkflow();
-  }, [workflowId, setNodes, setEdges]);
-
-  const saveWorkflow = async (nodes: WorkflowNode[], edges: Edge[]) => {
-    if (!workflowName) {
-        toast.error("Por favor, asigna un nombre al workflow antes de guardar.");
-        return false;
     }
-    setIsSaving(true);
-    try {
-      const vapiPayload = transformToVapiPayload(nodes, edges, workflowName);
 
-      const localPayload = {
-        name: workflowName,
-        workflowJson: {
-            nodes,
-            edges,
-        },
-        tools: vapiPayload.nodes.filter((node: any) => node.type === 'tool'),
-        vapiPayload: vapiPayload // Incluir el payload de Vapi
-      };
-      
-      const response = await updateWorkflow(localPayload, workflowId);
+    loadWorkflow()
+  }, [workflowId, setNodes, setEdges])
 
-      if (response.status !== 200) {
-        throw new Error(response.message || "Error al guardar el workflow");
-      }
-      
-      // Mostrar resultado de Vapi si está disponible
-      if (response.vapiResult) {
-        if (response.vapiResult.success) {
-          toast.success("Workflow guardado y sincronizado con Vapi AI");
-        } else {
-          toast.warning("Workflow guardado localmente, pero hubo un problema con Vapi AI");
-          console.warn("Vapi API error:", response.vapiResult.error);
+  const saveWorkflow = useCallback(
+    async (nodes: WorkflowNode[], edges: Edge[]) => {
+      setIsSaving(true)
+      try {
+        // Transformaciones a formato VAPI y minimalista
+        const vapiPayload = transformToVapiPayload(nodes, edges, workflowName, {
+          voice: globalVoice,
+        })
+        const minimalNodes = nodes.map(transformNodeToMinimal)
+        const minimalEdges = edges.map((edge) => transformEdgeToMinimal(edge, nodes))
+
+        const workflowJson = {
+          nodes: minimalNodes,
+          edges: minimalEdges,
+          globalSettings: {
+            voice: globalVoice,
+          },
         }
-      } else {
-      toast.success("Workflow guardado con éxito");
+
+        const response = await updateWorkflow({
+          name: workflowName,
+          vapiPayload: vapiPayload,
+          workflowJson: workflowJson,
+        }, workflowId)
+
+        if (response.status === 200) {
+          toast.success("Workflow guardado exitosamente!")
+          return true
+        } else {
+          toast.error(`Error al guardar: ${response.message}`)
+          return false
+        }
+      } catch (error) {
+        console.error("Error saving workflow:", error)
+        toast.error("Ocurrió un error inesperado al guardar el workflow.")
+        return false
+      } finally {
+        setIsSaving(false)
       }
-      
-      return true;
-    } catch (error: any) {
-      console.error("Error guardando el workflow:", error);
-      toast.error(error.message || "Error al guardar el workflow");
-      return false;
-    } finally {
-      setIsSaving(false);
-    }
-  };
+    },
+    [workflowId, workflowName, globalVoice],
+  )
 
   return {
     workflowName,
@@ -329,192 +350,132 @@ export function useWorkflowData({ workflowId, setNodes, setEdges }: UseWorkflowD
     isSaving,
     isLoading,
     saveWorkflow,
-  };
+    globalVoice,
+    setGlobalVoice,
+  }
 }
 
-/****************************************************************************************
- * Helpers – conversion between internal React-Flow format and minimal API format
- ****************************************************************************************/
+// --- Funciones de transformación ---
 
-// Converts a React-Flow node to the minimal node expected by the Vapi API
+/**
+ * Convierte un nodo de React Flow a un formato minimalista para almacenar en la DB.
+ * Solo se guarda la data esencial para reconstruir el nodo.
+ */
 function transformNodeToMinimal(node: Node): any {
-  const d: any = node.data || {};
-
-  // Conversation node -------------------------------------------------------
-  if (node.type === "conversation") {
-    return {
-      type: "conversation",
-      name: node.id,
-      prompt: d.prompt || "",
-      variableExtractionPlan: d.variableExtractionPlan || {},
-      model: d.model
-        ? {
-            provider: d.model.provider,
-            model: d.model.model,
-            temperature: d.model.temperature,
-            maxTokens: d.model.max_tokens ?? d.model.maxTokens,
-          }
-        : undefined,
-      transcriber: d.transcription || d.transcriber,
-      voice: d.voice,
-      position: node.position,
-    };
-  }
-
-  // Integration node --------------------------------------------------------
-  if (node.type === "integration") {
-    return {
-      type: "tool",
-      name: node.id,
-      metadataIntegration: (node as any).metadataIntegration || {},
-      position: node.position,
-      tool: d.tool || {
-        type: "apiRequest",
-      },
-    };
-  }
-
-  // API Request node -------------------------------------------------------
-  if (node.type === "apiRequest") {
-    return {
-      type: "tool",
-      name: node.id,
-      position: node.position,
-      tool: {
-        type: "apiRequest",
-        url: d.url,
-        method: d.method,
-        headers: d.headers || {},
-        body: d.body || {},
-      },
-    };
-  }
-
-  // Tool nodes (fallback) ---------------------------------------------------
-  const baseToolNode: any = {
-    type: "tool",
-    name: node.id,
-    tool: d.tool || {
-      type: node.type, // fallback
-    },
+  const minimalNode: any = {
+    id: node.id,
+    type: node.type,
     position: node.position,
-  };
+    data: {
+      type: node.data.type,
+      name: node.data.name,
+      label: node.data.label,
+    },
+  }
 
-  return baseToolNode;
+  // Añadir propiedades específicas del tipo de nodo
+  const data = node.data as WorkflowNodeData
+  switch (data.type) {
+    case "conversation":
+      minimalNode.data.prompt = data.prompt
+      minimalNode.data.model = data.model
+      minimalNode.data.voice = data.voice // Puede ser undefined
+      minimalNode.data.transcriber = data.transcriber
+      minimalNode.data.variables = data.variables
+      break
+    case "integration":
+      minimalNode.data.integrationType = data.integrationType
+      // Guardar solo las propiedades relevantes para el integrationType
+      if (data.integrationType === "google-sheet") {
+        minimalNode.data.spreadsheetId = data.spreadsheetId
+        minimalNode.data.sheetName = data.sheetName
+        minimalNode.data.column = data.column
+        minimalNode.data.value = data.value
+      } else if (data.integrationType === "google-calendar") {
+        minimalNode.data.calendarId = data.calendarId
+        minimalNode.data.calendarAction = data.calendarAction
+        if (data.calendarAction === "availability") {
+          minimalNode.data.rangeDays = data.rangeDays
+        } else {
+          minimalNode.data.eventSummary = data.eventSummary
+          minimalNode.data.eventDescription = data.eventDescription
+          minimalNode.data.eventStartDate = data.eventStartDate
+          minimalNode.data.eventStartTime = data.eventStartTime
+          minimalNode.data.eventDuration = data.eventDuration
+        }
+      } else if (data.integrationType === "custom-api") {
+        // Las propiedades de custom-api se guardarán si existen
+        minimalNode.data.url = data.url
+        minimalNode.data.method = data.method
+        minimalNode.data.headers = data.headers
+        minimalNode.data.body = data.body
+      }
+      break
+    case "transferCall":
+      minimalNode.data.number = data.number
+      minimalNode.data.message = data.message
+      break
+    case "endCall":
+      // No extra data needed for endCall
+      break
+    case "apiRequest":
+      minimalNode.data.url = data.url
+      minimalNode.data.method = data.method
+      minimalNode.data.headers = data.headers
+      minimalNode.data.body = data.body
+      break
+  }
+
+  return minimalNode
 }
 
-// Converts a React-Flow edge into the {from,to} format expected by the API
+/**
+ * Convierte un edge de React Flow a un formato minimalista.
+ */
 function transformEdgeToMinimal(edge: Edge, nodes: Node[]): any {
-  const sourceNode = nodes.find((n) => n.id === edge.source);
-  const targetNode = nodes.find((n) => n.id === edge.target);
-
   return {
-    from: sourceNode?.id || "",
-    to: targetNode?.id || "",
-  };
+    id: edge.id,
+    source: edge.source,
+    target: edge.target,
+    type: edge.type,
+    data: edge.data,
+  }
 }
 
 function getNodeName(node?: Node): string {
-  if (!node) return "";
-  const d: any = node.data || {};
-  return d.name || d.label || node.id;
+  if (!node) return ""
+  return (node.data as any)?.name || node.id
 }
 
-// Transform minimal format coming from the API back to React-Flow nodes & edges
-function transformFromMinimalFormat(minNodes: any[], minEdges: any[]) {
-  const builderNodes: Node[] = minNodes.map((minNode: any, idx: number) => {
-    let id = minNode.name || `${minNode.type}-${idx}`;
-    // Garantizar unicidad
-    const existingIds = new Set<string>();
-    if (existingIds.has(id)) {
-      id = `${id}-${idx}`;
-    }
-    existingIds.add(id);
-    const position = minNode.position || { x: (idx % 5) * 250, y: Math.floor(idx / 5) * 160 };
-
-    if (minNode.type === "conversation") {
-      return {
-        id,
-        type: "conversation",
-        position,
-        data: {
-          ...minNode,
-          // keep backwards compatibility with existing editor fields
-          transcription: minNode.transcriber,
-        },
-      } as Node;
-    }
-
-    if (minNode.type === "integration") {
-      // Compatibilidad con antiguos flujos donde el tipo era "integration"
-      return {
-        id,
-        type: "integration",
-        position,
-        metadataIntegration: minNode.metadataIntegration || {},
-        data: {
-          type: "tool",
-          name: minNode.name || "Integración",
-          metadataIntegration: minNode.metadataIntegration || {},
-          tool: minNode.tool || {
-            type: "apiRequest",
-          },
-        },
-      } as Node;
-    }
-
-    // Nuevo formato: minNode.type === "tool" pero incluye metadataIntegration
-    if (minNode.type === "tool" && minNode.metadataIntegration) {
-      return {
-        id,
-        type: "integration",
-        position,
-        metadataIntegration: minNode.metadataIntegration || {},
-        data: {
-          type: "tool",
-          name: minNode.name || "Integración",
-          metadataIntegration: minNode.metadataIntegration || {},
-          tool: minNode.tool || {
-            type: "apiRequest",
-          },
-        },
-      } as Node;
-    }
-
-    if (minNode.type === "tool") {
-      const toolType = minNode.tool?.type || "tool";
-      return {
-        id,
-        type: toolType,
-        position,
-        data: {
-          ...minNode,
-        },
-      } as Node;
-    }
-
-    // fallback
+/**
+ * Reconstruye los nodos y edges de React Flow desde el formato minimalista.
+ */
+function transformFromMinimalFormat(
+  minNodes: any[],
+  minEdges: any[],
+): { nodes: Node[]; edges: Edge[] } {
+  const nodes = minNodes.map((minNode) => {
     return {
-      id,
-      type: "default",
-      position,
-      data: { ...minNode },
-    } as Node;
-  });
+      id: minNode.id,
+      type: minNode.type,
+      position: minNode.position,
+      data: minNode.data,
+      width: 300, // Ancho predeterminado
+      height: 150, // Alto predeterminado
+    } as Node
+  })
 
-  const builderEdges: Edge[] = minEdges.map((minEdge: any, idx: number) => {
-    // find node ids based on names
-    const sourceNode = builderNodes.find((n) => n.id === minEdge.from);
-    const targetNode = builderNodes.find((n) => n.id === minEdge.to);
-
+  const edges = minEdges.map((minEdge) => {
     return {
-      id: `e-${idx}`,
-      source: sourceNode?.id || "",
-      target: targetNode?.id || "",
-      type: "smartCondition",
-      data: { condition: { type: "ai", prompt: "" } },
-    } as Edge;
-  });
+      id: minEdge.id,
+      source: minEdge.source,
+      target: minEdge.target,
+      type: minEdge.type,
+      data: minEdge.data,
+      style: { strokeWidth: 2, stroke: "#374151" },
+      animated: true,
+    } as Edge
+  })
 
-  return { builderNodes, builderEdges };
+  return { nodes, edges }
 } 
