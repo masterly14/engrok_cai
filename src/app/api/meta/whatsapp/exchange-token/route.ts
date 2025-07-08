@@ -170,8 +170,6 @@ export async function POST(request: Request) {
       console.warn("No se pudo obtener el número de teléfono. Continuando igualmente.");
     }
     
-    const isTestNumber = !!phoneNumber && /555/.test(phoneNumber.replace(/[\s-()]/g, ''));
-
     try {
       const { db } = await import("@/utils");
 
@@ -185,7 +183,6 @@ export async function POST(request: Request) {
           whatsappPhoneNumber: phoneNumber ?? undefined,
           isActive: true,
           userId,
-          isTestNumber,
         },
         create: {
           name,
@@ -195,8 +192,6 @@ export async function POST(request: Request) {
           whatsappBusinessAccountId: finalWabaId!,
           whatsappPhoneNumberId: finalPhoneNumberId!,
           whatsappPhoneNumber: phoneNumber ?? "",
-          isTestNumber,
-          hasSeenTestWarning: false,
         },
       });
 
