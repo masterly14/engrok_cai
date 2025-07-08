@@ -133,6 +133,35 @@ export async function POST(request: Request) {
     }
     // ----------------------------------------------------------------
 
+    // ---- Suscribir explícitamente el WABA a los webhooks de la App ----
+    try {
+        console.log(`Suscribiendo el WABA ${finalWabaId} a los webhooks de la aplicación...`);
+        const subscribeUrl = `https://graph.facebook.com/v20.0/${finalWabaId}/subscribed_apps`;
+        const subscribeResponse = await fetch(subscribeUrl, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                subscribed_fields: ['messages']
+            })
+        });
+
+        const subscribeData = await subscribeResponse.json();
+
+        if (subscribeResponse.ok && subscribeData.success) {
+            console.log('Suscripción al webhook forzada con éxito para el WABA.');
+        } else {
+            // Este error no es necesariamente fatal (puede que ya estuviera suscrito), pero es importante registrarlo.
+            console.warn('No se pudo forzar la suscripción al webhook (puede que ya estuviera activa). Respuesta:', subscribeData);
+        }
+    } catch (err) {
+        console.error('Excepción al intentar forzar la suscripción al webhook:', err);
+    }
+    // --------------------------------------------------------------------
+
+
     try {
       const phoneRes = await fetch(`https://graph.facebook.com/v20.0/${finalPhoneNumberId}?fields=display_phone_number&access_token=${accessToken}`);
       const phoneJson = await phoneRes.json();
