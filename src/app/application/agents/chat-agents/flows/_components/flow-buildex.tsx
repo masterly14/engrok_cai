@@ -100,6 +100,7 @@ const validateConnection = (
       return false;
     }
   }
+  
   if (targetNode.data.initialMessage && targetNode.type === "conversation") {
     if (sourceNode.type !== "trigger" && sourceNode.type !== "ai") {
       toast.error(

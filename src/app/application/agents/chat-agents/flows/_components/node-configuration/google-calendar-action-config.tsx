@@ -19,8 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Loader2, Save } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -85,8 +84,10 @@ export const GoogleCalendarActionConfig = ({
   );
 
   // Generic state
+  // Default variable name for availability results
   const [saveResponseTo, setSaveResponseTo] = useState<string>(
-    selectedNode.data.saveResponseTo || "",
+    selectedNode.data.saveResponseTo ||
+      (selectedNode.data.action === "GET_AVAILABILITY" ? "disponibilidad" : ""),
   );
 
   useEffect(() => {
@@ -120,23 +121,28 @@ export const GoogleCalendarActionConfig = ({
     }
   }, [action]);
 
-  const handleSave = () => {
-    if (!action) {
-      toast.error("Por favor, selecciona una acción.");
-      return;
-    }
+  /*
+   * =============================
+   *  Auto-save logic
+   * =============================
+   * Cada vez que el usuario cambie un campo relevante guardaremos los cambios
+   * en el nodo para que no requiera un botón de Guardar adicional.
+   */
+  useEffect(() => {
+    // Evitar ejecutar si no se ha definido la acción todavía
+    if (!action) return;
 
-    let fields = {};
+    let fields: Record<string, any> = {};
     let nodeName = "Google Calendar";
 
     if (action === "GET_AVAILABILITY") {
       if (!calendarId || !daysToCheck || !startTime || !endTime) {
-        toast.error("Completa todos los campos para ver disponibilidad.");
+        // No intentamos guardar hasta que todos los campos mínimos estén
         return;
       }
       fields = {
         connectionId: selectedNode.data.fields?.connectionId,
-        calendarId: calendarId,
+        calendarId,
         daysToCheck: parseInt(daysToCheck, 10),
         startTime,
         endTime,
@@ -152,20 +158,17 @@ export const GoogleCalendarActionConfig = ({
         !eventStartTimeVar ||
         !eventDurationMinutes
       ) {
-        toast.error(
-          "Completa todos los campos obligatorios para crear el evento.",
-        );
         return;
       }
       nodeName = "Crear Evento (GCal)";
       fields = {
         connectionId: selectedNode.data.fields?.connectionId,
-        calendarId: calendarId,
+        calendarId,
         title: eventTitle,
         description: eventDescription,
         startTimeVar: eventStartTimeVar,
         eventDurationMinutes: parseInt(eventDurationMinutes, 10),
-        attendeesVar: attendeesVar,
+        attendeesVar,
       };
     }
 
@@ -174,16 +177,27 @@ export const GoogleCalendarActionConfig = ({
         ...selectedNode.data,
         name: nodeName,
         provider: "GOOGLE_CALENDAR",
-        action: action,
-        fields: fields,
+        action,
+        fields,
         saveResponseTo: saveResponseTo,
       },
     });
-    const varMessage = saveResponseTo
-      ? ` El resultado se guardará en la variable {{${saveResponseTo}}}.`
-      : "";
-    toast.success(`Configuración de Google Calendar guardada.${varMessage}`);
-  };
+  }, [
+    action,
+    calendarId,
+    daysToCheck,
+    startTime,
+    endTime,
+    eventDurationMinutes,
+    eventTitle,
+    eventDescription,
+    eventStartTimeVar,
+    attendeesVar,
+    saveResponseTo,
+    updateNode,
+    selectedNode.id,
+    selectedNode.data,
+  ]);
 
   return (
     <Card>
@@ -311,6 +325,9 @@ export const GoogleCalendarActionConfig = ({
                 value={saveResponseTo}
                 onChange={(e) => setSaveResponseTo(e.target.value)}
               />
+              <p className="text-xs text-muted-foreground">
+                Podrás acceder a estos datos usando <code>{"{{"}{saveResponseTo || "disponibilidad"}{"}}"}</code>
+              </p>
             </div>
           </div>
         )}
@@ -429,12 +446,7 @@ export const GoogleCalendarActionConfig = ({
           </div>
         )}
 
-        {action && (
-          <Button onClick={handleSave} className="w-full gap-2">
-            <Save className="w-4 h-4" />
-            Guardar Configuración
-          </Button>
-        )}
+        {/* Se elimina el botón de guardado manual: ahora se guarda automáticamente */}
       </CardContent>
     </Card>
   );

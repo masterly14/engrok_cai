@@ -10,6 +10,7 @@ import {
   DialogTitle,
   DialogDescription,
   DialogTrigger,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -35,7 +36,12 @@ import {
   Plus,
   Loader2,
   Key,
+  Phone,
 } from "lucide-react";
+import { Info } from "lucide-react";
+import { useAllChatAgents, useUpdateChatAgent } from "@/hooks/use-all-chat-agents";
+import type { ChatAgentWithWorkflows } from "@/types/agent";
+import type { ChatAgentFormData } from "@/context/chat-agent-context";
 import { createChatWorkflow } from "@/actions/chat-agents";
 import { cn } from "@/lib/utils";
 import {
@@ -81,7 +87,7 @@ type TemplateDef = {
   description: string;
   features: string[];
   icon?: React.FC<React.SVGProps<SVGSVGElement>>;
-  getJson: () => { nodes: any[]; edges: any[] };
+  getJson: (options?: { wompiSetupSkipped?: boolean }) => { nodes: any[]; edges: any[] };
 };
 
 const TEMPLATES: TemplateDef[] = [
@@ -294,14 +300,130 @@ const TEMPLATES: TemplateDef[] = [
       "Seguimiento de ventas",
     ],
     icon: ShoppingBag,
-    getJson: () => ({
-      nodes: [
-        // ... nodes
-      ],
-      edges: [
-        // ... edges
-      ],
-    }),
+    getJson: (options) => {
+      if (options?.wompiSetupSkipped) {
+        return {
+          nodes: [
+            {
+              id: "ai-sales",
+              type: "ai",
+              position: { x: 250, y: 50 },
+              data: {
+                name: "Asistente de Ventas",
+                prompt:
+                  "Eres un asistente de ventas amigable. Tu objetivo es entender qué producto o servicio le interesa al cliente. Cuando sepas qué quiere, lo transferirás con un agente humano para procesar el pago.",
+                initialMessage: true,
+              },
+            },
+            {
+              id: "handover-node",
+              type: "handoverToHuman",
+              position: { x: 250, y: 250 },
+              data: {
+                name: "Transferir a Humano para Pago",
+                botResponse:
+                  "Entendido. Un momento por favor, te transferiré con un agente humano para que te ayude con el pago.",
+              },
+            },
+          ],
+          edges: [
+            {
+              id: "edge-ai-to-handover",
+              source: "ai-sales",
+              target: "handover-node",
+              type: "smoothstep",
+              label: "Transferir para pago",
+            },
+          ],
+        };
+      }
+      return {
+        nodes: [
+          {
+            id: "ai-sales-wompi",
+            type: "ai",
+            position: { x: 250, y: 50 },
+            data: {
+              name: "Asistente de Ventas con Wompi",
+              prompt:
+                "Eres un asistente de ventas. Recopila el nombre del cliente, su email y el producto que desea comprar con su valor. Luego, generarás un enlace de pago.",
+              initialMessage: true,
+              extractVariables: [
+                { id: "var-name", name: "nombre_cliente", description: "Nombre del cliente." },
+                { id: "var-email", name: "email_cliente", description: "Email del cliente." },
+                { id: "var-product", name: "producto", description: "Producto a comprar." },
+                { id: "var-amount", name: "monto", description: "Valor a pagar." },
+              ],
+            },
+          },
+          {
+            id: "wompi-payment",
+            type: "integration",
+            position: { x: 250, y: 350 },
+            data: {
+              name: "Generar Enlace de Pago Wompi",
+              provider: "WOMPI",
+              action: "CREATE_PAYMENT_LINK",
+              fields: {
+                amount: "{{monto}}",
+                customerEmail: "{{email_cliente}}",
+                description: "Pago por {{producto}}",
+              },
+              saveResponseTo: "payment_link",
+            },
+          },
+          {
+            id: "send-payment-link",
+            type: "conversation",
+            position: { x: 250, y: 550 },
+            data: {
+              name: "Enviar Enlace de Pago",
+              botResponse:
+                "¡Perfecto! Aquí tienes tu enlace de pago para completar la compra: {{payment_link}}",
+            },
+          },
+          {
+            id: "handover-node-wompi",
+            type: "handoverToHuman",
+            position: { x: 550, y: 150 },
+            data: {
+              name: "Transferir a Humano",
+              botResponse: "Claro, te transferiré con un agente humano.",
+            },
+          },
+        ],
+        edges: [
+          {
+            id: "e1",
+            source: "ai-sales-wompi",
+            target: "wompi-payment",
+            type: "smoothstep",
+            label: "Info. completa",
+          },
+          {
+            id: "e2",
+            source: "wompi-payment",
+            target: "send-payment-link",
+            type: "smoothstep",
+          },
+          {
+            id: "e3",
+            source: "ai-sales-wompi",
+            target: "handover-node-wompi",
+            type: "smoothstep",
+            label: "Solicita humano",
+          },
+        ],
+      };
+    },
+  },
+  {
+    id: "blank-workflow",
+    name: "En blanco",
+    description: "Crea un flujo desde cero usando el constructor.",
+    features: ["Sin configuración inicial"],
+    icon: Plus,
+    getJson: () => ({ nodes: [], edges: [] }),
   },
   {
     id: "customer-support",
@@ -350,6 +472,17 @@ export function CreateWorkflowDialog({
   const [wompiPublicKey, setWompiPublicKey] = useState<string>("");
   const [wompiPrivateKey, setWompiPrivateKey] = useState<string>("");
   const [wompiEventToken, setWompiEventToken] = useState<string>("");
+  const [wompiSetupSkipped, setWompiSetupSkipped] = useState(false);
+
+  // ---- Agent assignment state ----
+  const { data: agentsQuery, isLoading: agentsLoading } = useAllChatAgents();
+  const agentsList: ChatAgentWithWorkflows[] = agentsQuery || [];
+  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
+  const updateAgent = useUpdateChatAgent();
+
+  // Success dialog after creation & assignment
+  const [isSuccessDialogOpen, setIsSuccessDialogOpen] = useState(false);
+  const [assignedAgent, setAssignedAgent] = useState<ChatAgentWithWorkflows | null>(null);
 
   const totalSteps = 3;
 
@@ -453,10 +586,13 @@ export function CreateWorkflowDialog({
     checkWompiConnection,
   ]);
 
-  const createWorkflowFromTemplate = async (template: TemplateDef) => {
+  const createWorkflowFromTemplate = async (
+    template: TemplateDef,
+    agent: ChatAgentWithWorkflows,
+  ) => {
     setIsLoading(true);
     try {
-      const workflowJson = template.getJson();
+      const workflowJson = template.getJson({ wompiSetupSkipped });
 
       if (ragEnabled && knowledgeBaseId) {
         const aiNode = workflowJson.nodes.find((node) => node.type === "ai");
@@ -478,14 +614,58 @@ export function CreateWorkflowDialog({
         toast.error("No se pudo crear el flujo de trabajo.");
         throw new Error("Failed to create workflow from template");
       }
-      router.push(
-        `/application/agents/chat-agents/flows/${response.workflow.id}`
-      );
-    } catch (e) {
+
+      // --- Assign agent to workflow ---
+      const payload: ChatAgentFormData = {
+        name: agent.name,
+        isActive: agent.isActive,
+        whatsappAccessToken: agent.whatsappAccessToken || "",
+        whatsappBusinessAccountId: agent.whatsappBusinessAccountId || "",
+        whatsappPhoneNumber: agent.whatsappPhoneNumber || "",
+        whatsappPhoneNumberId: agent.whatsappPhoneNumberId || "",
+        workflowId: response.workflow.id,
+        isTestNumber: agent.isTestNumber,
+        hasSeenTestWarning: agent.hasSeenTestWarning,
+      };
+
+      try {
+        await updateAgent.mutateAsync({ id: agent.id, values: payload });
+      } catch (_) {
+        toast.error("Error al asignar el agente al flujo");
+        // seguimos, pero informamos
+      }
+
+      setAssignedAgent(agent);
+      setIsSuccessDialogOpen(true);
+      onOpenChange(false);
+      router.refresh();
+      }
+      catch (e) {
       toast.error("Error creando el flujo desde la plantilla");
     } finally {
       setIsLoading(false);
       onOpenChange(false);
+    }
+  };
+
+  const createBlankWorkflow = async () => {
+    setIsLoading(true);
+    try {
+      const response = await createChatWorkflow({
+        name: "Nuevo Flujo sin título",
+        workflowJson: { nodes: [], edges: [] },
+      });
+      if (response.status !== 200 || !response.workflow) {
+        toast.error("No se pudo crear el flujo de trabajo.");
+        throw new Error("Failed to create blank workflow");
+      }
+      onOpenChange(false);
+      router.push(`/application/agents/chat-agents/flows/${response.workflow.id}`);
+      router.refresh();
+    } catch (e) {
+      toast.error("Error creando el flujo");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -554,7 +734,7 @@ export function CreateWorkflowDialog({
                 >
                   {i === 0 && "Plantilla"}
                   {i === 1 && "Configuración"}
-                  {i === 2 && "Finalizar"}
+                  {i === 2 && "Asignar Agente"}
                 </span>
               </div>
               {i < totalSteps - 1 && (
@@ -885,155 +1065,135 @@ export function CreateWorkflowDialog({
           </div>
         )}
 
-        {/* Step 3: Finalization */}
-        {currentStep === 3 && selectedTemplateData && (
-          <>
-            {selectedTemplate === "appointment-scheduler-google" ||
-            selectedTemplate === "whatsapp-sales-wompi" ? (
-              <div>
-                {isIntegrationLoading &&
-                !isIntegrationConnected &&
-                !wompiPublicKey ? (
-                  <div className="flex flex-col items-center justify-center gap-4 p-8">
-                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                    <p className="text-muted-foreground">
-                      Verificando conexión...
-                    </p>
-                  </div>
-                ) : isIntegrationConnected === true ? (
-                  <div className="space-y-6">
-                    <div className="text-center space-y-4">
-                      <div className="mx-auto w-16 h-16 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center">
-                        <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
-                      </div>
-                      <div>
-                        <h3 className="text-xl font-semibold">¡Todo listo!</h3>
-                        <p className="text-muted-foreground">
-                          Tu agente de chat está configurado y listo para usar
-                        </p>
-                      </div>
+        {/* Step 3: Agent Assignment */}
+        {currentStep === 3 && (
+          <div className="space-y-6">
+            {/* Integration Setup */}
+            {(selectedTemplate === "appointment-scheduler-google" ||
+              selectedTemplate === "whatsapp-sales-wompi") && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Key className="h-5 w-5" />
+                    Configuración de Integración
+                  </CardTitle>
+                  <CardDescription>
+                    Conecta tus cuentas para activar todas las funcionalidades.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {isIntegrationLoading ? (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Loader2 className="animate-spin h-4 w-4" />
+                      <span>Verificando conexión...</span>
                     </div>
-                  </div>
-                ) : selectedTemplate === "appointment-scheduler-google" ? (
-                  <IntegrationComponent
-                    setIntegrationConnection={setIsIntegrationConnected}
-                    visibleName="Google Calendar"
-                    providerConfigKey="google-calendar"
-                    authMode="O_AUTH2"
-                    displayMode="button"
-                  />
-                ) : selectedTemplate === "whatsapp-sales-wompi" ? (
-                  <Card className="max-w-md mx-auto">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-base">
-                        <Key className="w-4 h-4" />
-                        Conecta tu cuenta de Wompi
-                      </CardTitle>
-                      <CardDescription>
-                        Ingresa tus credenciales de Wompi para establecer la
-                        conexión
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="publicKey">Clave Pública</Label>
-                        <Input
-                          id="publicKey"
-                          placeholder="pub_test_..."
-                          value={wompiPublicKey}
-                          onChange={(e) => setWompiPublicKey(e.target.value)}
+                  ) : isIntegrationConnected === true ? (
+                    <div className="flex items-center gap-2 text-green-600">
+                      <CheckCircle className="h-5 w-5" />
+                      <span>Conexión activa.</span>
+                    </div>
+                  ) : isIntegrationConnected === false ? (
+                    <div className="space-y-4">
+                      {selectedTemplate ===
+                        "appointment-scheduler-google" && (
+                        <IntegrationComponent
+                          providerConfigKey="gcal"
+                          visibleName="Google Calendar"
+                          authMode="OAUTH2"
+                          setIntegrationConnection={setIsIntegrationConnected}
                         />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="privateKey">Clave Privada</Label>
-                        <Input
-                          id="privateKey"
-                          type="password"
-                          placeholder="prv_test_..."
-                          value={wompiPrivateKey}
-                          onChange={(e) => setWompiPrivateKey(e.target.value)}
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="eventToken">Token de Evento</Label>
-                        <Input
-                          id="eventToken"
-                          type="password"
-                          placeholder="Event webhook token"
-                          value={wompiEventToken}
-                          onChange={(e) => setWompiEventToken(e.target.value)}
-                        />
-                      </div>
-
-                      <Button
-                        onClick={handleValidateWompi}
-                        className="w-full"
-                        disabled={
-                          isIntegrationLoading ||
-                          !wompiPublicKey ||
-                          !wompiPrivateKey ||
-                          !wompiEventToken
-                        }
-                      >
-                        {isIntegrationLoading && (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        )}
-                        Validar y Conectar
-                      </Button>
-                    </CardContent>
-                  </Card>
-                ) : null}
-              </div>
-            ) : (
-              <div className="space-y-6">
-                <div className="text-center space-y-4">
-                  <div className="mx-auto w-16 h-16 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center">
-                    <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-semibold">¡Todo listo!</h3>
-                    <p className="text-muted-foreground">
-                      Tu agente de chat está configurado y listo para usar
-                    </p>
-                  </div>
-                </div>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      {selectedTemplateData.icon && (
-                        <selectedTemplateData.icon className="h-5 w-5" />
                       )}
-                      {selectedTemplateData.name}
-                    </CardTitle>
-                    <CardDescription>
-                      {selectedTemplateData.description}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      <p className="font-medium text-sm">
-                        Características incluidas:
-                      </p>
-                      <div className="grid grid-cols-1 gap-2">
-                        {selectedTemplateData.features.map((feature, idx) => (
-                          <div
-                            key={idx}
-                            className="flex items-center gap-2 text-sm"
-                          >
-                            <CheckCircle className="h-4 w-4 text-green-500" />
-                            <span>{feature}</span>
+                      {selectedTemplate === "whatsapp-sales-wompi" && !wompiSetupSkipped && (
+                        <div className="space-y-3">
+                          <p className="text-sm text-muted-foreground">
+                            Ingresa tus credenciales de Wompi para continuar o configúralo más tarde.
+                          </p>
+                          <Input
+                            placeholder="Llave pública"
+                            value={wompiPublicKey}
+                            onChange={(e) => setWompiPublicKey(e.target.value)}
+                          />
+                          <Input
+                            placeholder="Llave privada"
+                            type="password"
+                            value={wompiPrivateKey}
+                            onChange={(e) =>
+                              setWompiPrivateKey(e.target.value)
+                            }
+                          />
+                          <Input
+                            placeholder="Token de eventos"
+                            type="password"
+                            value={wompiEventToken}
+                            onChange={(e) =>
+                              setWompiEventToken(e.target.value)
+                            }
+                          />
+                          <div className="flex gap-2">
+                            <Button onClick={handleValidateWompi} disabled={isIntegrationLoading}>
+                              {isIntegrationLoading ? "Validando..." : "Validar y Guardar"}
+                            </Button>
+                            <Button variant="ghost" onClick={() => setWompiSetupSkipped(true)}>
+                              Configurar más tarde
+                            </Button>
                           </div>
-                        ))}
-                      </div>
+                        </div>
+                      )}
+                       {selectedTemplate === "whatsapp-sales-wompi" && wompiSetupSkipped && (
+                        <div className="text-sm text-muted-foreground p-4 bg-muted/50 rounded-lg flex items-center gap-2">
+                          <Info className="h-4 w-4" />
+                          <div>
+                            <p>Has elegido configurar Wompi más tarde.</p>
+                            <p>El flujo de trabajo transferirá a un agente humano para los pagos.</p>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  </CardContent>
-                </Card>
+                  ) : null}
+                </CardContent>
+              </Card>
+            )}
+            <div className="text-center space-y-2">
+              <h3 className="text-xl font-semibold flex items-center justify-center gap-2">
+                <Phone className="h-5 w-5 text-primary" />
+                Selecciona un Agente de Chat
+              </h3>
+              <p className="text-muted-foreground">
+                Elige el agente al que se asociará este flujo.
+              </p>
+            </div>
+
+            {agentsLoading ? (
+              <p className="text-sm text-muted-foreground text-center">Cargando agentes...</p>
+            ) : agentsList.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center">
+                No tienes agentes de chat aún. Crea uno en la sección de agentes para poder asignarlo.
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {agentsList.map((agent) => {
+                  const isSelected = selectedAgentId === agent.id;
+                  return (
+                    <Card
+                      key={agent.id}
+                      className={`cursor-pointer transition-all duration-200 border-2 ${isSelected ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"}`}
+                      onClick={() => setSelectedAgentId(agent.id)}
+                    >
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-lg flex items-center justify-between">
+                          <span>{agent.name}</span>
+                          {isSelected && <CheckCircle className="h-5 w-5 text-primary" />}
+                        </CardTitle>
+                        <CardDescription className="text-xs text-muted-foreground">
+                          WhatsApp: {agent.whatsappPhoneNumber || "No configurado"}
+                        </CardDescription>
+                      </CardHeader>
+                    </Card>
+                  );
+                })}
               </div>
             )}
-          </>
+          </div>
         )}
 
         {/* Enhanced Footer */}
@@ -1051,8 +1211,17 @@ export function CreateWorkflowDialog({
             <div className="flex gap-2">
               {currentStep < totalSteps ? (
                 <Button
-                  onClick={() => setCurrentStep((s) => s + 1)}
-                  disabled={currentStep === 1 && !selectedTemplate}
+                  onClick={() => {
+                    if (currentStep === 1 && selectedTemplate === "blank-workflow") {
+                      createBlankWorkflow();
+                      return;
+                    }
+                    setCurrentStep((s) => s + 1);
+                  }}
+                  disabled={
+                    (currentStep === 1 && !selectedTemplate) ||
+                    (currentStep === 2 && ragEnabled && !knowledgeBaseId)
+                  }
                   className="min-w-[100px]"
                 >
                   Siguiente
@@ -1062,14 +1231,19 @@ export function CreateWorkflowDialog({
                 <Button
                   onClick={() => {
                     if (selectedTemplateData) {
-                      createWorkflowFromTemplate(selectedTemplateData);
+                      const agent = agentsList.find((a) => a.id === selectedAgentId);
+                      if (!agent) {
+                        toast.error("Selecciona un agente válido");
+                        return;
+                      }
+                      createWorkflowFromTemplate(selectedTemplateData, agent);
                     }
                   }}
                   disabled={
                     isLoading ||
-                    ((selectedTemplate === "appointment-scheduler-google" ||
-                      selectedTemplate === "whatsapp-sales-wompi") &&
-                      !isIntegrationConnected)
+                    !selectedAgentId ||
+                    (selectedTemplate === "whatsapp-sales-wompi" && !isIntegrationConnected && !wompiSetupSkipped) ||
+                    (selectedTemplate === "appointment-scheduler-google" && !isIntegrationConnected)
                   }
                   className="min-w-[120px]"
                 >
@@ -1090,6 +1264,42 @@ export function CreateWorkflowDialog({
           </div>
         </AlertDialogFooter>
       </DialogContent>
+      {/* Success Dialog */}
+      <Dialog open={isSuccessDialogOpen} onOpenChange={setIsSuccessDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>¡Flujo creado y agente asignado!</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p>
+              Tu flujo se ha asociado correctamente al agente
+              {" "}
+              <span className="font-semibold">{assignedAgent?.name}</span>.
+            </p>
+            {assignedAgent?.whatsappPhoneNumber && (
+              <p>
+                Ahora puedes enviar un mensaje de prueba a WhatsApp haciendo
+                clic en el siguiente enlace:
+              </p>
+            )}
+            {assignedAgent?.whatsappPhoneNumber && (
+              <a
+                href={`https://wa.me/${assignedAgent.whatsappPhoneNumber.replace(/[^0-9]/g, "")}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary underline"
+              >
+                Abrir chat en WhatsApp
+              </a>
+            )}
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setIsSuccessDialogOpen(false)}>
+              Cerrar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }

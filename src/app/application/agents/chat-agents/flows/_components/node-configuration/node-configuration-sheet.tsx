@@ -208,6 +208,8 @@ export function NodeConfigurationSheet({
       toast.error("Hay errores de validación. Corrígelos antes de cerrar.");
       return;
     }
+    // Guarda automáticamente los cambios antes de cerrar
+    onSaveFlow?.();
     onClose();
   };
 
@@ -216,10 +218,8 @@ export function NodeConfigurationSheet({
       toast.error("Hay errores de validación. Corrígelos antes de guardar.");
       return;
     }
-    if (didModify) {
-      // Save flow only if there were modifications
-      onSaveFlow?.();
-    }
+    // Guardar siempre que el usuario haga clic en "Hecho"
+    onSaveFlow?.();
     onClose();
   };
 
