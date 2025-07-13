@@ -629,7 +629,7 @@ export function FlowBuilder({ workflowId }: { workflowId?: string }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          text: "Mensaje de prueba",
+          text: "hola",
           from: phone,
           phone_number_id: agentData?.whatsappPhoneNumberId || "test_phone_id",
           userId: user?.data.id,
