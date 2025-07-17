@@ -13,6 +13,8 @@ import {
   MessageSquare,
   Contact,
   Megaphone,
+  PhoneIcon,
+  PhoneIncoming,
 } from "lucide-react";
 
 import {
@@ -134,6 +136,11 @@ export function NavMain() {
       icon: Bot,
       isActive: true,
       items: agentSubItems,
+    },
+    {
+      title: "Números",
+      url: "/application/numbers",  
+      icon: PhoneIncoming,
     },
     {
       title: "Crm",

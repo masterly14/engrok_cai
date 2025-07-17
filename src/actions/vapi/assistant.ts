@@ -11,6 +11,8 @@ const client = new VapiClient({
 
 export async function createAssistantAction(formData: FormData) {
   console.log("formData", formData);
+  console.log("knowledgeBaseId from formData:", formData.get("knowledgeBaseId"));
+  
   let backgroundSound =
     (formData.get("backgroundSound") as string) || undefined;
   if (backgroundSound !== "office" && backgroundSound !== "off") {
@@ -50,6 +52,8 @@ export async function createAssistantAction(formData: FormData) {
       style: 0.1,
     },
   });
+
+  console.log("Assistant created with knowledgeBaseId:", (formData.get("knowledgeBaseId") as string) || "undefined");
 
   if (!assistantResponse) {
     return {

@@ -33,6 +33,9 @@ export function useCreateAgent() {
 
   return useMutation({
     mutationFn: async (agentData: CreateAgentInput) => {
+      console.log("useCreateAgent - agentData:", agentData);
+      console.log("useCreateAgent - knowledgeBaseId:", agentData.knowledgeBaseId);
+      
       const formData = new FormData();
       formData.append("name", agentData.name);
       formData.append("firstMessage", agentData.firstMessage);
@@ -41,6 +44,7 @@ export function useCreateAgent() {
       formData.append("voiceId", agentData.voiceId || "");
       if (agentData.knowledgeBaseId) {
         formData.append("knowledgeBaseId", agentData.knowledgeBaseId);
+        console.log("useCreateAgent - Appending knowledgeBaseId to FormData:", agentData.knowledgeBaseId);
       }
 
       const newAssistant = await createAssistantAction(formData);

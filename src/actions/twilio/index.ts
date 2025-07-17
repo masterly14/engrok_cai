@@ -4,6 +4,7 @@ import { db } from "@/utils";
 import { onCurrentUser } from "@/actions/user";
 import { revalidatePath } from "next/cache";
 import twilio from "twilio";
+import { createPhoneNumber } from "../vapi/numbers";
 
 const getTwilioClient = () => {
   const accountSid = process.env.TWILIO_ACCOUNT_SID;
@@ -23,13 +24,7 @@ export async function getAvailablePhoneNumbers(
 ) {
   try {
     const client = getTwilioClient();
-    // La librería de Twilio usa paginación basada en `pageToken` internamente,
-    // pero el helper `list` nos abstrae esto y podemos pedir un tamaño de página.
-    // Para simular páginas, podríamos usar `limit` y un `areaCode` si quisiéramos ser más granulares,
-    // pero para este caso, buscaremos de forma general y mostraremos los resultados.
-    // La API de `availablePhoneNumbers` no soporta un `offset` o `page` directo.
-    // Por simplicidad, obtendremos una lista y la manejaremos en el cliente, 
-    // o podríamos implementar una lógica de "Cargar más".
+
     
     const numbers = await client.availablePhoneNumbers(countryCode).local.list({
       voiceEnabled: true,
@@ -49,44 +44,43 @@ export async function getAvailablePhoneNumbers(
 }
 
 export async function purchasePhoneNumber(phoneNumber: string) {
-  const user = await onCurrentUser();
-  if (!user) {
-    throw new Error("User not authenticated.");
-  }
-  
-  const internalUser = await db.user.findUnique({
-    where: { clerkId: user.id },
-  });
-
-  if (!internalUser) {
-    throw new Error("Internal user not found.");
-  }
-
   const client = getTwilioClient();
+  let purchasedNumberSid: string | null = null;
 
   try {
     const purchasedNumber = await client.incomingPhoneNumbers.create({
       phoneNumber,
-      // Se puede configurar una URL por defecto para manejar las llamadas
-      voiceUrl: 'https://demo.twilio.com/docs/voice.xml',
+      voiceUrl: "https://demo.twilio.com/docs/voice.xml",
     });
+    purchasedNumberSid = purchasedNumber.sid;
 
-    const newDbNumber = await db.phoneNumber.create({
-      data: {
-        number: purchasedNumber.phoneNumber,
-        provider: "twilio",
-        userId: internalUser.id,
-        name: phoneNumber,
-        vapiId: purchasedNumber.sid, // Guardamos el SID de Twilio
-        twilioAccountId: process.env.TWILIO_ACCOUNT_SID,
-      },
+    const newDbNumber = await createPhoneNumber({
+      provider: "twilio",
+      number: purchasedNumber.phoneNumber,
+      name: purchasedNumber.friendlyName,
+      twilioAccountSid: process.env.TWILIO_ACCOUNT_SID!,
+      twilioAuthToken: process.env.TWILIO_AUTH_TOKEN!,
     });
 
     revalidatePath("/application/phone-numbers");
     revalidatePath("/application/agents/voice-agents/numbers");
     return { success: true, data: newDbNumber };
   } catch (error: any) {
-    console.error("Error purchasing phone number:", error);
+    if (purchasedNumberSid) {
+      try {
+        await client.incomingPhoneNumbers(purchasedNumberSid).remove();
+        console.log(
+          `Successfully released Twilio number SID: ${purchasedNumberSid} after failed registration.`
+        );
+      } catch (releaseError) {
+        console.error(
+          `CRITICAL: Failed to release Twilio number SID: ${purchasedNumberSid}. Please release manually.`,
+          releaseError
+        );
+      }
+    }
+    console.error("Error purchasing and registering phone number:", error);
     return { success: false, error: error.message };
   }
 }
+  

@@ -1,3 +1,10 @@
-Funcionalidades: 
-    Testeo de las llamadas conectandose al Websocket.
-    Workflow backend
+Jueves 17 de Julio
+
+-Almacenamiento mediante APIS de bases de conocimiento que puedan ser usadas en Vapi AI por agentes de voz. 
+    Completado.
+
+-Integración para que al momento de crear un número de telefono este pueda obtener los números que ha comprado el usuario
+
+-Módificación de los planes para la cobertura de números y opción de solo chatbot. 
+
+
