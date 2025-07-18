@@ -36,6 +36,9 @@ export function Sidebar({ agents: initialAgents }: { agents: Agent[] }) {
   const handleNewAgent = () => {
     setSelectedAgent(null);
     setIsCreatingNew(true);
+    if (typeof window !== "undefined" && window.openVoiceAgentTemplateDialog) {
+      window.openVoiceAgentTemplateDialog();
+    }
   };
 
   // Suscribirse a los cambios del agente seleccionado
