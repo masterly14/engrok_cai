@@ -6,9 +6,10 @@ interface PageProps {
   searchParams?: Record<string, string | string[]>;
 }
 
-export default async function ApplicationHome({ searchParams }: PageProps) {
+export default async function ApplicationHome({ searchParams }: { searchParams: Promise<Record<string, string | string[]>> }) {
+  const resolvedSearchParams = await searchParams;
   // If user was redirected here due to lack of voice feature, show friendly page
-  if (searchParams?.["no-access"] === "voice") {
+  if (resolvedSearchParams?.["no-access"] === "voice") {
     const { currentPlan } = await getUserSubscription();
     return <RestrictedAccessPage planName={currentPlan} />;
   }
