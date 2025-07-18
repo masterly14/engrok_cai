@@ -50,7 +50,6 @@ export async function purchasePhoneNumber(phoneNumber: string) {
   try {
     const purchasedNumber = await client.incomingPhoneNumbers.create({
       phoneNumber,
-      voiceUrl: "https://demo.twilio.com/docs/voice.xml",
     });
     purchasedNumberSid = purchasedNumber.sid;
 

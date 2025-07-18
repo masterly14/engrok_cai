@@ -3,8 +3,8 @@ Jueves 17 de Julio
 -Almacenamiento mediante APIS de bases de conocimiento que puedan ser usadas en Vapi AI por agentes de voz. 
     Completado.
 
--Integración para que al momento de crear un número de telefono este pueda obtener los números que ha comprado el usuario
+-Integración para que al momento de crear un número de telefono este pueda obtener los números que ha comprado el usuario - Completado (Se implemento la lógica dentro de la página de comprar números esto, lo que hace cuando el usuario selecciona el número es que se agrega de forma local a su base de datos, pero tambien en Vapi)
+
 
 -Módificación de los planes para la cobertura de números y opción de solo chatbot. 
-
 

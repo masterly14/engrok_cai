@@ -1,5 +1,3 @@
-"use client";
-
 import type React from "react";
 import {
   Bot,
@@ -13,7 +11,6 @@ import {
   MessageSquare,
   Contact,
   Megaphone,
-  PhoneIcon,
   PhoneIncoming,
 } from "lucide-react";
 
@@ -32,6 +29,7 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
+import { getUserFeatures } from "@/actions/user-features";
 
 interface NestedMenuItem {
   title: string;
@@ -56,7 +54,10 @@ interface MenuItem {
   items?: SubMenuItem[];
 }
 
-export function NavMain() {
+export async function NavMain() {
+  const features = await getUserFeatures();
+  const hasVoice = features.includes("voice");
+
   const chatAgentItems: SubMenuItem = {
     title: "Agentes de chat",
     url: "/application/agents/chat",
@@ -120,39 +121,66 @@ export function NavMain() {
     ],
   };
 
-  const agentSubItems = [chatAgentItems];
-  agentSubItems.push(voiceAgentItems);
+  // ---------------- Build menu items depending on feature set ----------------
+  let items: MenuItem[];
 
-  const items: MenuItem[] = [
-    {
-      title: "Dashboard",
-      url: "/application/dashboard",
-      icon: LayoutDashboard,
-      isActive: true,
-    },
-    {
-      title: "Agentes",
-      url: "/application/agents",
-      icon: Bot,
-      isActive: true,
-      items: agentSubItems,
-    },
-    {
-      title: "Números",
-      url: "/application/numbers",  
-      icon: PhoneIncoming,
-    },
-    {
-      title: "Crm",
-      url: "/application/crm",
-      icon: Users,
-    },
-    {
-      title: "Historial de llamadas",
-      url: "/application/call-history",
-      icon: Phone,
-    },
-  ];
+  if (hasVoice) {
+    // —————————— Con voz: menú original agrupando Chat/Voz ——————————
+    const agentSubItems = [chatAgentItems, voiceAgentItems];
+
+    items = [
+      {
+        title: "Dashboard",
+        url: "/application/dashboard",
+        icon: LayoutDashboard,
+        isActive: true,
+      },
+      {
+        title: "Agentes",
+        url: "/application/agents",
+        icon: Bot,
+        isActive: true,
+        items: agentSubItems,
+      },
+      {
+        title: "Números",
+        url: "/application/numbers",
+        icon: PhoneIncoming,
+      },
+      {
+        title: "Crm",
+        url: "/application/crm",
+        icon: Users,
+      },
+      {
+        title: "Historial de llamadas",
+        url: "/application/call-history",
+        icon: Phone,
+      },
+    ];
+  } else {
+    // —————————— Sin voz: mostrar cada sección de Chat como item independiente ——————————
+    const chatTopLevelItems: MenuItem[] = chatAgentItems.items!.map((nested) => ({
+      title: nested.title,
+      url: nested.url,
+      icon: nested.icon,
+    }));
+
+    items = [
+      {
+        title: "Dashboard",
+        url: "/application/dashboard",
+        icon: LayoutDashboard,
+        isActive: true,
+      },
+      ...chatTopLevelItems,
+      {
+        title: "Crm",
+        url: "/application/crm",
+        icon: Users,
+      },
+    ];
+  }
 
   return (
     <SidebarGroup>
