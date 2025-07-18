@@ -1,18 +1,37 @@
 import { memo } from "react";
-import { Handle, Position, type NodeProps } from "reactflow";
-import { GitBranch, CheckCircle, XCircle } from "lucide-react";
+import { Handle, Position, useReactFlow, type NodeProps } from "reactflow";
+import { GitBranch, CheckCircle, XCircle, Settings, Trash2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const ConditionNode = ({
   data,
+  id,
 }: NodeProps<{
   name?: string;
   condition?: string;
   statusSuccess?: string;
   statusError?: string;
 }>) => {
+  const { setNodes, setEdges } = useReactFlow();
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setNodes((nds) => nds.filter((n) => n.id !== id));
+    setEdges((eds) => eds.filter((edge) => edge.source !== id && edge.target !== id));
+  };
+
   return (
-    <Card className="w-72 shadow-lg border-gray-200/80 bg-white">
+    <Card className="relative w-72 shadow-lg border-gray-200/80 bg-white">
+      {/* Toolbar */}
+      <div className="absolute top-2 right-2 flex gap-1 z-20">
+        <button className="bg-white/80 hover:bg-white p-1 rounded shadow" title="Configuración">
+          <Settings className="w-4 h-4 text-gray-700" />
+        </button>
+        <button onClick={handleDelete} className="bg-white/80 hover:bg-red-100 p-1 rounded shadow" title="Eliminar">
+          <Trash2 className="w-4 h-4 text-red-600" />
+        </button>
+      </div>
+
       <CardHeader className="p-4 flex flex-row items-center gap-3 space-y-0 bg-gray-50/70 rounded-t-lg">
         <div className="p-2 bg-emerald-100 rounded-lg">
           <GitBranch className="w-5 h-5 text-emerald-600" />

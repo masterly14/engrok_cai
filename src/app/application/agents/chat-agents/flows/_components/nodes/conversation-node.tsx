@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { Handle, Position, type NodeProps } from "reactflow";
+import { Handle, Position, useReactFlow, type NodeProps } from "reactflow";
 import {
   MessageSquare,
   CornerDownRight,
@@ -9,6 +9,8 @@ import {
   FileIcon,
   Info,
   Loader2,
+  Settings,
+  Trash2,
 } from "lucide-react";
 
 // Definimos el tipo para los botones para mayor claridad
@@ -32,10 +34,18 @@ interface ConversationNodeProps {
   initialMessage?: boolean;
 }
 
-const ConversationNode = ({ data }: NodeProps<ConversationNodeProps>) => {
+const ConversationNode = ({ data, id }: NodeProps<ConversationNodeProps>) => {
   const buttons = data.interactiveButtons || [];
   const isAudioResponse = data.responseType === "audio";
   const isTemplateResponse = data.responseType === "template";
+
+  const { setNodes, setEdges } = useReactFlow();
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setNodes((nds) => nds.filter((n) => n.id !== id));
+    setEdges((eds) => eds.filter((edge) => edge.source !== id && edge.target !== id));
+  };
 
   const renderMediaPreview = () => {
     if (!data.fileOrImageUrl && !data.isUploadingMedia) return null;
@@ -105,6 +115,22 @@ const ConversationNode = ({ data }: NodeProps<ConversationNodeProps>) => {
         backgroundRepeat: "no-repeat",
       }}
     >
+      {/* Toolbar */}
+      <div className="absolute top-2 right-2 flex gap-1 z-20">
+        <button
+          className="bg-white/80 hover:bg-white p-1 rounded shadow"
+          title="Configuración"
+        >
+          <Settings className="w-4 h-4 text-gray-700" />
+        </button>
+        <button
+          onClick={handleDelete}
+          className="bg-white/80 hover:bg-red-100 p-1 rounded shadow"
+          title="Eliminar"
+        >
+          <Trash2 className="w-4 h-4 text-red-600" />
+        </button>
+      </div>
       {/* WhatsApp-style message bubble */}
       <div className="relative">
         {/* info */}

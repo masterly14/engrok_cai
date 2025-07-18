@@ -1,12 +1,14 @@
 import { memo } from "react";
 import Image from "next/image";
-import { Handle, Position, type NodeProps } from "reactflow";
+import { Handle, Position, useReactFlow, type NodeProps } from "reactflow";
 import {
   Database,
   CheckCircle,
   XCircle,
   CreditCard,
   Calendar,
+  Settings,
+  Trash2,
 } from "lucide-react";
 
 const integrationDetails = {
@@ -42,7 +44,15 @@ const integrationDetails = {
   },
 };
 
-const IntegrationNode = ({ data }: NodeProps) => {
+const IntegrationNode = ({ data, id }: NodeProps) => {
+  const { setNodes, setEdges } = useReactFlow();
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setNodes((nds) => nds.filter((n) => n.id !== id));
+    setEdges((eds) => eds.filter((edge) => edge.source !== id && edge.target !== id));
+  };
+
   const statusSuccess = data.statusSuccess || "success";
   const statusError = data.statusError || "error";
   const statusPaymentSuccess = "success_payment";
@@ -52,7 +62,16 @@ const IntegrationNode = ({ data }: NodeProps) => {
     integrationDetails.DEFAULT;
 
   return (
-    <div className="bg-white rounded-xl shadow-lg w-80 border-2 border-stone-200/80 font-sans overflow-hidden">
+    <div className="relative bg-white rounded-xl shadow-lg w-80 border-2 border-stone-200/80 font-sans overflow-hidden">
+      {/* Toolbar */}
+      <div className="absolute top-2 right-2 flex gap-1 z-20">
+        <button className="bg-white/80 hover:bg-white p-1 rounded shadow" title="Configuración">
+          <Settings className="w-4 h-4 text-gray-700" />
+        </button>
+        <button onClick={handleDelete} className="bg-white/80 hover:bg-red-100 p-1 rounded shadow" title="Eliminar">
+          <Trash2 className="w-4 h-4 text-red-600" />
+        </button>
+      </div>
       {/* Header */}
       <div
         className={`${details.headerBg} p-4 border-b ${details.headerBorder}`}

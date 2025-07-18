@@ -1,8 +1,8 @@
 "use client";
 
 import { memo } from "react";
-import { Handle, Position, type NodeProps } from "reactflow";
-import { Bot } from "lucide-react";
+import { Handle, Position, useReactFlow, type NodeProps } from "reactflow";
+import { Bot, Settings, Trash2 } from "lucide-react";
 
 // Interfaz para los datos específicos del nodo de IA (sin condiciones)
 export interface AiNodeData {
@@ -13,11 +13,27 @@ export interface AiNodeData {
 }
 
 // El componente del nodo de IA rediseñado
-const AINode = memo(({ data, isConnectable }: NodeProps<AiNodeData>) => {
+const AINode = memo(({ data, isConnectable, id }: NodeProps<AiNodeData>) => {
+  const { setNodes, setEdges } = useReactFlow();
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setNodes((nds) => nds.filter((n) => n.id !== id));
+    setEdges((eds) => eds.filter((edge) => edge.source !== id && edge.target !== id));
+  };
   const { name = "Nodo de IA", prompt = "Sin prompt" } = data;
 
   return (
-    <div className="bg-white border-2 border-purple-500 shadow-lg rounded-lg w-64 font-sans overflow-hidden">
+    <div className="relative bg-white border-2 border-purple-500 shadow-lg rounded-lg w-64 font-sans overflow-hidden">
+      {/* Toolbar */}
+      <div className="absolute top-2 right-2 flex gap-1 z-20">
+        <button className="bg-white/80 hover:bg-white p-1 rounded shadow" title="Configuración">
+          <Settings className="w-4 h-4 text-gray-700" />
+        </button>
+        <button onClick={handleDelete} className="bg-white/80 hover:bg-red-100 p-1 rounded shadow" title="Eliminar">
+          <Trash2 className="w-4 h-4 text-red-600" />
+        </button>
+      </div>
       {/* Header */}
       <div className="bg-purple-500 text-white p-3 flex items-center gap-2">
         <Bot className="h-5 w-5 flex-shrink-0" />
