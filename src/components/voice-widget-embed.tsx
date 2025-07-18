@@ -1,32 +1,46 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 interface VoiceWidgetEmbedProps {
   agentId?: string;
 }
 
-// Componente que inyecta el widget de ElevenLabs de forma global.
-// Si el script ya existe, evita duplicarlo.
 export default function VoiceWidgetEmbed({ agentId }: VoiceWidgetEmbedProps) {
-  useEffect(() => {
-    if (!agentId) return;
+  const iframeRef = useRef<HTMLIFrameElement>(null);
 
-    // Evitar añadir el script varias veces
-    if (!document.getElementById("elevenlabs-convai-script")) {
-      const script = document.createElement("script");
-      script.id = "elevenlabs-convai-script";
-      script.src = "https://unpkg.com/@elevenlabs/convai-widget-embed";
-      script.async = true;
-      script.type = "text/javascript";
-      document.body.appendChild(script);
-    }
+  useEffect(() => {
+    if (!agentId || !iframeRef.current) return;
+
+    // HTML que se inyectará dentro del iframe
+    const iframeHtml = `<!DOCTYPE html>
+      <html lang="en">
+        <head><meta charset="utf-8" /></head>
+        <body style="margin:0;">
+          <elevenlabs-convai agent-id="${agentId}"></elevenlabs-convai>
+          <script src="https://unpkg.com/@elevenlabs/convai-widget-embed" async type="text/javascript"></script>
+        </body>
+      </html>`;
+
+    // Establecemos el HTML en el iframe
+    iframeRef.current.srcdoc = iframeHtml;
   }, [agentId]);
 
   if (!agentId) return null;
 
-  // El custom element se renderiza directamente; el script se encargará de inicializarlo.
-  // Colocamos el widget sin estilos adicionales para que respete su posición (bottom-right por defecto).
-  // Nota: tailwind/estilos globales no afectarán al widget puesto que viene encapsulado.
-  return <elevenlabs-convai agent-id={agentId}></elevenlabs-convai> as any;
+  return (
+    <iframe
+      ref={iframeRef}
+      title="ElevenLabs Voice Widget"
+      style={{
+        border: "none",
+        position: "fixed",
+        bottom: 0,
+        right: 0,
+        width: "360px",
+        height: "420px",
+        zIndex: 2147483647,
+      }}
+    />
+  );
 } 
