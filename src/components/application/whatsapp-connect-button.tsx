@@ -66,25 +66,27 @@ const WhatsAppConnectButton = () => {
       return;
     }
 
-    console.log("Iniciando login de Facebook con configuración de migración...");
+    console.log(
+      "Iniciando login de Facebook con configuración de migración..."
+    );
     console.log("Config ID:", process.env.NEXT_PUBLIC_META_CONFIG_ID);
-    
+
     setIsAuthorizing(true);
 
     window.FB.login(
       (response: any) => {
         setIsAuthorizing(false);
         console.log("Respuesta completa de Facebook:", response);
-        
+
         if (response.authResponse && response.authResponse.code) {
           console.log(
             "Código de autorización obtenido:",
-            response.authResponse.code,
+            response.authResponse.code
           );
           exchangeCodeForToken(response.authResponse.code);
         } else {
           console.log(
-            "El usuario canceló el login o no autorizó completamente.",
+            "El usuario canceló el login o no autorizó completamente."
           );
         }
       },
@@ -93,22 +95,11 @@ const WhatsAppConnectButton = () => {
         response_type: "code",
         override_default_response_type: true,
         extras: {
-          feature: "whatsapp_embedded_signup",
-          session_info_version: "2",
-          setup: {
-            flows: [
-              {
-                action: "MIGRATE_PHONE_NUMBER",
-                enabled: true,
-              },
-            ],
-          },
-          migration: {
-            enabled: true,
-            allow_existing_whatsapp_business: true,
-          },
+          setup: {},
+          featureType: 'whatsapp_business_app_onboarding',
+          sessionInfoVersion: '3',
         },
-      },
+      }
     );
   };
 
