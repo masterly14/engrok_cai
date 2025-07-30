@@ -306,7 +306,7 @@ async function handleIncomingMessage(whatsappPayload: any) {
   }
 
   let contact = await db.chatContact.findUnique({
-    where: { phone: userPhone },
+    where: { phone_chatAgentId: { phone: userPhone, chatAgentId: agent.id } },
   });
   if (!contact) {
     console.log(`[Handler] New contact: ${userPhone}. Creating...`);
@@ -1220,7 +1220,7 @@ async function handleExternalTrigger(event: ExternalTriggerEvent) {
     }
 
     // 2. Contacto (crear si no existe)
-    let contact = await db.chatContact.findUnique({ where: { phone } });
+    let contact = await db.chatContact.findUnique({ where: { phone_chatAgentId: { phone: phone, chatAgentId: agent.id } } });
     if (!contact) {
       contact = await db.chatContact.create({
         data: {
