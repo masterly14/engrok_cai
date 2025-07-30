@@ -38,6 +38,9 @@ export default async function ApplicationLayout({
           </div>
           <NotificationBell />
         </header>
+        <main className="flex-1 overflow-auto">
+          {children}
+        </main>
       </SidebarInset>
     </SidebarProvider>
   );
