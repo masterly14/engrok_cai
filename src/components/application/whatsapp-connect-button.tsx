@@ -89,7 +89,15 @@ const WhatsAppConnectButton = () => {
         override_default_response_type: true,
         extras: {
           feature: "whatsapp_embedded_signup",
-          session_info_version: "2",
+           session_info_version: "2",
+           setup: {
+            flows: [
+              {
+                action: "MIGRATE_PHONE_NUMBER", 
+                enabled: true,
+              },
+            ],
+          },
         },
       },
     );
