@@ -38,9 +38,6 @@ export default async function ApplicationLayout({
           </div>
           <NotificationBell />
         </header>
-        <div className="h-[calc(100vh-4rem)]">{children}</div>
-        {/* Widget de voz global */}
-        <VoiceWidgetEmbed agentId={process.env.NEXT_PUBLIC_ELEVENLABS_REFERENCE_WIDGET_ID} />
       </SidebarInset>
     </SidebarProvider>
   );
