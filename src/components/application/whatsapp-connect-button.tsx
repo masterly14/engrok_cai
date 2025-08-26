@@ -79,7 +79,7 @@ const WhatsAppConnectButton = () => {
         console.log("Respuesta completa de Facebook:", response);
 
         if (response.authResponse && response.authResponse.code) {
-          console.log(
+          console.log( 
             "Código de autorización obtenido:",
             response.authResponse.code
           );

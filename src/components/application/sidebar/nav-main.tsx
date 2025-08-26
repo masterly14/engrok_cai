@@ -144,7 +144,7 @@ export async function NavMain() {
       },
       {
         title: "Números",
-        url: "/application/numbers",
+        url: "/application/phone-numbers",
         icon: PhoneIncoming,
       },
       {
