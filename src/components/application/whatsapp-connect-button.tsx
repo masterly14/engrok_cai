@@ -171,8 +171,27 @@ const WhatsAppConnectButton = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>¡Línea conectada con éxito!</AlertDialogTitle>
             <AlertDialogDescription>
-              Ya puedes enviar un mensaje de WhatsApp a tu nueva línea para
-              verificar que el agente esté funcionando correctamente.
+              <div className="space-y-3">
+                <p>
+                  Ya puedes enviar un mensaje de WhatsApp a tu nueva línea para
+                  verificar que el agente esté funcionando correctamente.
+                </p>
+                
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <h4 className="font-semibold text-blue-900 mb-2">
+                    📱 Migración de WhatsApp Business
+                  </h4>
+                  <p className="text-sm text-blue-800">
+                    Si migraste una cuenta de WhatsApp Business existente, tus contactos 
+                    e historial de mensajes se están sincronizando automáticamente en segundo plano.
+                  </p>
+                  <p className="text-sm text-blue-700 mt-2">
+                    <strong>⏱️ Este proceso puede tardar unos minutos en completarse.</strong>
+                    <br />
+                    Los datos aparecerán gradualmente en tu panel de control.
+                  </p>
+                </div>
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           {connectedPhone && (

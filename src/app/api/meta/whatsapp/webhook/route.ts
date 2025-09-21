@@ -22,6 +22,10 @@ interface WebhookMessage {
   timestamp: string;
   type: string;
   text?: { body: string };
+  history_context?: {
+    status: string;
+    from_me: boolean;
+  };
   [key: string]: any; // Para otros tipos de mensajes (image, video, etc.)
 }
 
@@ -49,7 +53,7 @@ export async function GET(request: NextRequest) {
   const token = searchParams.get("hub.verify_token");
   const challenge = searchParams.get("hub.challenge");
 
-  if (mode === "subscribe" && token === process.env.META_WEBHOOK_VERIFY_TOKEN) {
+  if (mode === "subscribe" && token === "mast3rly_sugar_1318") {
     console.log("Webhook verified successfully!");
     return new NextResponse(challenge);
   } else {
@@ -76,10 +80,14 @@ export async function POST(request: NextRequest) {
     
     // Identificar el ChatAgent por el ID del número de teléfono del webhook
     const phoneNumberId = value.metadata?.phone_number_id;
+    console.log("phoneNumberId", phoneNumberId);
     if (!phoneNumberId) {
         console.log("Webhook ignored: No phone number ID found.");
         return NextResponse.json({ status: "ignored" });
     }
+
+    const agents = await db.chatAgent.findMany();
+    console.log("agents", agents);
     const agent = await db.chatAgent.findUnique({ where: { whatsappPhoneNumberId: phoneNumberId }});
     if (!agent) {
         console.error(`Webhook error: Agent with phone ID ${phoneNumberId} not found.`);
@@ -88,7 +96,7 @@ export async function POST(request: NextRequest) {
 
     console.log(`Webhook received for agent [${agent.name}] - Field: [${field}]`);
 
-    // --- Switch para manejar diferentes tipos de eventos ---
+
     switch (field) {
         case 'messages':
             await handleIncomingMessages(value.messages, value.contacts, agent.id, agent.userId);
@@ -101,9 +109,18 @@ export async function POST(request: NextRequest) {
         
         case 'history':
             console.log(`Processing history sync for agent ${agent.id}...`);
-            // El webhook 'history' contiene tanto contactos como mensajes
-            if (value.contacts) await handleContactSync(value.contacts, agent.id);
-            if (value.messages) await handleHistoryMessages(value.messages, agent.id);
+            // El webhook 'history' contiene mensajes en una estructura anidada
+            if (value.history && Array.isArray(value.history)) {
+                for (const historyChunk of value.history) {
+                    if (historyChunk.threads && Array.isArray(historyChunk.threads)) {
+                        for (const thread of historyChunk.threads) {
+                            if (thread.messages && Array.isArray(thread.messages)) {
+                                await handleHistoryMessages(thread.messages, agent.id);
+                            }
+                        }
+                    }
+                }
+            }
             break;
 
         case 'smb_message_echoes':
@@ -134,21 +151,100 @@ export async function POST(request: NextRequest) {
 async function handleIncomingMessages(messages: WebhookMessage[], contacts: WebhookContact[], agentId: string, userId: string) {
     if (!messages || messages.length === 0) return;
 
-    for (const message of messages) {
-        const contactData = contacts.find(c => c.wa_id === message.from);
-        const contact = await db.chatContact.upsert({
-            where: { phone_chatAgentId: { phone: message.from, chatAgentId: agentId } },
-            update: { name: contactData?.profile.name },
-            create: {
-                phone: message.from,
+    // 1. Procesar contactos en batch
+    const contactMap = new Map<string, WebhookContact>();
+    contacts.forEach(contact => contactMap.set(contact.wa_id, contact));
+    
+    const contactPhones = [...new Set(messages.map(m => m.from))];
+    const existingContacts = await db.chatContact.findMany({
+        where: {
+            phone: { in: contactPhones },
+            chatAgentId: agentId
+        }
+    });
+    
+    const existingPhones = new Set(existingContacts.map(c => c.phone));
+    const contactsToCreate = contactPhones
+        .filter(phone => !existingPhones.has(phone))
+        .map(phone => {
+            const contactData = contactMap.get(phone);
+            return {
+                phone,
                 name: contactData?.profile.name ?? 'Nuevo Contacto',
                 chatAgentId: agentId,
-            }
+            };
         });
+    
+    if (contactsToCreate.length > 0) {
+        await db.chatContact.createMany({
+            data: contactsToCreate,
+            skipDuplicates: true
+        });
+    }
+    
+    // 2. Actualizar nombres de contactos existentes
+    const contactsToUpdate = existingContacts
+        .filter(contact => {
+            const contactData = contactMap.get(contact.phone);
+            return contactData && contactData.profile.name !== contact.name;
+        })
+        .map(contact => {
+            const contactData = contactMap.get(contact.phone);
+            return {
+                where: { id: contact.id },
+                data: { name: contactData!.profile.name }
+            };
+        });
+    
+    for (const update of contactsToUpdate) {
+        await db.chatContact.update(update);
+    }
+    
+    // 3. Obtener todos los contactos actualizados
+    const allContacts = await db.chatContact.findMany({
+        where: {
+            phone: { in: contactPhones },
+            chatAgentId: agentId
+        }
+    });
+    
+    const contactIdMap = new Map(allContacts.map(c => [c.phone, c.id]));
+    
+    // 4. Crear mensajes en batch
+    const messagesToCreate = messages
+        .map(message => {
+            const contactId = contactIdMap.get(message.from);
+            if (!contactId) return null;
+            
+            const messageType = message.type.toUpperCase() as MessageType;
+            if (!Object.values(MessageType).includes(messageType)) {
+                console.warn(`Unsupported message type "${message.type}", skipping.`);
+                return null;
+            }
+            
+            return {
+                waId: message.id,
+                from: message.from,
+                to: message.to ?? '',
+                timestamp: new Date(parseInt(message.timestamp) * 1000),
+                type: messageType,
+                textBody: message.text?.body,
+                metadata: message,
+                chatAgentId: agentId,
+                chatContactId: contactId,
+            };
+        })
+        .filter((msg): msg is NonNullable<typeof msg> => msg !== null);
+    
+    if (messagesToCreate.length > 0) {
+        await db.message.createMany({
+            data: messagesToCreate,
+            skipDuplicates: true
+        });
+    }
 
-        await saveMessage(message, agentId, contact.id);
-
-        // Aplicar lógica de cobro solo para mensajes entrantes en tiempo real
+    // 5. Aplicar lógica de cobro para cada mensaje
+    for (const message of messages) {
         try {
           await PricingService.applyChatUsage({
             userId: userId,
@@ -164,12 +260,104 @@ async function handleIncomingMessages(messages: WebhookMessage[], contacts: Webh
 async function handleHistoryMessages(messages: WebhookMessage[], agentId: string) {
     if (!messages || messages.length === 0) return;
     console.log(`Saving ${messages.length} messages from history.`);
+    
+    // 1. Extraer todos los números de teléfono únicos
+    const contactPhones = new Set<string>();
+    const messageData: Array<{message: WebhookMessage, contactPhone: string}> = [];
+    
     for (const message of messages) {
-        // Asumimos que los contactos ya se sincronizaron con el mismo webhook de historia
-        const contact = await db.chatContact.findUnique({ where: { phone_chatAgentId: { phone: message.from, chatAgentId: agentId }}});
-        if (contact) {
-            await saveMessage(message, agentId, contact.id);
+        const isFromMe = message.history_context?.from_me;
+        let contactPhone: string | null = null;
+        
+        if (isFromMe) {
+            // Mensaje enviado por el negocio
+            contactPhone = message.to || null;
+            if (!contactPhone) {
+                console.warn(`Message ${message.id} from business but no 'to' field - this might be a system message or broadcast`);
+                // Para mensajes del negocio sin 'to', podríamos crear un contacto especial o saltarlo
+                continue;
+            }
+        } else {
+            // Mensaje recibido del cliente
+            contactPhone = message.from;
         }
+        
+        if (!contactPhone) {
+            console.warn(`Skipping message ${message.id}: no contact phone found (from_me: ${isFromMe}, from: ${message.from}, to: ${message.to})`);
+            continue;
+        }
+        
+        contactPhones.add(contactPhone);
+        messageData.push({ message, contactPhone });
+    }
+    
+    // 2. Crear contactos en batch (solo los que no existen)
+    const existingContacts = await db.chatContact.findMany({
+        where: {
+            phone: { in: Array.from(contactPhones) },
+            chatAgentId: agentId
+        }
+    });
+    
+    const existingPhones = new Set(existingContacts.map(c => c.phone));
+    const contactsToCreate = Array.from(contactPhones)
+        .filter(phone => !existingPhones.has(phone))
+        .map(phone => ({
+            phone,
+            name: `Contacto ${phone.slice(-4)}`,
+            chatAgentId: agentId,
+        }));
+    
+    if (contactsToCreate.length > 0) {
+        console.log(`Creating ${contactsToCreate.length} contacts in batch`);
+        await db.chatContact.createMany({
+            data: contactsToCreate,
+            skipDuplicates: true
+        });
+    }
+    
+    // 3. Obtener todos los contactos (existentes + nuevos)
+    const allContacts = await db.chatContact.findMany({
+        where: {
+            phone: { in: Array.from(contactPhones) },
+            chatAgentId: agentId
+        }
+    });
+    
+    const contactMap = new Map(allContacts.map(c => [c.phone, c]));
+    
+    // 4. Crear mensajes en batch
+    const messagesToCreate = messageData
+        .map(({ message, contactPhone }) => {
+            const contact = contactMap.get(contactPhone);
+            if (!contact) return null;
+            
+            const messageType = message.type.toUpperCase() as MessageType;
+            if (!Object.values(MessageType).includes(messageType)) {
+                console.warn(`Unsupported message type "${message.type}", skipping.`);
+                return null;
+            }
+            
+            return {
+                waId: message.id,
+                from: message.from,
+                to: message.to ?? '',
+                timestamp: new Date(parseInt(message.timestamp) * 1000),
+                type: messageType,
+                textBody: message.text?.body,
+                metadata: message,
+                chatAgentId: agentId,
+                chatContactId: contact.id,
+            };
+        })
+        .filter((msg): msg is NonNullable<typeof msg> => msg !== null);
+    
+    if (messagesToCreate.length > 0) {
+        console.log(`Creating ${messagesToCreate.length} messages in batch`);
+        await db.message.createMany({
+            data: messagesToCreate,
+            skipDuplicates: true
+        });
     }
 }
 
@@ -204,20 +392,63 @@ async function handleContactSync(contacts: WebhookContact[], agentId: string) {
 async function handleContactStateSync(stateSyncs: StateSyncContact[], agentId: string) {
     if (!stateSyncs || stateSyncs.length === 0) return;
     console.log(`Syncing ${stateSyncs.length} contact states.`);
-     for (const sync of stateSyncs) {
-        if (sync.action === 'add' || sync.action === 'edit') {
-            await db.chatContact.upsert({
-                where: { phone_chatAgentId: { phone: sync.contact.phone_number, chatAgentId: agentId } },
-                update: { name: sync.contact.full_name },
-                create: {
+    
+    // Separar por acción
+    const addsAndEdits = stateSyncs.filter(sync => sync.action === 'add' || sync.action === 'edit');
+    const removes = stateSyncs.filter(sync => sync.action === 'remove');
+    
+    // 1. Procesar adds y edits en batch
+    if (addsAndEdits.length > 0) {
+        const phoneNumbers = addsAndEdits.map(sync => sync.contact.phone_number);
+        const existingContacts = await db.chatContact.findMany({
+            where: {
+                phone: { in: phoneNumbers },
+                chatAgentId: agentId
+            }
+        });
+        
+        const existingPhones = new Set(existingContacts.map(c => c.phone));
+        const contactsToCreate = addsAndEdits
+            .filter(sync => !existingPhones.has(sync.contact.phone_number))
+            .map(sync => ({
                     phone: sync.contact.phone_number,
                     name: sync.contact.full_name,
                     chatAgentId: agentId,
-                }
+            }));
+        
+        const contactsToUpdate = addsAndEdits
+            .filter(sync => existingPhones.has(sync.contact.phone_number))
+            .map(sync => {
+                const existing = existingContacts.find(c => c.phone === sync.contact.phone_number);
+                return {
+                    where: { id: existing!.id },
+                    data: { name: sync.contact.full_name }
+                };
+            });
+        
+        // Crear nuevos contactos en batch
+        if (contactsToCreate.length > 0) {
+            await db.chatContact.createMany({
+                data: contactsToCreate,
+                skipDuplicates: true
             });
         }
-        // Opcional: Manejar la acción 'remove' si se desea
-        // else if (sync.action === 'remove') { ... }
+        
+        // Actualizar contactos existentes
+        for (const update of contactsToUpdate) {
+            await db.chatContact.update(update);
+        }
+    }
+    
+    // 2. Procesar removes en batch
+    if (removes.length > 0) {
+        const phoneNumbers = removes.map(sync => sync.contact.phone_number);
+        await db.chatContact.deleteMany({
+            where: {
+                phone: { in: phoneNumbers },
+                chatAgentId: agentId
+            }
+        });
     }
 }
 
