@@ -32,6 +32,7 @@ export async function AppSidebar({
           <CreditDisplay
             amount={user?.amountCredits!}
             maxAmount={user?.initialAmountCredits!}
+            creditsUsedThisMonth={user?.creditsUsedThisMonth!}
           />
         </div>
       </SidebarContent>

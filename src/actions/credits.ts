@@ -26,6 +26,26 @@ export async function getCreditLedger(
   return rows;
 }
 
+export async function getCreditsUsedThisMonth(userId: string): Promise<number> {
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  
+  const debitEntries = await db.creditLedger.findMany({
+    where: {
+      userId,
+      type: "debit",
+      createdAt: {
+        gte: startOfMonth,
+      },
+    },
+  });
+
+  // Sumar todos los débitos (valores negativos) del mes actual
+  const totalUsed = debitEntries.reduce((sum, entry) => sum + Math.abs(entry.delta), 0);
+  
+  return totalUsed;
+}
+
 // -------- Generate checkout for credit pack --------
 export interface GenerateCreditCheckoutParams {
   userId: string;

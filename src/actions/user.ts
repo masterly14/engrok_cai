@@ -189,6 +189,7 @@ export const getUserCredits = async () => {
     return {
       initialAmountCredits: 0,
       amountCredits: 0,
+      creditsUsedThisMonth: 0,
     };
   }
 
@@ -200,8 +201,25 @@ export const getUserCredits = async () => {
     },
   });
 
+  // Calcular créditos usados este mes
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  
+  const debitEntries = await db.creditLedger.findMany({
+    where: {
+      userId: internalUser.id,
+      type: "debit",
+      createdAt: {
+        gte: startOfMonth,
+      },
+    },
+  });
+
+  const creditsUsedThisMonth = debitEntries.reduce((sum, entry) => sum + Math.abs(entry.delta), 0);
+
   return {
     initialAmountCredits: internalUser.initialAmountCredits,
     amountCredits: subscription?.currentCredits ?? 0, // Devuelve 0 si no hay suscripción
+    creditsUsedThisMonth,
   };
 };

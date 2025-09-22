@@ -16,6 +16,7 @@ export default function CreditsPage() {
   const [ledger, setLedger] = useState<LedgerEntry[]>([]);
   const [balance, setBalance] = useState<number>(0);
   const [initialCredits, setInitialCredits] = useState<number>(0);
+  const [creditsUsedThisMonth, setCreditsUsedThisMonth] = useState<number>(0);
 
   useEffect(() => {
     const load = async () => {
@@ -23,9 +24,10 @@ export default function CreditsPage() {
         const res1 = await fetch("/api/credits/balance").then((r) => r.json());
         setBalance(res1.credits ?? 0);
         
-        // Obtener los créditos iniciales del usuario
+        // Obtener los créditos iniciales del usuario y créditos usados este mes
         const res3 = await fetch("/api/user/credits").then((r) => r.json());
         setInitialCredits(res3.initialAmountCredits ?? 0);
+        setCreditsUsedThisMonth(res3.creditsUsedThisMonth ?? 0);
         
         const res2 = await fetch("/api/credits/ledger?take=100").then((r) =>
           r.json(),
@@ -47,6 +49,7 @@ export default function CreditsPage() {
         <CreditDisplay
           amount={balance}
           maxAmount={initialCredits}
+          creditsUsedThisMonth={creditsUsedThisMonth}
           className="w-full"
         />
 

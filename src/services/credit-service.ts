@@ -8,7 +8,7 @@ interface LedgerMeta {
 
 export class CreditService {
   /**
-   * Añade (delta > 0) o sustrae (delta < 0) créditos creando un registro en CreditLedger y actualizando Subscription.currentCredits
+   * Añade (delta > 0) o sustrae (delta < 0) créditos creando un registro en CreditLedger y actualizando tanto Subscription.currentCredits como User.amountCredits
    */
   static async mutateCredits(
     userId: string,
@@ -31,9 +31,16 @@ export class CreditService {
         throw new Error("NO_CREDITS");
       }
 
+      // Actualizar Subscription.currentCredits
       await tx.subscription.update({
         where: { id: sub.id },
         data: { currentCredits: { increment: delta } },
+      });
+
+      // Actualizar User.amountCredits para mantener sincronización
+      await tx.user.update({
+        where: { id: userId },
+        data: { amountCredits: { increment: delta } },
       });
 
       await tx.creditLedger.create({
