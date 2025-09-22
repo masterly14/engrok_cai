@@ -15,12 +15,18 @@ interface LedgerEntry {
 export default function CreditsPage() {
   const [ledger, setLedger] = useState<LedgerEntry[]>([]);
   const [balance, setBalance] = useState<number>(0);
+  const [initialCredits, setInitialCredits] = useState<number>(0);
 
   useEffect(() => {
     const load = async () => {
       try {
         const res1 = await fetch("/api/credits/balance").then((r) => r.json());
         setBalance(res1.credits ?? 0);
+        
+        // Obtener los créditos iniciales del usuario
+        const res3 = await fetch("/api/user/credits").then((r) => r.json());
+        setInitialCredits(res3.initialAmountCredits ?? 0);
+        
         const res2 = await fetch("/api/credits/ledger?take=100").then((r) =>
           r.json(),
         );
@@ -40,7 +46,7 @@ export default function CreditsPage() {
         {/* Balance actual */}
         <CreditDisplay
           amount={balance}
-          maxAmount={balance}
+          maxAmount={initialCredits}
           className="w-full"
         />
 

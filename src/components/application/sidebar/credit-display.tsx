@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { motion, useMotionValue, useTransform, animate } from "framer-motion";
+import { motion } from "framer-motion";
 import { Plus, Loader2, Coins, Sparkles, Crown, Zap } from "lucide-react";
 import {
   SidebarGroup,
@@ -69,20 +69,6 @@ export function CreditDisplay({
   maxAmount = 1000,
   className,
 }: CreditDisplayProps) {
-  const count = useMotionValue(0);
-  const rounded = useTransform(count, (latest) => Math.round(latest));
-  const displayText = useTransform(rounded, (latest) =>
-    latest.toLocaleString(),
-  );
-
-  React.useEffect(() => {
-    const animation = animate(count, amount, {
-      duration: 2,
-      ease: "easeOut",
-    });
-
-    return animation.stop;
-  }, [amount, count]);
 
   const percentage = Math.min(100, Math.round((amount / maxAmount) * 100));
   const [loadingCredits, setLoadingCredits] = React.useState<number | null>(
@@ -274,9 +260,9 @@ export function CreditDisplay({
               <span className="text-sm text-[var(--muted-foreground)]">
                 Disponibles
               </span>
-              <motion.span className="text-lg font-semibold text-[var(--foreground)]">
-                {displayText}
-              </motion.span>
+              <span className="text-lg font-semibold text-[var(--foreground)]">
+                {amount.toLocaleString()}
+              </span>
             </div>
 
             <Progress value={percentage} className="h-1.5 bg-[var(--muted)]" />
