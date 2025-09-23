@@ -45,7 +45,7 @@ export default function CrmDashboard() {
     leadsLoading,
     leadsError,
     leadsFetching,
-  } = useAllLeads();
+  } = useAllLeads(true);
 
   // Update state with data from the hook
   useEffect(() => {
@@ -119,7 +119,7 @@ export default function CrmDashboard() {
       }
     },
     onSuccess: () => {
-      queryClient.refetchQueries({ queryKey: ["leads"] });
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
       toast.success("Lead creado correctamente	!");
     },
   });
@@ -135,7 +135,7 @@ export default function CrmDashboard() {
       }
     },
     onSuccess: () => {
-      queryClient.refetchQueries({ queryKey: ["leads"] });
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
     },
   });
 
