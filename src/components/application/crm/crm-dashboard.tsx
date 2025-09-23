@@ -119,7 +119,7 @@ export default function CrmDashboard() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      queryClient.refetchQueries({ queryKey: ["leads"] });
       toast.success("Lead creado correctamente	!");
     },
   });
@@ -135,7 +135,7 @@ export default function CrmDashboard() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      queryClient.refetchQueries({ queryKey: ["leads"] });
     },
   });
 

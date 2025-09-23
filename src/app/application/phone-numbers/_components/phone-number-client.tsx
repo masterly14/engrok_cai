@@ -74,19 +74,19 @@ export const PhoneNumberClient = () => {
         const result = await purchasePhoneNumber(phoneNumber)
 
         if (result.success) {
-          toast.success("¡Número comprado exitosamente!", {
+          toast.success("¡Número alquilado exitosamente!", {
             description: "Tu nuevo número está listo para usarse",
             icon: <CheckCircle2 className="h-4 w-4" />,
           })
           // Refresh the list to remove purchased number
           handleFetchNumbers()
         } else {
-          toast.error("La compra falló", {
-            description: "No se pudo completar la compra. Por favor, inténtalo de nuevo.",
+          toast.error("El alquiler falló", {
+            description: "No se pudo completar el alquiler. Por favor, inténtalo de nuevo.",
           })
         }
       } catch (error) {
-        toast.error("La compra falló", {
+        toast.error("El alquiler falló", {
           description: "Ocurrió un error inesperado. Por favor, inténtalo de nuevo.",
         })
       } finally {
@@ -280,11 +280,6 @@ export const PhoneNumberClient = () => {
                   <CardContent className="space-y-4">
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Costo mensual</span>
-                        <span className="font-semibold text-green-600">$1.00</span>
-                      </div>
-
-                      <div className="flex items-center justify-between">
                         <span className="text-sm text-muted-foreground">Cuota de instalación</span>
                         <span className="font-semibold">Gratis</span>
                       </div>
@@ -309,12 +304,12 @@ export const PhoneNumberClient = () => {
                       {isPurchasing === number.phoneNumber ? (
                         <>
                           <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Comprando...
+                          Alquilando...
                         </>
                       ) : (
                         <>
                           <CreditCard className="w-4 h-4 mr-2" />
-                          Comprar número
+                          Alquilar número
                         </>
                       )}
                     </Button>
